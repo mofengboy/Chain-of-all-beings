@@ -1,0 +1,235 @@
+# 共识模块的数据结构
+# 投票信息
+from core.data.node_info import NodeInfo
+from core.data.block_of_galaxy import BlockOfGalaxy
+
+
+# 投票信息
+class VoteInformation:
+    def __init__(self, main_node_id, block_id, election_period, number_of_vote, user_pk):
+        self.mainNodeId = main_node_id
+        self.blockId = block_id,
+        self.electionPeriod = election_period
+        self.numberOfVote = number_of_vote
+        self.userPK = user_pk
+        self.signature = ""
+
+    def setSignature(self, signature):
+        self.signature = signature
+
+    def getVoteInfo(self):
+        return {
+            "main_node_id": self.mainNodeId,  # 推荐和负责维护投票信息的主节点
+            "block_id": self.blockId,
+            "current_election_period": self.electionPeriod,
+            "number_of_vote": self.numberOfVote
+        }
+
+    def getMessage(self):
+        return {
+            "main_node_id": self.mainNodeId,  # 推荐和负责维护投票信息的主节点
+            "block_id": self.blockId,
+            "current_election_period": self.electionPeriod,
+            "number_of_vote": self.numberOfVote,
+            "user_pk": self.userPK,
+            "signature": self.signature
+        }
+
+
+# 等待成为银河区块的区块
+class WaitGalaxyBlock:
+    def __init__(self, main_node_id, main_user_pk):
+        self.blockList = []
+        self.mainNodeId = main_node_id
+        self.mainUserPk = main_user_pk
+
+    def isExit(self, block_id):
+        for block in self.blockList:
+            if block["block_id"] == block_id:
+                return True
+        return False
+
+    def addGalaxyBlock(self, block_id):
+        block = {
+            "block_id": block_id,
+            "votes": [],
+            "total": 0,
+            "main_node_id": self.mainNodeId,
+            "main_user_pk": self.mainUserPk
+        }
+        self.blockList.append(block)
+
+    def addVote(self, vote_info: VoteInformation) -> bool:
+        for block in self.blockList:
+            if block["block_id"] == vote_info.blockId:
+                vote = {
+                    "vote_info": vote_info.getVoteInfo(),
+                    "signature": vote_info.signature,
+                    "user_pk": vote_info.userPK
+                }
+                block["votes"].append(vote)
+                block["total"] += vote_info.numberOfVote
+                return True
+        return False
+
+    def getTotalOfVotesByBlockId(self, block_id):
+        for block in self.blockList:
+            if block_id == block["block_id"]:
+                return block["total"]
+
+    def getVotesByBlockId(self, block_id):
+        for block in self.blockList:
+            if block_id == block["block_id"]:
+                return block["votes"]
+
+
+# 银河区块生成确认消息
+class ConformationOfGalaxyBlock:
+    def __init__(self, block_of_galaxy: BlockOfGalaxy, votes, total):
+        self.blockOfGalaxy = block_of_galaxy
+        self.votes = votes
+        self.total = total
+
+    def getMessage(self):
+        return {
+            "block_of_galaxy": self.blockOfGalaxy,
+            "votes": self.votes,
+            "total": self.total
+        }
+
+    def getVotes(self):
+        return self.votes
+
+
+# 申请书
+class ApplicationForm:
+    def __init__(self, db_id, node_info: NodeInfo, content, new_node_signature):
+        self.dbID = db_id
+        self.nodeId = node_info.nodeId
+        self.nodeInfo = node_info.getInfo()
+        self.nodeSignature = node_info.nodeSignature
+        self.application = {
+            "content": content,
+            "new_node_signature": new_node_signature,
+            "start_time": None,
+            "main_node_signature": None,
+            "main_node_user_pk": None
+        }
+
+    def setStartTime(self, start_time):
+        self.application["start_time"] = start_time
+
+    def setMainNodeSignature(self, main_node_signature):
+        self.application["main_node_signature"] = main_node_signature
+
+    def setMainNodeUserPk(self, main_node_user_pk):
+        self.application["main_node_user_pk"] = main_node_user_pk
+
+
+# 申请书回复
+class ReplyApplicationForm:
+    def __init__(self, new_node_id, start_time: int, reply_time: int, is_agree: int):
+        self.newNodeId = new_node_id
+        self.startTime = start_time
+        self.replyTime = reply_time
+        self.isAgree = is_agree
+        self.signature = None
+        self.userPk = None
+
+    def getInfo(self):
+        return {
+            "new_node_id": self.newNodeId,
+            "start_time": self.startTime,
+            "is_agree": self.isAgree,
+            "reply_time": self.replyTime
+        }
+
+    def setSignature(self, signature):
+        self.signature = signature
+
+    def setUserPk(self, user_pk):
+        self.userPk = user_pk
+
+
+# 新节点申请书回复信息管理
+class ManagerOfReplyNewNode:
+    def __init__(self, db_id, new_node_id, start_time, node_info: NodeInfo):
+        self.dbId = db_id
+        self.newNodeId = new_node_id
+        self.startTime = start_time
+        self.nodeInfo = node_info
+        self.agreeList = []
+        self.disagreeCount = 0
+
+    def addAgreeNode(self, signature, reply_time, user_pk):
+        self.agreeList.append({
+            "info": {
+                "new_node_id": self.newNodeId,
+                "start_time": self.startTime,
+                "is_agree": 1,
+                "reply_time": reply_time
+            },
+            "signature": signature,
+            "user_pk": user_pk
+        })
+
+    def addDisagree(self):
+        self.disagreeCount += 1
+
+    def getAgreeInfo(self):
+        return {
+            "new_node_id": self.newNodeId,
+            "start_time": self.startTime,
+            "node_info": self.nodeInfo.getInfo(),
+            "node_signature": self.nodeInfo.nodeSignature,
+            "agree_list": self.agreeList
+        }
+
+
+# 被选中节点不回复
+# 删除节点申请书
+class NodeDelApplicationForm:
+    def __init__(self, del_node_id, del_user_pk, current_epoch):
+        self.delNodeId = del_node_id
+        self.delNodeUserPk = del_user_pk
+        self.currentEpoch = current_epoch
+        self.applyUserPk = None
+        self.applySignature = None
+        self.votes = []
+
+    def getInfo(self):
+        return {
+            "del_node_id": self.delNodeId,
+            "del_node_user_pk": self.delNodeUserPk,
+            "current_epoch": self.currentEpoch
+        }
+
+    def addVotes(self, user_pk, signature):
+        self.votes.append(
+            {
+                "user_pk": user_pk,
+                "signature": signature
+            }
+        )
+
+    def userPkIsVotes(self, user_pk):
+        for vote in self.votes:
+            if vote["user_pk"] == user_pk:
+                return True
+        return False
+
+    def getMessage(self):
+        return {
+            "del_node_id": self.delNodeId,
+            "del_node_user_pk": self.delNodeUserPk,
+            "current_epoch": self.currentEpoch,
+            "apply_user_pk": self.applyUserPk,
+            "apply_signature": self.applySignature,
+            "votes": self.votes
+        }
+
+    def setApplyUserPk(self, user_pk):
+        self.applyUserPk = user_pk
+
+    def setApplySignature(self, signature):
+        self.applySignature = signature

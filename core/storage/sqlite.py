@@ -1,0 +1,131 @@
+import sqlite3
+from abc import ABC
+
+
+class Sqlite(ABC):
+    def __init__(self):
+        self.blockConn = sqlite3.connect('./db/block.db')
+        self.initBlockDB()
+
+        self.tempConn = sqlite3.connect('./db/temp.db')
+        self.initTempDB()
+
+    def initBlockDB(self):
+        cursor = self.blockConn.cursor()
+        # 众生链 繁星链
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'beings'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table beings(
+            id INTEGER PRIMARY KEY,
+            epoch INTEGER NOT NULL,
+            block_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            header BLOB NOT NULL,
+            body BLOB NOT NULL
+            )
+            """)
+            self.blockConn.commit()
+        # 银河
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'galaxy'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table galaxy(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            block_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            header BLOB NOT NULL,
+            body BLOB NOT NULL
+            )
+            """)
+            self.blockConn.commit()
+
+        # 垃圾标注链
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'garbage'")
+        if cursor.fetchone()[0] == 0:
+            print("创建垃圾标注链")
+
+    def initTempDB(self):
+        cursor = self.tempConn.cursor()
+        # 存储待发布的区块内容
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'block'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table block(
+            id INTEGER PRIMARY KEY,
+            user_pk TEXT NOT NULL,
+            body_signature TEXT NOT NULL,
+            body TEXT NOT NULL,
+            is_release INTEGER NOT NULL, 
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储待审核的新节点加入信息
+        # is_audit 0代表未审核 1代表审核通过 2代表拒绝 3表示以及申请完成，4超过规定时间未达到要求
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_join'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_join(
+            id INTEGER PRIMARY KEY,
+            node_info BLOB NOT NULL,
+            node_signature TEXT NOT NULL,
+            application BLOB NOT NULL,
+            is_audit INTEGER NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储待审核的节点删除信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_delete'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_delete(
+            id INTEGER PRIMARY KEY,
+            node_info BLOB NOT NULL,
+            node_signature TEXT NOT NULL,
+            application BLOB NOT NULL,
+            is_audit INTEGER NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储收集到的投票信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'votes'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table votes(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            election_period INTEGER NOT NULL,
+            block_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            votes FLOAT NOT NULL,
+            signature TEXT NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 授权给简单用户节点的票
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'simple_user_vote'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table simple_user_vote(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            user_pk TEXT NOT NULL,
+            total_vote FLOAT NOT NULL,
+            used_vote FLOAT NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+
+if __name__ == "__main__":
+    sqlite = Sqlite()
