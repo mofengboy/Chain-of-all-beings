@@ -1,9 +1,12 @@
+import logging
 import random
 
 from core.data.node_info import MainNodeList
 from core.data.block_of_beings import BlockOfBeings
 from core.data.block_of_galaxy import BlockOfGalaxy, BodyOfGalaxyBlock
 from core.utils.ciphersuites import CipherSuites
+
+logger = logging.getLogger("main")
 
 
 # 计算本次生成区块的节点
@@ -25,9 +28,13 @@ class CurrentMainNode:
         random.seed(seed)
         node_list = random.choices(population=self.mainNodeList.getNodeList(),
                                    weights=self.mainNodeList.getNodeWeights(), k=self.getGenerateCount())
+        logger.info("本次被选中的节点数量为:" + str(len(node_list)))
         main_node_list = MainNodeList()
         for node in node_list:
-            main_node_list.addMainNode(node)
+            if not main_node_list.userPKisExit(user_pk=node["node_info"].userPk):
+                main_node_list.addMainNode(node["node_info"])
+
+        logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
         return main_node_list
 
 
@@ -50,7 +57,6 @@ class NewBlockOfBeings:
 class NewBlockOfGalaxy:
     def __init__(self, user_pk, election_period, body_signature, body: BodyOfGalaxyBlock, epoch, pre_block,
                  prev_block_header):
-
         if not CipherSuites.verify(pk=user_pk[0], signature=body_signature[0], message=body.getBody()):
             # 用户公钥、签名、内容不匹配 抛出错误
             pass

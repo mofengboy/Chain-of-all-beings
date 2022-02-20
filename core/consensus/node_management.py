@@ -1,7 +1,6 @@
 # 两种方式，主动申请和未收到消息被动申请
 from core.consensus.data import ManagerOfReplyNewNode, ReplyApplicationForm, NodeDelApplicationForm
 from core.data.network_message import NetworkMessage, NetworkMessageType, SubscribeTopics
-from core.network.net import PUB
 from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
 from core.user.user import User
@@ -66,7 +65,7 @@ class NodeManager:
         return CipherSuites.verify(pk=user_pk, signature=signature, message=str(info).encode("utf-8"))
 
     # 处理申请书回复消息
-    def replyApplyJoin(self, pub: PUB, current_main_node_count,
+    def replyApplyJoin(self, pub, current_main_node_count,
                        storage_of_temp: StorageOfTemp,
                        reply_application_form: ReplyApplicationForm):
         # 验证签名

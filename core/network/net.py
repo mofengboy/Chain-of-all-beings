@@ -1,3 +1,4 @@
+import logging
 import threading
 import zmq
 from ast import literal_eval
@@ -16,6 +17,8 @@ from core.data.network_message import SubscribeTopics, NetworkMessage, NetworkMe
 from core.data.block_of_beings import BlockListOfBeings, EmptyBlock
 from core.data.node_info import MainNodeList, NodeInfo
 
+logger = logging.getLogger("main")
+
 
 # 订阅消息
 # 发布者
@@ -25,15 +28,20 @@ class PUB(threading.Thread):
         super().__init__()
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
+        self.name = "pub"
+        logger.info("发布者初始化完成")
 
     def initBind(self):
         self.socket.bind('tcp://*:23333')
 
     def sendMessage(self, topic: bytes, message):
         self.socket.send(topic + str(message).encode("utf-8"))
+        logger.info("已发送广播，主题：" + topic.decode("utf-8"))
+        logger.debug(str(message).encode("utf-8"))
 
     def run(self):
         self.initBind()
+        logger.info("发布者进程启动")
 
 
 # 指定IP发送消息
@@ -42,6 +50,7 @@ class Client:
         self.mainNodeList = main_node_list
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
+        logger.info("客户端初始化完成")
 
     def sendMessageByNodeID(self, node_id, data: bytes):
         self.socket.setsockopt(zmq.RCVTIMEO, 5000)
@@ -54,6 +63,7 @@ class Client:
         self.socket.send(data)
         message = self.socket.recv()
         self.socket.disconnect(ip)
+        logger.info("消息发送完成，对方ip为" + ip)
         return message
 
     def sendMessageByIP(self, ip, data: bytes):
@@ -63,6 +73,7 @@ class Client:
         self.socket.send(data)
         message = self.socket.recv()
         self.socket.disconnect(ip)
+        logger.info("消息发送完成，对方ip为" + ip)
         return message
 
 
@@ -102,18 +113,28 @@ class SUB(threading.Thread):
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getBlockTopicOfBeings())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfJoin())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyJoin())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyDelete())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getBlockTopicOfGalaxy())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfDelete())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getVoteConfirmation())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfProactiveApplyDelete())
         self.stopFlag = True
+        logger.info("订阅者初始化完成，订阅ip为" + ip)
 
     def stop(self):
         self.stopFlag = False
+        logger.info("订阅者关闭，订阅ip为" + self.name)
 
     def run(self):
         self.receive()
+        logger.info("订阅者启动")
+        print("订阅者启动")
 
     def receive(self):
         while self.stopFlag:
             message = self.socket.recv_multipart()
-            print(f'Received: {message}')
+            logger.info("订阅者收到消息：")
+            logger.debug(message)
 
             # 收集其他节点产生的众生区块
             if message[0:len(SubscribeTopics.getBlockTopicOfBeings())] == SubscribeTopics.getBlockTopicOfBeings():
@@ -374,17 +395,22 @@ class Server(threading.Thread):
         self.newBlockOfGalaxy = newBlockOfGalaxy
         self.currentMainNode = current_main_node
         self.user = user
+        logger.info("服务端初始化完成")
 
     def run(self):
         self.receive()
+        logger.info("服务端启动")
 
     def stop(self):
         self.stopFlag = False
+        logger.info("服务端关闭")
 
     def receive(self):
         while self.stopFlag:
             #  Wait for next request from client
             message = self.socket.recv()
+            logger.info("服务端收到消息")
+            logger.info(message)
             try:
                 print(f"Received request: {message}")
                 net_message = literal_eval(bytes(message).decode())

@@ -48,7 +48,7 @@ class CipherSuites:
 
     @staticmethod
     def getSeed(block_abstract, epoch):
-        seed = hashlib.sha256(block_abstract + str(epoch))
+        seed = hashlib.sha256((block_abstract + str(epoch)).encode("utf-8"))
         return seed
 
 

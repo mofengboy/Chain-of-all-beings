@@ -1,7 +1,10 @@
+import logging
 from ast import literal_eval
 
 from core.storage.sqlite import Sqlite
 from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
+
+logger = logging.getLogger("main")
 
 
 class StorageOfBeings(Sqlite):
@@ -10,11 +13,12 @@ class StorageOfBeings(Sqlite):
         self.currentBlockListOfBeing = BlockListOfBeings()
 
     def saveCurrentBlockOfBeings(self, blockListOfBeings: BlockListOfBeings):
-        self.currentBlockListOfBeing = blockListOfBeings.copy()
+        self.currentBlockListOfBeing.list = blockListOfBeings.list.copy()
+        self.currentBlockListOfBeing.listOfNoBlock = blockListOfBeings.listOfNoBlock.copy()
 
         cursor = self.blockConn.cursor()
         data_list = []
-        for block in blockListOfBeings.getList():
+        for block in blockListOfBeings.list:
             data_list.append(
                 (block.getEpoch(), block.getBlockID(), str(block.getUserPk()),
                  str(block.getBlockHeader()).encode("utf-8"),
@@ -26,16 +30,22 @@ class StorageOfBeings(Sqlite):
             values (?,?,?,?,?);
             """, data_list)
         self.blockConn.commit()
+        logger.info("已保存当前众生区块列表，数量为：" + str(len(data_list)))
 
     def getLastBlockByCache(self) -> BlockOfBeings:
-        return self.currentBlockListOfBeing.getBlockByMaxBlockId()
+        if len(self.currentBlockListOfBeing.list) > 0:
+            return self.currentBlockListOfBeing.getBlockByMaxBlockId()
+        else:
+            # 上一轮没有产生众生区块
+            # 向前寻找
+            return self.getLastBlock()
 
     def getLastBlock(self) -> BlockOfBeings:
         cursor = self.blockConn.cursor()
         # 其中order by id desc 是按照id降序排列；limit 0,1中0是指从偏移量为0（也就是从第1条记录）开始，1是指需要查询的记录数，这里只查询1条记录
         cursor.execute("""
         select epoch,block_id,user_pk,header,body
-         from beings order by id desc limit 0,1;
+         from beings order by epoch,block_id desc limit 0,1;
         """)
         res = cursor.fetchone()
         block_header = literal_eval(bytes.decode(res[3]))

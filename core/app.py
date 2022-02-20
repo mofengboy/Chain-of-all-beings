@@ -1,7 +1,11 @@
 import random
+import logging.config
+import time
+
+import yaml
 from ast import literal_eval
 
-from core.data.block_of_beings import EmptyBlock
+from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
 from core.data.block_of_galaxy import BodyOfGalaxyBlock, BlockOfGalaxy
 from core.data.node_info import NodeInfo
 from core.data.network_message import NetworkMessageType, NetworkMessage, SubscribeTopics
@@ -18,6 +22,7 @@ from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
+from core.db.genesis_block import GenesisBlock
 
 
 class APP:
@@ -31,10 +36,11 @@ class APP:
         self.storageOfGalaxy = StorageOfGalaxy()  # 银河区块存储类
 
         self.user = User()  # 用户
+        # 注册或者登录用户
+        self.user.register()
+
         self.mainNode = MainNode(self.user)  # 主节点
-        # 当前epoch生成区块的节点列表
-        self.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
-                                               self.storageOfBeings.getLastBlockByCache()).getNodeList()
+        self.currentMainNode = None  # 当前epoch生成区块的节点列表
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp)  # 票数计算
@@ -50,6 +56,7 @@ class APP:
                              getElectionPeriod=self.getElectionPeriod, newBlockOfGalaxy=self.newBlockOfGalaxy,
                              current_main_node=self.currentMainNode)  # 服务端
         self.server.start()
+        self.storageGenesisBlock()
 
     def addEpoch(self):
         self.currentEpoch += 1
@@ -95,10 +102,20 @@ class APP:
         for node_i in node_list:
             ip = node_i["node_info"].nodeIp
             self.addSub(ip)
+        logger.info("订阅完成，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
         # 删除之前订阅
         for sub_i in lastSub:
             ip = sub_i.name
             self.delSub(ip)
+        logger.info("已删除之前订阅，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
+
+    # 存储创世区块
+    def storageGenesisBlock(self):
+        genesis_block = GenesisBlock()
+        block_list_of_beings = BlockListOfBeings()
+        block_list_of_beings.addBlock(block=genesis_block.getBlockOfBeings())
+        self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=block_list_of_beings)
+        logger.info("创世区块存储完成")
 
     # 创建推荐区块数据结构，准备接受其他节点的投票信息
     def recommendedBlock(self, block_id):
@@ -209,14 +226,17 @@ class APP:
 
     # 众生区块生成周期
     def startNewEpoch(self):
+        logger.info("众生区块生成周期开始，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         # 获取本次产生区块的节点列表
         self.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
                                                self.storageOfBeings.getLastBlockByCache()).getNodeList()
-        # 当前节点是否生成区块
         for node in self.currentMainNode.getNodeList():
-            if node.nodeInfo.nodeId == self.mainNode.nodeInfo.nodeId:
+            # 当前节点是否生成区块
+            if node["node_info"].nodeId == self.mainNode.nodeInfo.nodeId:
+                logger.info("当前节点已被共识机制选中")
                 # 判断临时存储区是否有数据，若有数据，则生成区块，否则发送不生成区块的消息
                 if self.storageOfTemp.getDataCount() > 0:
+                    logger.info("当前节点生成区块")
                     # 生成区块
                     prev_block_header = []
                     pre_block = []
@@ -243,13 +263,79 @@ class APP:
                     self.mainNode.currentBlockList.addBlock(block=new_block)
                 else:
                     # 广播无区块产生的消息
+                    logger.info("当前节点不生成区块")
                     empty_block = EmptyBlock(user_pk=self.user.getUserPKString(), epoch=self.getEpoch())
                     signature = self.user.sign(str(empty_block.getInfo()).encode("utf-8"))
                     empty_block.setSignature(signature)
                     mess = NetworkMessage(mess_type=NetworkMessageType.NO_BLOCK, message=empty_block.getMessage())
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=mess)
+                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=mess.getNetMessage())
                     # 保存至当前区块列表
-                    self.mainNode.currentBlockList.addMessageOfNoBlock(net_message=empty_block.getMessage())
+                    self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
+
+    # 新周期开始15秒后，检查并执行
+    def startCheckAndApplyDeleteNode(self):
+        logger.info("众生区块生成周期开始15秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        if self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
+            # 该节点为本次发布节点的其中之一
+            for node in self.currentMainNode.getNodeList():
+                user_pk = node["node_info"].userPk
+                node_id = node["node_info"].nodeId
+                # 检查是否存在应该收到，但是未收到的区块
+                if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
+                    logger.info("存在应该产生区块，但是未收到信息的节点")
+                    logger.info("节点ID为：" + node_id)
+                    # 没有收到该节点产生的区块或消息
+                    # 制作申请书，删除该节点
+                    node_del_application_form = NodeDelApplicationForm(del_node_id=node_id, del_user_pk=user_pk,
+                                                                       current_epoch=self.getEpoch())
+                    signature = self.user.sign(str(node_del_application_form.getInfo()).encode("utf-8"))
+                    node_del_application_form.setApplySignature(signature)
+                    node_del_application_form.setApplyUserPk(self.user.getUserPKString())
+                    # 广播申请删除该节点的消息
+                    self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
+                                         message=node_del_application_form.getMessage())
+
+    # 新周期开始20秒后执行
+    def startCheckAndGetBlock(self):
+        logger.info("众生区块生成周期开始20秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        if not self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
+            # 该节点不负责本次区块生成
+            for node in self.currentMainNode.getNodeList():
+                user_pk = node["node_info"].userPk
+                node_id = node["node_info"].nodeId
+                # 检查是否存在应该收到，但是未收到的区块
+                if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
+                    logger.info("存在应该产生区块，但是未收到信息的节点")
+                    logger.info("节点ID为：" + node_id)
+                    # 直接发送请求，获取生成的区块
+                    network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
+                                                     message=self.getEpoch())
+                    network_message.setCertification(node_id=self.user.getUserPKString()[0:16],
+                                                     user_pk=self.user.getUserPKString())
+                    signature = self.user.sign(message=str(network_message.getCertification()).encode("utf-8"))
+                    network_message.setSignature(signature)
+                    res = self.client.sendMessageByNodeID(node_id=node_id,
+                                                          data=str(network_message.getNetMessage()).encode("utf-8"))
+                    res = literal_eval(res)
+                    if res["mess_type"] == NetworkMessageType.NEW_BLOCK:
+                        self.mainNode.currentBlockList.addBlock(block=res["message"])
+                    if res["mess_type"] == NetworkMessageType.NO_BLOCK:
+                        self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
+
+    # 检查是否收集完成所有区块，收集完成后保存到数据库
+    # 后五秒，每秒检查一次
+    def startCheckAndSave(self):
+        logger.info("众生区块生成周期开始25秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        is_finish = True
+        for node in self.currentMainNode.getNodeList():
+            user_pk = node["node_info"].userPk
+            node_id = node["node_info"].nodeId
+            # 检查是否存在应该收到，但是未收到的区块
+            if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
+                is_finish = False
+                logger.info("存在未收到的区块,应产生该区块的节点ID为：" + str(node_id))
+        if is_finish:
+            self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=self.mainNode.currentBlockList)
 
     # 生成银河区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:
@@ -273,46 +359,34 @@ class APP:
                                                prev_block_header=prev_block_header).getBlock()
         return new_block_of_galaxy
 
-    # 新周期开始16秒后，检查并执行
-    def startCheckAndApplyDeleteNode(self):
-        if self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-            # 该节点为本次发布节点的其中之一
-            for node in self.currentMainNode.getNodeList():
-                user_pk = node["node_info"].userPk
-                node_id = node["node_info"].nodeId
-                # 检查是否存在应该收到，但是未收到的区块
-                if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                    # 没有收到该节点产生的区块或消息
-                    # 制作申请书，删除该节点
-                    node_del_application_form = NodeDelApplicationForm(del_node_id=node_id, del_user_pk=user_pk,
-                                                                       current_epoch=self.getEpoch())
-                    signature = self.user.sign(str(node_del_application_form.getInfo()).encode("utf-8"))
-                    node_del_application_form.setApplySignature(signature)
-                    node_del_application_form.setApplyUserPk(self.user.getUserPKString())
-                    # 广播申请删除该节点的消息
-                    self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
-                                         message=node_del_application_form.getMessage())
 
-    # 新周期开始24秒后执行
-    def startCheckAndGetBlock(self):
-        if not self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-            # 该节点不负责本次区块生成
-            for node in self.currentMainNode.getNodeList():
-                user_pk = node["node_info"].userPk
-                node_id = node["node_info"].nodeId
-                # 检查是否存在应该收到，但是未收到的区块
-                if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                    # 直接发送请求，获取生成的区块
-                    network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
-                                                     message=self.getEpoch())
-                    network_message.setCertification(node_id=self.user.getUserPKString()[0:16],
-                                                     user_pk=self.user.getUserPKString())
-                    signature = self.user.sign(message=str(network_message.getCertification()).encode("utf-8"))
-                    network_message.setSignature(signature)
-                    res = self.client.sendMessageByNodeID(node_id=node_id,
-                                                          data=str(network_message.getNetMessage()).encode("utf-8"))
-                    res = literal_eval(res)
-                    if res["mess_type"] == NetworkMessageType.NEW_BLOCK:
-                        self.mainNode.currentBlockList.addBlock(block=res["message"])
-                    if res["mess_type"] == NetworkMessageType.NO_BLOCK:
-                        self.mainNode.currentBlockList.addMessageOfNoBlock(user_pk=user_pk)
+if __name__ == "__main__":
+    with open('./config/log_config.yaml', 'r') as f:
+        config = yaml.safe_load(f.read())
+        logging.config.dictConfig(config)
+    logger = logging.getLogger("main")
+
+    app = APP()
+    logger.info("全体初始化完成")
+    # 获取主节点列表
+    # 将自己添加到主节点列表
+    app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+
+    # 订阅
+    app.reSubscribe()
+    # 同步数据
+    # 创世区块
+
+    # 周期开始
+    while True:
+        app.startNewEpoch()
+        time.sleep(3)
+        app.startCheckAndApplyDeleteNode()
+        time.sleep(3)
+        app.startCheckAndGetBlock()
+        time.sleep(3)
+        app.startCheckAndSave()
+
+        app.addEpoch()
+        time.sleep(5)
+    pass

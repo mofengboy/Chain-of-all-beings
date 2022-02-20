@@ -1,4 +1,8 @@
+import logging
+
 from core.utils.ciphersuites import CipherSuites
+
+logger = logging.getLogger("main")
 
 
 class User:
@@ -27,11 +31,15 @@ class User:
     def register(self):
         self.generateUserSK()
         self.generateUserVKBySK()
+        logger.info("用户已经注册")
+        logger.info("公钥为：" + self.getUserPKString())
 
     # 新用户登录
     def login(self, sk):
         self.setUserSK(sk)
         self.generateUserVKBySK()
+        logger.info("用户已经登录")
+        logger.info("公钥为：" + self.getUserPKString())
 
     def getUserPK(self):
         return self.__userPK

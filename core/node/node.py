@@ -1,9 +1,12 @@
+import logging
 from abc import ABC
 
 from core.network.local_network import NetworkInfo
 from core.utils.ciphersuites import CipherSuites
 from core.user.user import User
 from core.data.node_info import NodeInfo
+
+logger = logging.getLogger("main")
 
 
 class Node(ABC):
@@ -14,10 +17,13 @@ class Node(ABC):
         self.node_ip = NetworkInfo.get_network_ip()
         self.nodeInfo = NodeInfo(self.__node_id, user_pk, self.node_ip)
         self.nodeInfo.nodeSignature = self.generateNodeSignature()
+        logger.info("节点初始化完成")
+        logger.info("节点ID:" + self.__node_id)
+        logger.info("节点签名:" + self.nodeInfo.nodeSignature)
 
     # 生成节点签名
     def generateNodeSignature(self):
-        node_signature = self.user.sign(self.nodeInfo.getInfo())
+        node_signature = self.user.sign(str(self.nodeInfo.getInfo()).encode("utf-8"))
         return node_signature
 
     # 对指定信息生成签名
