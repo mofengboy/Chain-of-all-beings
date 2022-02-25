@@ -1,0 +1,85 @@
+<template>
+  <div>
+    <div class="header">
+      <GlobalHeader></GlobalHeader>
+    </div>
+    <div class="top-menu">
+      <el-menu mode="horizontal" @select="handleSelect">
+        <el-menu-item index="1">首页</el-menu-item>
+        <el-sub-menu index="2">
+          <template #title>众生之链</template>
+          <el-menu-item index="2-1">众生链</el-menu-item>
+          <el-menu-item index="2-2">时代链</el-menu-item>
+          <el-menu-item index="2-3">垃圾标识链</el-menu-item>
+        </el-sub-menu>
+        <el-menu-item index="3">发布</el-menu-item>
+        <el-menu-item index="4">查询</el-menu-item>
+        <el-menu-item index="5">源码</el-menu-item>
+      </el-menu>
+    </div>
+    <div class="main">
+      <BlockOfBeings v-if="menu==='2-1'"></BlockOfBeings>
+      <ReleaseBlock v-if="menu==='3'"></ReleaseBlock>
+    </div>
+    <div class="footer">
+      <GlobalFooter></GlobalFooter>
+    </div>
+  </div>
+</template>
+
+<script>
+import ElMenu from "element-plus";
+import ElMenuItem from "element-plus";
+import ElSubMenu from "element-plus";
+import GlobalHeader from "@/components/GlobalHeader";
+import GlobalFooter from "@/components/GlobalFooter";
+import BlockOfBeings from "@/components/BlockOfBeings";
+import ReleaseBlock from "@/components/ReleaseBlock";
+// import WaitingForLoading from "@/components/WaitingForLoading";
+
+export default {
+  name: 'App',
+  data() {
+    return {
+      menu: "1"
+    }
+  },
+  components: {
+    ReleaseBlock,
+    GlobalHeader,
+    GlobalFooter,
+    BlockOfBeings,
+    ElMenu,
+    ElSubMenu,
+    ElMenuItem,
+  },
+  methods: {
+    handleSelect(key, keyPath) {
+      console.log(key, keyPath)
+      this.menu = key
+    },
+  }
+}
+</script>
+
+<style>
+#app {
+  margin: auto;
+  width: 80%;
+}
+
+.header {
+  margin: 20px 0;
+}
+
+.main {
+  margin: 20px 0;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
+}
+
+.footer {
+  width: 80%;
+  position: fixed;
+  bottom: 5px;
+}
+</style>
