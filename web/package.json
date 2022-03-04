@@ -8,11 +8,26 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
+    "Buffer": "npm:buffer@^6.0.3",
     "core-js": "^3.8.3",
+    "eccrypto": "^1.1.6",
     "element-plus": "^2.0.2",
+    "highlight.js": "^11.4.0",
+    "inline-process-browser": "^2.0.1",
+    "jsrsasign": "^10.5.8",
+    "jsrsasign-util": "^1.0.5",
+    "prismjs": "^1.27.0",
+    "process": "^0.11.10",
+    "sass-loader": "^12.6.0",
+    "simple-web-worker": "^1.2.0",
+    "starkbank-ecdsa": "^1.1.4",
+    "stream-browserify": "^3.0.0",
     "unplugin-auto-import": "^0.6.1",
     "unplugin-vue-components": "^0.17.20",
-    "vue": "^3.2.13"
+    "vue": "^3.2.13",
+    "vue3-markdown-it": "^1.0.10",
+    "webpack": "^5.69.1"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

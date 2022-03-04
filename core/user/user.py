@@ -56,7 +56,16 @@ class User:
 if __name__ == "__main__":
     user = User()
     user.register()
-    a = user.getUserPK().to_string()
-    b = user.getUserPK().to_string().hex()
-    c = bytes.fromhex(b)
-    print(c)
+    userpk = user.getUserPKString()
+    s = "efsd".encode()
+    a = user.sign(message=s)
+
+    a_list = []
+    for i in range(5):
+        a = user.sign(message=s)
+        print(a)
+        print(len(a))
+        a_list.append(a)
+
+    for i in a_list:
+        print(CipherSuites.verify(pk=user.getUserPKString(), signature=i, message=s))

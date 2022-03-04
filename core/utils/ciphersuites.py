@@ -53,8 +53,8 @@ class CipherSuites:
 
 
 if __name__ == "__main__":
-    pk = "8778e91df26e1510781783925e51c8af2719e768b402b1a2ecc0d18965f1701abe96424d6c48095fbb96ed6ba1f0c9213c858a702c4786c5cea2e23c463a70d52d74a3c717e74fecb8d2933a3a6961ad296bda8e07f091decd2a2f83aaaad4fa"
-    a = str("abc").encode()
-    sig = '69f6305455a23f9195092b0e1d8cd4ba18b6165f95e42a65421d0c0a7baff29d0db55c559e4bd327e49c9a361c23c92cabc7851bde166243135e6df60d473ba69bd33671ace3434d174d22ed1691d852ea5ada4ae9b59cf6b3e598121c2f11a2'
-    fl = CipherSuites.verify(pk, bytes.fromhex(sig), a)
+    pk = "04e9d2202827c544266b7ce7bfc1f43b4eff15afc9f713371ad367ee4ad2df0e881f1657b516f15df8c195c1c8bc29dbfcb6a37ab3eb4e3e3deeeef5e1f9711de13a1571566d63361518d382d22a014db3cdbebf8b0f3ccefcfd359fbb2ea0c81e"
+    a = str("d04b98f48e8f8bcc15c6ae5ac050801cd6dcfd428fb5f9e65c4e16e7807340fa").encode()
+    sig = "5367c5743591b5573a65cfe2f31fd2010b051dddc8d48c53f0601071dcd47fec139c98881f5255ea8607837e10a3a8abee0fc96b2eed998ac4b1cb1263b46bc468f04dbdfa79aedd6c70906f25a4fb0484d3375542558eca262f21be0e36db61"
+    fl = CipherSuites.verify(pk=pk, signature=sig, message=a)
     print(fl)

@@ -28,14 +28,15 @@
 </template>
 
 <script>
-import ElMenu from "element-plus";
-import ElMenuItem from "element-plus";
-import ElSubMenu from "element-plus";
+import {ElMenu, ElMenuItem, ElSubMenu} from "element-plus";
 import GlobalHeader from "@/components/GlobalHeader";
 import GlobalFooter from "@/components/GlobalFooter";
 import BlockOfBeings from "@/components/BlockOfBeings";
 import ReleaseBlock from "@/components/ReleaseBlock";
+
+
 // import WaitingForLoading from "@/components/WaitingForLoading";
+
 
 export default {
   name: 'App',
@@ -54,7 +55,7 @@ export default {
     ElMenuItem,
   },
   methods: {
-    handleSelect(key, keyPath) {
+    handleSelect: function (key, keyPath) {
       console.log(key, keyPath)
       this.menu = key
     },
@@ -72,14 +73,16 @@ export default {
   margin: 20px 0;
 }
 
+.top-menu {
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
+}
+
 .main {
   margin: 20px 0;
+  padding: 25px 10px 10px 10px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
 
 .footer {
-  width: 80%;
-  position: fixed;
-  bottom: 5px;
 }
 </style>
