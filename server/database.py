@@ -20,7 +20,6 @@ class DB:
             body BLOB NOT NULL,
             signature TEXT NOT NULL,
             is_review INTEGER NOT NULL,
-            review_username TEXT,
             create_time TEXT NOT NULL
             )
             """)
@@ -68,7 +67,35 @@ class DB:
         for data in data_list:
             id_list.append({
                 "db_id": data[0],
-                "crate_time": data[1]
+                "create_time": data[1]
+            })
+        return id_list
+
+    def getBlockListOfBeingsByOffset(self, offset, count):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id,create_time from beings where is_review = 0 and id> ? limit ?
+        """, (offset, count))
+        data_list = cursor.fetchall()
+        id_list = []
+        for data in data_list:
+            id_list.append({
+                "db_id": data[0],
+                "create_time": data[1]
+            })
+        return id_list
+
+    def getWaitingBlockListOfBeingsByOffset(self, offset, count):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id,create_time from beings where is_review = 1 and id > ? limit ?
+        """, (offset, count))
+        data_list = cursor.fetchall()
+        id_list = []
+        for data in data_list:
+            id_list.append({
+                "db_id": data[0],
+                "create_time": data[1]
             })
         return id_list
 
@@ -89,10 +116,10 @@ class DB:
         }
         return block
 
-    def reviewBlockOfBeingsDBId(self, db_id, is_review, review_username):
+    def reviewBlockOfBeingsDBId(self, db_id, is_review):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        update beings set is_review=?,review_username=?
+        update beings set is_review = ?
         where id = ?
-        """, (is_review, review_username, db_id))
+        """, (is_review, db_id))
         self.__DB.commit()

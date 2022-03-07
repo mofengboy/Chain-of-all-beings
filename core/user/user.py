@@ -1,4 +1,5 @@
 import logging
+import base64
 
 from core.utils.ciphersuites import CipherSuites
 
@@ -55,17 +56,27 @@ class User:
 
 if __name__ == "__main__":
     user = User()
+    # for i in range(5):
+    #     user.register()
+    #     user_pk = user
+    #     print(user_pk)
+    #     print(len(user_pk))
+    body = "# markdown文件格式".encode("utf-8")
+    # body = base64.b64encode(body)
+    # a = user.sign(message=body)
+    # print(a)
     user.register()
-    userpk = user.getUserPKString()
-    s = "efsd".encode()
-    a = user.sign(message=s)
-
     a_list = []
     for i in range(5):
-        a = user.sign(message=s)
+        a = user.sign(message=body)
         print(a)
         print(len(a))
         a_list.append(a)
-
+    #
     for i in a_list:
-        print(CipherSuites.verify(pk=user.getUserPKString(), signature=i, message=s))
+        print(CipherSuites.verify(pk=user.getUserPKString(), signature=i, message=body))
+    # pk = "d0644eb8b673de6bccad286ba4703476bb9a8498772ce9592476a5556a47bb5da4b28744b7774e49efda62eaf7d92b98f7b0f0c03b2d33418305f94e77e78026e2506a0926f23e7d09be6deadd6a87a029ea86e0e8187b9f9c1301060bf0921a"
+    # mes = "IyBtYXJrZG93buaWh+S7tuagvOW8jw==".encode("utf-8")
+    # sig = '4a877320a8603ffa9050f2a21f03a3209b327a66b4eb9609da1a7b7e5d1376a81b9f0cc3507f8364818bfd38785f441b6904ba9449e44c51e6390f985ca9f40390df0b12160a121072b3c9f360ca83da9175ef3ba625f8b852aa065771bb558f'
+    # a = CipherSuites.verify(pk=pk, signature=sig, message=mes)
+    # print(a)

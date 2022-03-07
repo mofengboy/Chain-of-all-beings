@@ -79,15 +79,24 @@ class BlockOfBeings:
             self.db.insertBlockOfBeings(user_pk=user_pk, body=body, signature=signature)
             return True
         except Exception as err:
+            print(err)
             return False
 
-    def getBlockList(self, count):
-        id_list = self.db.getBlockListOfBeings(count)
+    def getBlockList(self, offset=None, count=1):
+        if offset is None:
+            id_list = self.db.getBlockListOfBeings(count)
+            return id_list
+        else:
+            id_list = self.db.getBlockListOfBeingsByOffset(offset, count)
+            return id_list
+
+    def getWaitingBlockList(self, offset, count):
+        id_list = self.db.getWaitingBlockListOfBeingsByOffset(offset, count)
         return id_list
 
     def getBlockByDBId(self, db_id):
         block = self.db.getBlockOfBeingsByDBId(db_id=db_id)
         return block
 
-    def reviewBlock(self, db_id, is_review, review_username):
-        self.db.reviewBlockOfBeingsDBId(db_id=db_id, is_review=is_review, review_username=review_username)
+    def reviewBlock(self, db_id, is_review):
+        self.db.reviewBlockOfBeingsDBId(db_id=db_id, is_review=is_review)

@@ -22,7 +22,7 @@ class Captcha:
     # 验证验证码
     def verify(self, uuid, word) -> bool:
         # 清楚过期验证码
-        for uuid_i in self.__captchaStorage:
+        for uuid_i in self.__captchaStorage.copy():
             data = self.__captchaStorage[uuid_i]
             if time.time() - data[1] > Storage_Time:
                 del self.__captchaStorage[uuid_i]
@@ -33,7 +33,7 @@ class Captcha:
             else:
                 return False
         except Exception as err:
-            # print(err)
+            print(err)
             return False
 
 
