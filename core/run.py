@@ -1,6 +1,9 @@
+import sys
 import logging.config
 import time
 import yaml
+
+sys.path.append("../")
 
 from core.app import APP
 from core.utils.system_time import STime
