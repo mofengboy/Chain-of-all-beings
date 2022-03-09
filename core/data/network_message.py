@@ -1,3 +1,4 @@
+import hashlib
 from enum import Enum, auto
 
 from core.utils.system_time import STime
@@ -72,6 +73,18 @@ class NetworkMessageType(Enum):
     Vote_Info = auto()
     # 投票信息回复
     Reply_Vote_Info = auto()
+    # 获取主节点列表
+    Get_Main_Node_List = auto()
+    # 获取当前epoch
+    Get_Current_Epoch = auto()
+    # 申请同步众生区块数据
+    Get_Beings_Data = auto()
+    # 数据恢复请求
+    Data_Recovery_Req = auto()
+    # 无法数据恢复（同样没收集完成）
+    No_Data_Recovery = auto()
+    # 数据恢复
+    Data_Recovery = auto()
 
 
 # 网络消息格式
@@ -80,19 +93,21 @@ class NetworkMessage:
         self.message = message
         self.messType = mess_type
         self.clientInfo = {
-            "node_id": "",
             "user_pk": "",
             "send_time": 0
         }
         self.signature = None
 
-    def setCertification(self, node_id, user_pk):
-        self.clientInfo["node_id"] = node_id
+    def setClientInfo(self, user_pk):
         self.clientInfo["user_pk"] = user_pk
         self.clientInfo["send_time"] = STime.getTimestamp()
 
-    def getCertification(self):
-        return self.clientInfo
+    def getCertificationAbstract(self):
+        data = {
+            "client_info": self.clientInfo,
+            "message": self.message
+        }
+        return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
 
     def setSignature(self, signature):
         self.signature = signature

@@ -11,10 +11,10 @@ class DB:
 
     def __initDB(self):
         cursor = self.__DB.cursor()
-        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'beings'")
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'beings_block'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
-            create table beings(
+            create table beings_block(
             id INTEGER PRIMARY KEY,
             user_pk TEXT NOT NULL,
             body BLOB NOT NULL,
@@ -53,14 +53,14 @@ class DB:
     def insertBlockOfBeings(self, user_pk, body, signature):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        insert into beings(user_pk,body,signature,is_review,create_time) values (?,?,?,0,?)
+        insert into beings_block(user_pk,body,signature,is_review,create_time) values (?,?,?,0,?)
         """, (user_pk, body, signature, time.time()))
         self.__DB.commit()
 
     def getBlockListOfBeings(self, count):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,create_time from beings where is_review = 0 limit ?
+        select id,create_time from beings_block where is_review = 0 limit ?
         """, (count,))
         data_list = cursor.fetchall()
         id_list = []
@@ -74,7 +74,7 @@ class DB:
     def getBlockListOfBeingsByOffset(self, offset, count):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,create_time from beings where is_review = 0 and id> ? limit ?
+        select id,create_time from beings_block where is_review = 0 and id> ? limit ?
         """, (offset, count))
         data_list = cursor.fetchall()
         id_list = []
@@ -88,7 +88,7 @@ class DB:
     def getWaitingBlockListOfBeingsByOffset(self, offset, count):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,create_time from beings where is_review = 1 and id > ? limit ?
+        select id,create_time from beings_block where is_review = 1 and id > ? limit ?
         """, (offset, count))
         data_list = cursor.fetchall()
         id_list = []
@@ -102,7 +102,7 @@ class DB:
     def getBlockOfBeingsByDBId(self, db_id):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select * from beings where id = ?
+        select * from beings_block where id = ?
         """, (db_id,))
         res = cursor.fetchone()
         block = {
@@ -119,7 +119,15 @@ class DB:
     def reviewBlockOfBeingsDBId(self, db_id, is_review):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        update beings set is_review = ?
+        update beings_block set is_review = ?
         where id = ?
         """, (is_review, db_id))
         self.__DB.commit()
+
+
+
+
+if __name__ == "__main__":
+    db = DB()
+    c = db.getWaitingBlockCountOfBeingsToSDK()
+    print(c)

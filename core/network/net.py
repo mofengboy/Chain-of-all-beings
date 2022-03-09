@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import threading
 import zmq
@@ -8,11 +9,13 @@ from core.consensus.node_management import NodeManager, ManagerOfReplyNewNode
 from core.consensus.data import ApplicationForm, VoteInformation, WaitGalaxyBlock, ConformationOfGalaxyBlock, \
     NodeDelApplicationForm
 from core.node.main_node import MainNode
+from core.storage.storage_of_beings import StorageOfBeings
 from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.user.user import User
 from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
+from core.utils.serialization import SerializationBeings
 from core.data.network_message import SubscribeTopics, NetworkMessage, NetworkMessageType
 from core.data.block_of_beings import BlockListOfBeings, EmptyBlock
 from core.data.node_info import MainNodeList, NodeInfo
@@ -56,8 +59,8 @@ class Client:
         self.socket.setsockopt(zmq.RCVTIMEO, 5000)
         ip = ""
         for main_node in self.mainNodeList.getNodeList():
-            if main_node["node_info"].nodeId == node_id:
-                ip = main_node["node_info"].nodeIp
+            if main_node["node_info"]["node_id"] == node_id:
+                ip = main_node["node_info"]["node_ip"]
         ip = "tcp://" + ip + ":23334"
         self.socket.connect(ip)
         self.socket.send(data)
@@ -85,7 +88,7 @@ class SUB(threading.Thread):
                  user: User, manager_of_reply_new_node_list: [ManagerOfReplyNewNode],
                  storage_of_galaxy: StorageOfGalaxy, vote_count: VoteCount, getEpoch, getElectionPeriod,
                  manager_of_reply_delete_node_list, main_node: MainNode, reSubscribe, storage_of_temp: StorageOfTemp,
-                 current_main_node, node_del_application_form_list: []):
+                 current_main_node, node_del_application_form_list):
         super().__init__()
         self.name = str(ip)
         self.reSubscribe = reSubscribe
@@ -140,7 +143,9 @@ class SUB(threading.Thread):
             if message[0:len(SubscribeTopics.getBlockTopicOfBeings())] == SubscribeTopics.getBlockTopicOfBeings():
                 block_mess = message[len(SubscribeTopics.getBlockTopicOfBeings()):]
                 if block_mess["mess_type"] == NetworkMessageType.NEW_BLOCK:
-                    block = block_mess["message"]
+                    net_block = block_mess["message"]
+                    # 反序列化
+                    block = SerializationBeings.deserialization(data_of_beings=net_block)
                     # 是否已经存在
                     if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()):
                         continue
@@ -277,7 +282,6 @@ class SUB(threading.Thread):
                 # 检测是否有该节点，没有说明已收到过此消息，已经删除
                 if not self.mainNode.mainNodeList.userPKisExit(user_pk=del_node_user_pk):
                     continue
-
                 # 检测申请节点是否有申请权限
                 if not self.currentMainNode.userPKisExit(user_pk=apply_user_pk):
                     continue
@@ -291,11 +295,14 @@ class SUB(threading.Thread):
 
                 # 检测申请书的投票数量是否达到标准
                 if self.nodeManager.confirmDelNodes(node_del_application_form=node_del_application_form):
-                    # 删除节点
-                    self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
                     # 广播
                     self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
                                          message=node_del_application_form_mess)
+                    # 添加该删除节点的不产生区块的消息
+                    self.mainNode.currentBlockList.addMessageOfNoBlock(
+                        empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
+                    # 删除节点
+                    self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
                     continue
 
                 # 检测自己是否收到该区块
@@ -303,10 +310,9 @@ class SUB(threading.Thread):
                     if self.mainNode.currentBlockList.userPkIsBlock(user_pk=del_node_user_pk):
                         block = self.mainNode.currentBlockList.getBlockByUserPk(user_pk=del_node_user_pk)
                         network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=block)
-                        network_message.setCertification(node_id=self.user.getUserPKString()[0:16],
-                                                         user_pk=self.user.getUserPKString())
-                        user_signature = self.user.sign(message=str(network_message.getCertification()).encode("utf-8"))
-                        network_message.setSignature(user_signature)
+                        network_message.setClientInfo(user_pk=self.user.getUserPKString())
+                        signature = self.user.sign(message=str(network_message.getCertificationAbstract()).encode("utf-8"))
+                        network_message.setSignature(signature)
                         self.client.sendMessageByNodeID(node_id=apply_user_pk[0:16],
                                                         data=str(network_message.getNetMessage()).encode("utf-8"))
                     else:
@@ -372,7 +378,7 @@ class SUB(threading.Thread):
 class Server(threading.Thread):
     def __init__(self, user: User, manager_of_reply_new_node_list: [ManagerOfReplyNewNode],
                  manager_of_reply_delete_node_list, pub: PUB, main_node: MainNode, storage_of_temp: StorageOfTemp,
-                 storage_of_galaxy: StorageOfGalaxy,
+                 storage_of_galaxy: StorageOfGalaxy, storage_of_beings: StorageOfBeings,
                  wait_galaxy_block: WaitGalaxyBlock, vote_count: VoteCount, getEpoch, getElectionPeriod,
                  newBlockOfGalaxy, current_main_node):
         super().__init__()
@@ -387,6 +393,7 @@ class Server(threading.Thread):
         self.mainNode = main_node
         self.mainNodeList = self.mainNode.mainNodeList
         self.storageOfTemp = storage_of_temp
+        self.storageOfBeings = storage_of_beings
         self.storageOfGalaxy = storage_of_galaxy
         self.waitGalaxyBlock = wait_galaxy_block
         self.voteCount = vote_count
@@ -415,6 +422,24 @@ class Server(threading.Thread):
                 print(f"Received request: {message}")
                 net_message = literal_eval(bytes(message).decode())
                 mess_type = net_message["mess_type"]
+
+                # 获取主节点列表的请求、当前Epoch请求、数据同步的请求不验证签名
+                # 获取主节点列表请求
+                if mess_type == NetworkMessageType.Get_Main_Node_List:
+                    node_list = self.mainNode.mainNodeList.getNodeList()
+                    self.socket.send((str(node_list).encode("utf-8")))
+                    continue
+                # 当前Epoch请求
+                if mess_type == NetworkMessageType.Get_Current_Epoch:
+                    self.socket.send(self.getEpoch())
+                    continue
+                # 数据同步请求
+                if mess_type == NetworkMessageType.Get_Beings_Data:
+                    start, end = net_message["message"]
+                    block_list = self.storageOfBeings.getBlocksByEpoch(start=start, end=end)
+                    self.socket.send(data=str(block_list).encode("utf-8"))
+                    continue
+
                 # 检查发送方签名，核对对方是否为主节点
                 # 签名有效期为八秒
                 client_info = net_message["client_info"]
@@ -425,8 +450,13 @@ class Server(threading.Thread):
                 if not self.mainNode.mainNodeList.userPKisExit(user_pk=client_info["user_pk"]):
                     # 发送方不是主节点
                     continue
+                data = {
+                    "client_info": client_info,
+                    "message": net_message["message"]
+                }
+                certification_abstract = hashlib.sha256(str(data).encode("utf-8")).hexdigest()
                 if not CipherSuites.verify(pk=client_info["user_pk"], signature=signature,
-                                           message=str(client_info).encode("utf-8")):
+                                           message=str(certification_abstract).encode("utf-8")):
                     # 签名验证失败
                     continue
 
@@ -541,15 +571,30 @@ class Server(threading.Thread):
                     user_pk = self.user.getUserPKString()
                     if self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
                         block = self.mainNode.currentBlockList.getBlockByUserPk(user_pk=user_pk)
-                        network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=block)
+                        net_block = SerializationBeings.serialization(block_of_beings=block)
+                        network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=net_block)
                         self.socket.send(data=str(network_message.getNetMessage()).encode("utf-8"))
                     else:
                         network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=None)
-                        self.socket.send(str(network_message).encode("utf-8"))
+                        self.socket.send(str(network_message.getNetMessage()).encode("utf-8"))
+
+                # 数据恢复
+                if mess_type == NetworkMessageType.Data_Recovery_Req:
+                    # 若此时没有收集完成，返回false消息
+                    epoch = net_message["message"]
+                    if self.getEpoch() <= epoch:
+                        network_message = NetworkMessage(NetworkMessageType.No_Data_Recovery, message=None)
+                        self.socket.send(str(network_message.getNetMessage()).encode("utf-8"))
+                    else:
+                        block_list_of_beings = self.storageOfBeings.getBlocksByEpoch(start=epoch, end=epoch + 1)
+                        network_message = NetworkMessage(NetworkMessageType.Data_Recovery, message=block_list_of_beings)
+                        self.socket.send(str(network_message.getNetMessage()).encode("utf-8"))
 
                 # 新区块消息
                 if mess_type == NetworkMessageType.NEW_BLOCK:
-                    block = literal_eval(net_message["message"])
+                    net_block = literal_eval(net_message["message"])
+                    # 反序列化
+                    block = SerializationBeings.deserialization(data_of_beings=net_block)
                     # 检测自己是否收到了该区块
                     if self.mainNode.currentBlockList.userPkIsExit(user_pk=block.getUserPk()[1]):
                         continue
@@ -599,7 +644,6 @@ class Server(threading.Thread):
                     self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
 
             # 其他消息类型
-
             except Exception:
                 # 非规定数据结构
                 pass

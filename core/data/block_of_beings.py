@@ -3,7 +3,8 @@ from core.user.user import User
 
 
 class BlockOfBeings(Block):
-    def __init__(self, epoch, prev_block_header, pre_block, user_pk, body_signature, body: bytes):
+    def __init__(self, body: bytes, epoch=None, prev_block_header=None, pre_block=None, user_pk=None,
+                 body_signature=None):
         super().__init__(epoch, "b", user_pk)
         self.setPrevBlockHeader(prev_block_header)
         self.setPrevBlock(pre_block)
@@ -40,6 +41,10 @@ class BlockListOfBeings:
         self.list = []
         self.listOfNoBlock = []
 
+    def reset(self):
+        self.list = []
+        self.listOfNoBlock = []
+
     def getCount(self):
         return len(self.list) + len(self.listOfNoBlock)
 
@@ -64,12 +69,12 @@ class BlockListOfBeings:
 
     def getBlockByUserPk(self, user_pk) -> BlockOfBeings:
         for block in self.list:
-            if block.getUserPk() == user_pk:
+            if block.getUserPk()[1] == user_pk:
                 return block
 
     def userPkIsExit(self, user_pk):
         for block in self.list:
-            if block.getUserPk() == user_pk:
+            if block.getUserPk()[1] == user_pk:
                 return True
         for empty_block in self.listOfNoBlock:
             if user_pk == empty_block.userPk:
@@ -78,7 +83,7 @@ class BlockListOfBeings:
 
     def userPkIsBlock(self, user_pk):
         for block in self.list:
-            if block.getUserPk() == user_pk:
+            if block.getUserPk()[1] == user_pk:
                 return True
         return False
 

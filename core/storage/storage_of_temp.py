@@ -17,13 +17,27 @@ class StorageOfTemp(Sqlite):
         """, (user_pk, body_signature, str(body).encode("utf-8"), create_time))
         self.tempConn.commit()
 
+    def saveBatchData(self, beings_list):
+        create_time = STime.getTimestamp()
+        cursor = self.tempConn.cursor()
+        data_list = []
+        for beings in beings_list:
+            data_list.append(
+                (beings["user_pk"], beings["body_signature"], str(beings["body"]).encode("utf-8"), create_time)
+            )
+        cursor.executemany("""
+        insert into block(user_pk, body_signature, body, is_release, create_time) 
+        values (?,?,?,0,?)
+        """, data_list)
+        self.tempConn.commit()
+
     def getTopData(self):
         cursor = self.tempConn.cursor()
-        res = cursor.execute("""
+        cursor.execute("""
         select id,user_pk,body_signature,body from block 
         where is_release = 0 limit 1
         """)
-        res = next(res)
+        res = cursor.fetchone()
         current_id = res[0]
         data = {
             "user_pk": res[1],
@@ -31,28 +45,28 @@ class StorageOfTemp(Sqlite):
             "body": res[3]
         }
         cursor.execute("""
-        update block set is_release = 1 where id = (?)
-        """, current_id)
+        update block set is_release = 1 where id = ?
+        """, (current_id,))
         self.tempConn.commit()
         return data
 
     # 查询待发布的数据数量
     def getDataCount(self):
         cursor = self.tempConn.cursor()
-        res = cursor.execute("""
+        cursor.execute("""
         select count(*) from block where is_release = 0
         """)
-        res = next(res)
+        res = cursor.fetchone()
         data_count = res[0]
         return data_count
 
     # 查询待审核的新节点数量
     def getCountOfNodeApply(self):
         cursor = self.tempConn.cursor()
-        res = cursor.execute("""
+        cursor.execute("""
         select count(*) from node_join where is_audit = 0
         """)
-        res = next(res)
+        res = cursor.fetchone()
         data_count = res[0]
         return data_count
 

@@ -1,8 +1,10 @@
 import logging
 from ast import literal_eval
 
+from core.consensus.block_generate import NewBlockOfBeingsByExist
 from core.storage.sqlite import Sqlite
 from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
+from core.utils.serialization import SerializationBeings
 
 logger = logging.getLogger("main")
 
@@ -62,13 +64,29 @@ class StorageOfBeings(Sqlite):
     # 包括start不包括end
     def getBlocksByEpoch(self, start, end) -> []:
         cursor = self.blockConn.cursor()
-        res = cursor.execute("""
-        select user_pk from beings where epoch >= ? and epoch < ?
+        cursor.execute("""
+        select id, epoch, block_id, user_pk, header, body from beings where epoch >= ? and epoch < ?
         """, (start, end))
-        main_node_user_pk_list = []
-        for user_pk_i in res:
-            main_node_user_pk_list.append(user_pk_i[1])
-        return main_node_user_pk_list
+        res = cursor.fetchall()
+        block_list = []
+        for block_dict in res:
+            block = NewBlockOfBeingsByExist(header=block_dict[4], body=block_dict[5]).getBlock()
+            block_list.append(SerializationBeings.serialization(block_of_beings=block))
+        return block_list
+
+    def saveBatchBlock(self, block_list: [BlockOfBeings]):
+        data_list = []
+        for block in block_list:
+            data_list.append(
+                [block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
+                 str(block.getBlockHeader()).encode("utf-8"),
+                 str(block.body).encode("utf-8")])
+        cursor = self.blockConn.cursor()
+        cursor.executemany("""
+        insert into beings(epoch,block_id,user_pk,header,body) 
+        values(?,?,?,?,?) 
+        """, data_list)
+        self.blockConn.commit()
 
     # 获取当前用户在此范围内的数量
     def getUserCountByEpoch(self, user_pk, start, end):

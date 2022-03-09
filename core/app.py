@@ -1,8 +1,5 @@
 import random
 import logging.config
-import time
-
-import yaml
 from ast import literal_eval
 
 from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
@@ -22,15 +19,19 @@ from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
+from core.utils.sdk import SDK
+from core.utils.serialization import SerializationBeings
+from core.utils.network_request import MainNodeIp
 from core.db.genesis_block import GenesisBlock
+
+logger = logging.getLogger("main")
 
 
 class APP:
     def __init__(self):
         self.currentEpoch = 0  # 当前epoch
         self.electionPeriod = 0  # 选举期次
-        self.managerOfReplyNewNodeList = []  # 新节点申请回复信息管理
-        self.nodeDelApplicationFormList = []  # 申请删除节点以及投票信息列表
+
         self.storageOfBeings = StorageOfBeings()  # 众生区块存储类
         self.storageOfTemp = StorageOfTemp()  # 临时区存储类
         self.storageOfGalaxy = StorageOfGalaxy()  # 银河区块存储类
@@ -40,7 +41,6 @@ class APP:
         self.user.register()
 
         self.mainNode = MainNode(self.user)  # 主节点
-        self.currentMainNode = None  # 当前epoch生成区块的节点列表
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp)  # 票数计算
@@ -49,14 +49,18 @@ class APP:
         self.pub.start()
         self.subList = []  # 订阅列表
         self.client = Client(main_node_list=self.mainNode.mainNodeList)  # 客户端
-        self.server = Server(user=self.user, manager_of_reply_new_node_list=self.managerOfReplyNewNodeList,
+        self.server = Server(user=self.user, manager_of_reply_new_node_list=self.mainNode.managerOfReplyNewNodeList,
                              manager_of_reply_delete_node_list=[], pub=self.pub, main_node=self.mainNode,
                              storage_of_temp=self.storageOfTemp, wait_galaxy_block=self.waitGalaxyBlock,
                              vote_count=self.voteCount, getEpoch=self.getEpoch, storage_of_galaxy=self.storageOfGalaxy,
                              getElectionPeriod=self.getElectionPeriod, newBlockOfGalaxy=self.newBlockOfGalaxy,
-                             current_main_node=self.currentMainNode)  # 服务端
+                             current_main_node=self.mainNode.currentMainNode,
+                             storage_of_beings=self.storageOfBeings)  # 服务端
         self.server.start()
+        # 存储创世区块
         self.storageGenesisBlock()
+        # 后端sdk
+        self.webServerSDK = SDK()
 
     def addEpoch(self):
         self.currentEpoch += 1
@@ -64,21 +68,28 @@ class APP:
     def getEpoch(self):
         return self.currentEpoch
 
+    def setEpoch(self, epoch):
+        self.currentEpoch = epoch
+
     def addElectionPeriod(self):
         self.electionPeriod += 1
 
     def getElectionPeriod(self):
         return self.electionPeriod
 
+    def setElectionPeriod(self, election_period):
+        self.electionPeriod = election_period
+
     # 增加订阅
     def addSub(self, ip):
         sub = SUB(ip=ip, pub=self.pub, blockListOfBeings=self.mainNode.currentBlockList,
                   node_list_of_apply=self.mainNode.nodeListOfApply, user=self.user, vote_count=self.voteCount,
-                  manager_of_reply_new_node_list=self.managerOfReplyNewNodeList, manager_of_reply_delete_node_list=[],
+                  manager_of_reply_new_node_list=self.mainNode.managerOfReplyNewNodeList,
+                  manager_of_reply_delete_node_list=[],
                   main_node=self.mainNode, reSubscribe=self.reSubscribe, storage_of_temp=self.storageOfTemp,
                   getEpoch=self.getEpoch, getElectionPeriod=self.getElectionPeriod,
-                  storage_of_galaxy=self.storageOfGalaxy, current_main_node=self.currentMainNode,
-                  node_del_application_form_list=[], client=self.client)
+                  storage_of_galaxy=self.storageOfGalaxy, current_main_node=self.mainNode.currentMainNode,
+                  node_del_application_form_list=self.mainNode.nodeDelApplicationFormList, client=self.client)
         sub.start()
         self.subList.append(sub)
 
@@ -108,6 +119,65 @@ class APP:
             ip = sub_i.name
             self.delSub(ip)
         logger.info("已删除之前订阅，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
+
+    # 读入主节点列表，通过配置文件提供的种子IP
+    def loadMainNodeListBySeed(self):
+        ip_list = MainNodeIp().getTpList()
+        data = NetworkMessage(mess_type=NetworkMessageType.Get_Main_Node_List, message=None).getNetMessage()
+        for ip in ip_list:
+            try:
+                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
+                self.mainNode.mainNodeList.setNodeList(literal_eval(res))
+                break
+            except Exception as err:
+                logger.warning(err)
+
+    # 通过其他主节点获取当前epoch
+    def getCurrentEpochByOtherMainNode(self):
+        node_ip_list = []
+        for main_node in self.mainNode.mainNodeList.getNodeList():
+            node_ip_list.append(main_node["node_info"]["node_ip"])
+        random.shuffle(node_ip_list)
+        data = NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None).getNetMessage()
+        for ip in node_ip_list:
+            try:
+                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
+                self.setEpoch(res)
+                break
+            except Exception as err:
+                logger.warning(err)
+
+    # 同步区块
+    def synchronizedBlockOfBeings(self):
+        node_ip_list = []
+        for main_node in self.mainNode.mainNodeList.getNodeList():
+            node_ip_list.append(main_node["node_info"]["node_ip"])
+        logger.info("众生区块开始同步")
+        start = 0
+        while True:
+            if start + 10 <= self.getEpoch():
+                end = start + 10
+            else:
+                end = self.getEpoch()
+            data = NetworkMessage(NetworkMessageType.Get_Beings_Data,
+                                  message=[start, end]).getNetMessage()
+            ip = random.choice(node_ip_list)
+            try:
+                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
+                block_list = literal_eval(res)
+                block_list_of_beings = []
+                for block_i in block_list:
+                    block = SerializationBeings.deserialization(block_i)
+                    block_list_of_beings.append(block)
+                self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+                logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
+
+                if end == self.getEpoch():
+                    logger.info("众生区块同步完成")
+                    break
+                start += 10
+            except Exception as err:
+                logger.warning(err)
 
     # 存储创世区块
     def storageGenesisBlock(self):
@@ -210,7 +280,7 @@ class APP:
                                                   application=application_form.application, start_time=start_time,
                                                   main_node_signature=main_node_signature,
                                                   main_node_user_pk=main_node_user_pk)
-        # 统计数据
+        # 创建投票统计
         new_node_id = application_form.nodeInfo["node_id"]
         new_user_pk = application_form.nodeInfo["user_pk"]
         new_node_ip = application_form.nodeInfo["node_ip"]
@@ -219,32 +289,38 @@ class APP:
         manager_of_reply_new_node = ManagerOfReplyNewNode(db_id=application_form.dbID,
                                                           new_node_id=application_form.nodeId, start_time=start_time,
                                                           node_info=node_info)
-        self.managerOfReplyNewNodeList.append(manager_of_reply_new_node)
+        self.mainNode.managerOfReplyNewNodeList.append(manager_of_reply_new_node)
 
         # 全网广播
         self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=application_form)
 
     # 众生区块生成周期
+    # 0-30S
     def startNewEpoch(self):
         logger.info("众生区块生成周期开始，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         # 获取本次产生区块的节点列表
-        self.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
-                                               self.storageOfBeings.getLastBlockByCache()).getNodeList()
-        for node in self.currentMainNode.getNodeList():
+        self.mainNode.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
+                                                        self.storageOfBeings.getLastBlockByCache()).getNodeList()
+        #
+        # 若本次主节点被选中产生区块，则检查暂存区数据数量，若大于0,则直接产生区块，若等于0，则调用后端sdk获取数据。只有在没获得数据的情况，
+        # 才广播不产生区块的消息。
+        # 若本次主节点没有被选中产生区块，则检查暂存区数据数量，若数量大于5，则不进行任何操作，若小于5，则调用后端SDK获取数据。
+        #
+        is_selected = False
+        for node in self.mainNode.currentMainNode.getNodeList():
             # 当前节点是否生成区块
-            if node["node_info"].nodeId == self.mainNode.nodeInfo.nodeId:
+            if node["node_info"]["node_id"] == self.mainNode.nodeInfo.nodeId:
+                is_selected = True
                 logger.info("当前节点已被共识机制选中")
                 # 判断临时存储区是否有数据，若有数据，则生成区块，否则发送不生成区块的消息
-                if self.storageOfTemp.getDataCount() > 0:
+                temp_beings_count = self.storageOfTemp.getDataCount()
+                if (temp_beings_count > 0) or (self.webServerSDK.getBeingsCount() > 0):
                     logger.info("当前节点生成区块")
                     # 生成区块
-                    prev_block_header = []
-                    pre_block = []
-                    for block in self.storageOfBeings.currentBlockListOfBeing.getList():
-                        prev_block_header.append(block.getBlockHeaderSHA256())
-                        pre_block.append(block.getBlockSHA256())
-
-                    epoch = self.storageOfBeings.currentBlockListOfBeing.getList()[0].getEpoch()
+                    if temp_beings_count <= 0:
+                        logger.info("调用web server SDK 读入数据")
+                        webserver_beings_list = self.webServerSDK.getBeings()
+                        self.storageOfTemp.saveBatchData(webserver_beings_list)
 
                     data = self.storageOfTemp.getTopData()
                     body = data["body"]
@@ -252,12 +328,20 @@ class APP:
                     main_node_user_signature = self.user.sign(body)
                     body_signature = [data["body_signature"], main_node_user_signature]
 
+                    prev_block_header = []
+                    pre_block = []
+                    for block in self.storageOfBeings.currentBlockListOfBeing.list:
+                        prev_block_header.append(block.getBlockHeaderSHA256())
+                        pre_block.append(block.getBlockSHA256())
+
+                    epoch = self.getEpoch()
                     new_block = NewBlockOfBeings(user_pk=user_pk, body_signature=body_signature, body=body, epoch=epoch,
                                                  pre_block=pre_block, prev_block_header=prev_block_header).getBlock()
 
+                    serialization_block = SerializationBeings.serialization(block_of_beings=new_block)
                     # 广播消息
                     block_mess = NetworkMessage(mess_type=NetworkMessageType.NEW_BLOCK,
-                                                message=new_block).getNetMessage()
+                                                message=serialization_block).getNetMessage()
                     self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                     # 保存至当前区块列表
                     self.mainNode.currentBlockList.addBlock(block=new_block)
@@ -271,15 +355,21 @@ class APP:
                     self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=mess.getNetMessage())
                     # 保存至当前区块列表
                     self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
+                break
+            # 没被选中
+        if not is_selected:
+            if self.storageOfTemp.getDataCount() < 5:
+                webserver_beings_list = self.webServerSDK.getBeings()
+                self.storageOfTemp.saveBatchData(webserver_beings_list)
 
-    # 新周期开始15秒后，检查并执行
+    # 新周期开始30秒后，检查并执行
     def startCheckAndApplyDeleteNode(self):
-        logger.info("众生区块生成周期开始15秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
-        if self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
+        logger.info("众生区块生成周期开始30秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        if self.mainNode.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
             # 该节点为本次发布节点的其中之一
-            for node in self.currentMainNode.getNodeList():
-                user_pk = node["node_info"].userPk
-                node_id = node["node_info"].nodeId
+            for node in self.mainNode.currentMainNode.getNodeList():
+                user_pk = node["node_info"]["user_pk"]
+                node_id = node["node_info"]["node_id"]
                 # 检查是否存在应该收到，但是未收到的区块
                 if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
                     logger.info("存在应该产生区块，但是未收到信息的节点")
@@ -294,15 +384,18 @@ class APP:
                     # 广播申请删除该节点的消息
                     self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
                                          message=node_del_application_form.getMessage())
+                    # 暂存该申请书
+                    # 在遇到其他节点申请时直接同意或收到区块后取消
+                    self.mainNode.nodeDelApplicationFormList.append(node_del_application_form)
 
-    # 新周期开始20秒后执行
+    # 新周期开始40秒后执行
     def startCheckAndGetBlock(self):
-        logger.info("众生区块生成周期开始20秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
-        if not self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
+        logger.info("众生区块生成周期开始40秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        if not self.mainNode.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
             # 该节点不负责本次区块生成
-            for node in self.currentMainNode.getNodeList():
-                user_pk = node["node_info"].userPk
-                node_id = node["node_info"].nodeId
+            for node in self.mainNode.currentMainNode.getNodeList():
+                user_pk = node["node_info"]["user_pk"]
+                node_id = node["node_info"]["node_id"]
                 # 检查是否存在应该收到，但是未收到的区块
                 if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
                     logger.info("存在应该产生区块，但是未收到信息的节点")
@@ -310,9 +403,9 @@ class APP:
                     # 直接发送请求，获取生成的区块
                     network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
                                                      message=self.getEpoch())
-                    network_message.setCertification(node_id=self.user.getUserPKString()[0:16],
-                                                     user_pk=self.user.getUserPKString())
-                    signature = self.user.sign(message=str(network_message.getCertification()).encode("utf-8"))
+                    network_message.setClientInfo(user_pk=self.user.getUserPKString())
+                    signature = self.user.sign(message=str(network_message.getCertificationAbstract()).encode("utf-8"))
+                    network_message.setSignature(signature)
                     network_message.setSignature(signature)
                     res = self.client.sendMessageByNodeID(node_id=node_id,
                                                           data=str(network_message.getNetMessage()).encode("utf-8"))
@@ -323,19 +416,61 @@ class APP:
                         self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
 
     # 检查是否收集完成所有区块，收集完成后保存到数据库
-    # 后五秒，每秒检查一次
-    def startCheckAndSave(self):
-        logger.info("众生区块生成周期开始25秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+    # 后10秒，每秒检查一次
+    def startCheckAndSave(self) -> bool:
+        logger.info("众生区块生成周期开始50秒后，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         is_finish = True
-        for node in self.currentMainNode.getNodeList():
-            user_pk = node["node_info"].userPk
-            node_id = node["node_info"].nodeId
+        for node in self.mainNode.currentMainNode.getNodeList():
+            user_pk = node["node_info"]["user_pk"]
+            node_id = node["node_info"]["node_id"]
             # 检查是否存在应该收到，但是未收到的区块
             if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
                 is_finish = False
                 logger.info("存在未收到的区块,应产生该区块的节点ID为：" + str(node_id))
         if is_finish:
             self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=self.mainNode.currentBlockList)
+            # 存储完成，重置当前区块列表，准备下一个epoch收集
+            self.mainNode.currentBlockList.reset()
+        return is_finish
+
+    # 开始数据恢复阶段
+    def startDataRecovery(self):
+        logger.info("进入数据恢复阶段")
+        ip_list = []
+        for node in self.mainNode.mainNodeList.getNodeList():
+            ip_list.append(node["node_info"]["node_ip"])
+        i = 0
+        last_block_id = ""
+        while True:
+            ip = random.choice(ip_list)
+            net_mess = NetworkMessage(NetworkMessageType.Data_Recovery_Req, message=self.getEpoch())
+            # 增加签名
+            net_mess.setClientInfo(user_pk=self.user.getUserPKString())
+            signature = self.user.sign(message=str(net_mess.getCertificationAbstract()).encode("utf-8"))
+            net_mess.setSignature(signature)
+            res = self.client.sendMessageByIP(ip, data=str(net_mess.getNetMessage()).encode("utf-8"))
+            data = literal_eval(res)
+            if data["mess_type"] == NetworkMessageType.No_Data_Recovery:
+                continue
+            if data["mess_type"] == NetworkMessageType.Data_Recovery:
+                block_list = data["message"]
+                block_id = ""
+                for block_i in block_list:
+                    block = SerializationBeings.deserialization(data_of_beings=block_i)
+                    block_id += block.getBlockID()
+                if last_block_id == block_id:
+                    i += 1
+                else:
+                    last_block_id = block_id
+                if i >= 3:
+                    block_list_of_beings = BlockListOfBeings()
+                    for block_i in block_list:
+                        block = SerializationBeings.deserialization(data_of_beings=block_i)
+                        block_list_of_beings.addBlock(block)
+
+                    self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=block_list_of_beings)
+                    logging.info("数据恢复成功")
+                    break
 
     # 生成银河区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:
@@ -358,35 +493,3 @@ class APP:
                                                pre_block=pre_block,
                                                prev_block_header=prev_block_header).getBlock()
         return new_block_of_galaxy
-
-
-if __name__ == "__main__":
-    with open('./config/log_config.yaml', 'r') as f:
-        config = yaml.safe_load(f.read())
-        logging.config.dictConfig(config)
-    logger = logging.getLogger("main")
-
-    app = APP()
-    logger.info("全体初始化完成")
-    # 获取主节点列表
-    # 将自己添加到主节点列表
-    app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
-
-    # 订阅
-    app.reSubscribe()
-    # 同步数据
-    # 创世区块
-
-    # 周期开始
-    while True:
-        app.startNewEpoch()
-        time.sleep(3)
-        app.startCheckAndApplyDeleteNode()
-        time.sleep(3)
-        app.startCheckAndGetBlock()
-        time.sleep(3)
-        app.startCheckAndSave()
-
-        app.addEpoch()
-        time.sleep(5)
-    pass

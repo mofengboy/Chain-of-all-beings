@@ -34,6 +34,9 @@ class MainNodeList:
     def getNodeList(self):
         return self.__nodeList
 
+    def setNodeList(self, node_list):
+        self.__nodeList = node_list
+
     def getNodeCount(self):
         return len(self.__nodeList)
 
@@ -51,7 +54,7 @@ class MainNodeList:
 
     def addMainNode(self, node_info: NodeInfo):
         self.__nodeList.append({
-            "node_info": node_info,
+            "node_info": node_info.getInfo(),
             "update_time": node_info.createTime
         })
         # 排序
@@ -60,14 +63,14 @@ class MainNodeList:
 
     def setMainNodeUpdateTimeByNodeId(self, update_time, node_id):
         for main_node in self.__nodeList:
-            if main_node["node_info"].nodeId == node_id:
+            if main_node["node_info"]["node_id"] == node_id:
                 main_node["update_time"] = update_time
                 break
         logger.info("节点上次生成区块时间已更新，节点ID为：" + node_id + ",时间更新为：" + str(update_time))
 
     def delMainNodeById(self, node_id):
         for i in range(len(self.__nodeList)):
-            if self.__nodeList[i]["node_info"].nodeId == node_id:
+            if self.__nodeList[i]["node_info"]["node_id"] == node_id:
                 del self.__nodeList[i]
 
         # 排序
@@ -77,17 +80,17 @@ class MainNodeList:
 
     def isExit(self, ip):
         for main_node in self.__nodeList:
-            if main_node["node_info"].nodeIp == ip:
+            if main_node["node_info"]["node_ip"] == ip:
                 return True
         return False
 
     def userPKisExit(self, user_pk):
         for main_node in self.__nodeList:
-            if main_node["node_info"].userPk == user_pk:
+            if main_node["node_info"]["user_pk"] == user_pk:
                 return True
         return False
 
 
 # 获取nodeId的静态函数
 def get_node_id(node_list):
-    return node_list["node_info"].nodeId
+    return node_list["node_info"]["node_id"]
