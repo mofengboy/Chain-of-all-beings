@@ -1,10 +1,12 @@
 from flask import Flask, request
 from flask_cors import cross_origin
+import threading
 
 from server.database import DB
 from server.models import Auth, BlockOfBeings
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
+from server.config import Allow_Url_List
 
 api = Flask(__name__)
 db = DB()
@@ -13,13 +15,14 @@ blockOfBeings = BlockOfBeings(db)
 
 
 @api.route('/')
+@cross_origin()
 def hello_world():
     http_message = HttpMessage(is_success=True, data="众生之链")
     return http_message.getJson()
 
 
 @api.route('/block/beings/save', methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def block_of_beings_save():
     """申请创建众生区块
         Content-Type: application/json
@@ -66,7 +69,7 @@ def block_of_beings_save():
 
 # 获取验证码
 @api.route("/captcha/get", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def get_captcha():
     """
     Content-Type: application/json
@@ -87,7 +90,7 @@ def get_captcha():
 
 # 以下为后台接口，需要权限认证
 @api.route("/backstage/login", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def login():
     """后台用户登录
         Content-Type: application/json
@@ -129,7 +132,7 @@ def login():
 
 
 @api.route("/backstage/token/verify", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def verifyToken():
     """验证token
         Content-Type: application/json
@@ -157,7 +160,7 @@ def verifyToken():
 
 
 @api.route("/backstage/beings_list/get", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def getBeingList():
     """获取待审核众生区块列表
         Content-Type: application/json
@@ -201,7 +204,7 @@ def getBeingList():
 
 
 @api.route("/backstage/waiting_beings_list/get", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def getWaitingBeingList():
     """获取待发布众生区块列表
         Content-Type: application/json
@@ -237,7 +240,7 @@ def getWaitingBeingList():
 
 
 @api.route("/backstage/beings/get", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def getBeings():
     """获取众生区块详细信息
         Content-Type: application/json
@@ -269,7 +272,7 @@ def getBeings():
 
 
 @api.route("/backstage/beings/audit", methods=['POST'])
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def auditBeings():
     """审核众生区块
         Content-Type: application/json
@@ -300,6 +303,11 @@ def auditBeings():
         print(err)
         http_message = HttpMessage(is_success=False, data="参数错误")
         return http_message.getJson()
+
+
+class WebServer(threading.Thread):
+    def run(self) -> None:
+        api.run()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 <template>
   <div class="icp">
-    ICP证：鲁ICP备15022835号-1
+    <el-link href="https://beian.miit.gov.cn">ICP证：鲁ICP备15022835号-5</el-link>
   </div>
 </template>
 

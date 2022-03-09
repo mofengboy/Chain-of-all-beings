@@ -1,12 +1,13 @@
 import logging.config
 import time
-
 import yaml
 
 from core.app import APP
 from core.utils.system_time import STime
+from server.api import WebServer
 
-if __name__ == "__main__":
+
+def run():
     # 日志
     with open('./config/log_config.yaml', 'r') as f:
         config = yaml.safe_load(f.read())
@@ -21,6 +22,7 @@ if __name__ == "__main__":
         exit()
 
     # 启动后端服务（若已经定制化后端，此处可修改）
+    WebServer().start()
 
     # 初始化核心 core
     app = APP()
@@ -37,9 +39,14 @@ if __name__ == "__main__":
 
     # 循环获取主节点列表，检查自己是否在主节点列表内
     # 只有当自己成为主节点列表时，才继续执行，否则在此处等待，即此时只有读取权限，没有写入权限
+    # 不再主节点列表时，可接受订阅数据
+    while not app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
+        logger.info("当前节点不是主节点")
+        time.sleep(1)
 
     # # DEBUG模式 将自己添加到主节点列表
-    app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+    # 仅限DEBUG模式，线上模式需要申请加入主节点
+    # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
     # #
 
     # 成为主节点后周期开始
@@ -101,3 +108,7 @@ if __name__ == "__main__":
                 # 此处可能还有未考虑到的情况，例如进行数据恢复时，错过了下一个或下下一个..众生区块生存周期，如何再次进行数据恢复。
 
         time.sleep(1)
+
+
+if __name__ == "__main__":
+    run()

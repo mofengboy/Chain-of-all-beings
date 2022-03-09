@@ -189,6 +189,7 @@ class APP:
 
     # 创建推荐区块数据结构，准备接受其他节点的投票信息
     def recommendedBlock(self, block_id):
+        # 检查数据库数据，是否有推荐区块
         self.waitGalaxyBlock.addGalaxyBlock(block_id=block_id)
 
     # 简单节点用户发起的投票

@@ -32,7 +32,7 @@ class STime:
     @staticmethod
     def getNTPTime():
         c = ntplib.NTPClient()
-        response = c.request('pool.ntp.org')
+        response = c.request('cn.pool.ntp.org')
         return int(str(response.tx_time * 1000)[0:13])
 
 

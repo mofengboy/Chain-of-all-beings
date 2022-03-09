@@ -1,5 +1,6 @@
 import {createApp} from 'vue'
 import App from './App.vue'
+import config from "./config"
 
 const app = createApp(App)
 
@@ -25,7 +26,7 @@ app.config.globalProperties.$worker = vueWorker
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 
-axios.defaults.baseURL = 'http://127.0.0.1:5000';
+axios.defaults.baseURL = config.server_url;
 
 app.use(VueAxios, axios)
 
