@@ -1,13 +1,14 @@
 import sys
+import os
 import logging.config
 import time
 import yaml
 
 sys.path.append("../")
+sys.path.append(os.path.abspath("."))
 
 from core.app import APP
 from core.utils.system_time import STime
-from server.api import WebServer
 
 
 def run():
@@ -23,9 +24,6 @@ def run():
         # 抛出错误
         logger.info("系统时间与NTP服务器时间不得超过1秒")
         exit()
-
-    # 启动后端服务（若已经定制化后端，此处可修改）
-    WebServer().start()
 
     # 初始化核心 core
     app = APP()

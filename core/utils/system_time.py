@@ -1,5 +1,8 @@
+import logging
 import time
 import ntplib
+
+logger = logging.getLogger("main")
 
 
 class STime:
@@ -32,8 +35,15 @@ class STime:
     @staticmethod
     def getNTPTime():
         c = ntplib.NTPClient()
-        response = c.request('cn.pool.ntp.org')
-        return int(str(response.tx_time * 1000)[0:13])
+        for i in range(5):
+            try:
+                response = c.request('cn.pool.ntp.org')
+                return int(str(response.tx_time * 1000)[0:13])
+            except Exception as err:
+                logger.warning(err)
+                logger.info("第" + str(i + 1) + "次尝试重连ntp服务器")
+        logger.warning("时间校对失败！")
+        return STime.getTimestamp()
 
 
 if __name__ == "__main__":

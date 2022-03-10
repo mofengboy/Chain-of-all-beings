@@ -1,6 +1,11 @@
+import os
+import sys
 from flask import Flask, request
 from flask_cors import cross_origin
 import threading
+
+sys.path.append("../")
+sys.path.append(os.path.abspath("."))
 
 from server.database import DB
 from server.models import Auth, BlockOfBeings

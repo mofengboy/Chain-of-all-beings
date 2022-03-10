@@ -1,5 +1,8 @@
 import sqlite3
 from abc import ABC
+import sys
+import os
+
 
 
 class Sqlite(ABC):
@@ -125,7 +128,3 @@ class Sqlite(ABC):
             )
             """)
             self.tempConn.commit()
-
-
-if __name__ == "__main__":
-    sqlite = Sqlite()

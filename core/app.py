@@ -22,7 +22,7 @@ from core.utils.system_time import STime
 from core.utils.sdk import SDK
 from core.utils.serialization import SerializationBeings
 from core.utils.network_request import MainNodeIp
-from core.db.genesis_block import GenesisBlock
+from core.data.genesis_block import GenesisBlock
 
 logger = logging.getLogger("main")
 

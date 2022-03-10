@@ -2,7 +2,7 @@ from ast import literal_eval
 
 from core.data.block_of_beings import BlockOfBeings
 from core.consensus.block_generate import NewBlockOfBeingsByExist
-from core.db.genesis_block import GenesisBlock
+from core.data.genesis_block import GenesisBlock
 
 
 # 众生区块对象序列化与反序列化
