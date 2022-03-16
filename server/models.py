@@ -2,6 +2,7 @@ import time
 
 from server.utils.captcha import Captcha
 from server.utils.ciphersuites import CipherSuites
+from server.utils.core_sdk import DBOfTemp
 from server.database import DB
 import hashlib
 
@@ -100,3 +101,43 @@ class BlockOfBeings:
 
     def reviewBlock(self, db_id, is_review):
         self.db.reviewBlockOfBeingsDBId(db_id=db_id, is_review=is_review)
+
+
+class MainNodeManager:
+    def __init__(self, db: DB):
+        self.DBOfTemp = DBOfTemp()
+        self.db = db
+
+    # 获取该主节点接受到的等待审核的申请表列表id
+    def getApplicationListOfMainNode(self, offset, count):
+        id_list = self.db.getApplicationFormByOffset(offset, count)
+        return id_list
+
+    # 获取申请表
+    def getApplicationFormByDBId(self, db_id):
+        application_form_dict = self.db.getApplicationFormByDBId(db_id)
+        return application_form_dict
+
+    # 审核申请表
+    def reviewApplicationFormByDBId(self, db_id, is_review):
+        self.db.reviewApplicationFormByDBId(db_id, is_review)
+
+    # 增加申请表列表
+    def addApplicationForm(self, node_id, user_pk, node_ip, node_create_time, node_signature, application
+                           , application_signature, remarks):
+        self.db.insertApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature, application,
+                                      application_signature, remarks)
+
+    # 获取从其他主节点接受到的等待审核的申请表列表id
+    def getApplicationOfOtherMainNode(self, offset, count):
+        id_list = self.DBOfTemp.getListOfWaitingApplicationForm(offset, count)
+        return id_list
+
+    # 获取从其他主节点接受到的等待审核的申请表
+    def getOtherNodeApplicationFormByDBId(self, db_id):
+        application_form = self.DBOfTemp.getWaitingApplicationForm(db_id)
+        return application_form
+
+    # 审核从其他主节点接受到的等待审核的申请表
+    def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
+        self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)

@@ -22,18 +22,23 @@ def run():
     # 校对系统时间，系统时间与NTP服务器时间不得超过1秒
     if not STime.proofreadingTime():
         # 抛出错误
-        logger.info("系统时间与NTP服务器时间不得超过1秒")
+        logger.info("系统时间与NTP服务器时间不得超过1秒,请核对系统时间")
         exit()
 
     # 初始化核心 core
     app = APP()
     logger.info("全体初始化完成")
 
+    # # DEBUG模式 将自己添加到主节点列表
+    # # 仅限DEBUG模式，线上模式需要申请加入主节点
+    # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+    # #
+
     # 获取主节点列表（读取配置文件）
-    # app.loadMainNodeListBySeed()
+    app.loadMainNodeListBySeed()
     # 同步数据
-    # app.getCurrentEpochByOtherMainNode()
-    # app.synchronizedBlockOfBeings()
+    app.getCurrentEpochByOtherMainNode()
+    app.synchronizedBlockOfBeings()
 
     # 订阅
     app.reSubscribe()
@@ -41,14 +46,17 @@ def run():
     # 循环获取主节点列表，检查自己是否在主节点列表内
     # 只有当自己成为主节点列表时，才继续执行，否则在此处等待，即此时只有读取权限，没有写入权限
     # 不再主节点列表时，可接受订阅数据
+    i = 0
     while not app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
-        logger.info("当前节点不是主节点")
-        time.sleep(1)
-
-    # # DEBUG模式 将自己添加到主节点列表
-    # 仅限DEBUG模式，线上模式需要申请加入主节点
-    # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
-    # #
+        time.sleep(2)
+        i += 1
+        if i >= 15:
+            logger.info("当前节点不是主节点,请在其他主节点处进行申请")
+            logger.info("节点信息如下：")
+            logger.info(app.mainNode.getNodeInfo())
+            logger.info("节点签名如下：")
+            logger.info(app.mainNode.getNodeSignature())
+            i = 0
 
     # 成为主节点后周期开始
     phase1 = False

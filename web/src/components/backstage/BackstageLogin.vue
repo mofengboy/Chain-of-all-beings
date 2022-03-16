@@ -60,6 +60,7 @@ export default {
           .then((res) => {
             this.captchaSrc = res.data.data
           })
+      this.captchaInput = ""
     },
     verifyToken: function () {
       const _this = this
@@ -89,7 +90,6 @@ export default {
         }),
         headers: {"content-type": "	application/json"}
       }).then((res) => {
-        console.log(res)
         _this.isLogin = res.data["is_success"];
         _this.token = res.data["data"]
         if (!_this.isLogin) {

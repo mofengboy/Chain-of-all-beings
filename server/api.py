@@ -8,7 +8,7 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from server.database import DB
-from server.models import Auth, BlockOfBeings
+from server.models import Auth, BlockOfBeings, MainNodeManager
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -17,6 +17,7 @@ api = Flask(__name__)
 db = DB()
 auth = Auth(db=db)
 blockOfBeings = BlockOfBeings(db)
+mainNodeManager = MainNodeManager(db)
 
 
 @api.route('/')
@@ -93,6 +94,55 @@ def get_captcha():
     return http_message.getJson()
 
 
+@api.route("/main_node/new_apply/save", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def saveNewApply():
+    """保存新申请书
+    Content-Type: application/json
+    {
+      "captcha":{
+              "uuid":"",
+              "word"：“”
+        }
+      "node_id":str,
+      "user_pk": str,
+      "node_ip": str,
+      "node_create_time": str,
+      "node_signature": str,
+      "application": str,
+      "application_signature": str,
+      "remarks": str,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ""
+    """
+    try:
+        info = request.get_json()
+        # 验证码
+        captcha = info["captcha"]
+        if not auth.verifyCaptcha(uuid=captcha["uuid"], word=captcha["word"]):
+            http_message = HttpMessage(is_success=False, data="验证码错误")
+            return http_message.getJson()
+        node_id = info["node_id"]
+        user_pk = info["user_pk"]
+        node_ip = info["node_ip"]
+        node_create_time = info["node_create_time"]
+        node_signature = info["node_signature"]
+        application = info["application"]
+        application_signature = info["application_signature"]
+        remarks = info["remarks"]
+        mainNodeManager.addApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature,
+                                           application, application_signature, remarks)
+        http_message = HttpMessage(is_success=True, data="保存成功")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 # 以下为后台接口，需要权限认证
 @api.route("/backstage/login", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
@@ -124,6 +174,7 @@ def login():
             username = info["username"]
             password = info["password"]
             token = auth.generateTokenByUsernameAndPassword(username=username, password=password)
+            print(token)
             if token == "false":
                 http_message = HttpMessage(is_success=False, data="用户名或密码错误")
                 return http_message.getJson()
@@ -310,10 +361,206 @@ def auditBeings():
         return http_message.getJson()
 
 
+@api.route("/backstage/main_node/new_apply_list/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getNewApplyList():
+    """获取通过此主节点申请成为主节点的申请书列表
+    Content-Type: application/json
+    {
+      "token":"",
+      "offset":int,
+      "count": int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": [{'db_id': 1, 'crate_time': '16453453280.98137'}]
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        count = info["count"]
+        offset = info["offset"]
+        res = mainNodeManager.getApplicationListOfMainNode(offset, count)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/main_node/other_apply_list/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getOtherApplyList():
+    """获取通过其他主节点申请成为主节点的申请书列表
+    Content-Type: application/json
+    {
+      "token":"",
+      "offset":int,
+      "count": int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": [{'db_id': 1, 'crate_time': '16453453280.98137'}]
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        count = info["count"]
+        offset = info["offset"]
+        res = mainNodeManager.getApplicationOfOtherMainNode(offset, count)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/main_node/new_apply/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getNewApply():
+    """获取通过此主节点申请成为主节点的申请书
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {'db_id': 1, 'crate_time': '16453453280.98137'....}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        res = mainNodeManager.getApplicationFormByDBId(db_id)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/main_node/other_apply/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getOtherApply():
+    """获取通过其他主节点申请成为主节点的申请书
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {'db_id': 1, 'crate_time': '16453453280.98137'....}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        res = mainNodeManager.getOtherNodeApplicationFormByDBId(db_id)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/main_node/new_apply/review", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def reviewNewApply():
+    """审核通过当前主节点申请成为主节点的申请书
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int,
+      "review":int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ”“
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        review = info["review"]
+        mainNodeManager.reviewApplicationFormByDBId(db_id, review)
+        http_message = HttpMessage(is_success=True, data="审核完成")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/main_node/other_apply/review", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def reviewOtherApply():
+    """审核通过其他主节点申请成为主节点的申请书
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int,
+      "review":int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ”“
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        review = info["review"]
+        mainNodeManager.reviewOtherNodeApplicationFormByDBId(db_id, review)
+        http_message = HttpMessage(is_success=True, data="审核完成")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 class WebServer(threading.Thread):
     def run(self) -> None:
         api.run()
 
 
 if __name__ == '__main__':
-    api.run()
+    api.run(host="0.0.0.0")

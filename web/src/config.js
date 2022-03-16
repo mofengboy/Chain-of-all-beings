@@ -1,6 +1,6 @@
 const config = {
     // "server_url": "https://server.beings.icu",
-    "server_url": "http://127.0.0.1:5000",
+    "server_url": "http://192.168.1.116:5000/"
 }
 
 export default config

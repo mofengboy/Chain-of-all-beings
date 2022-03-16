@@ -65,7 +65,8 @@ class StorageOfBeings(Sqlite):
     def getBlocksByEpoch(self, start, end) -> []:
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select id, epoch, block_id, user_pk, header, body from beings where epoch >= ? and epoch < ?
+        select id, epoch, block_id, user_pk, header, body 
+        from beings where epoch >= ? and epoch < ?
         """, (start, end))
         res = cursor.fetchall()
         block_list = []

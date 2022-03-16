@@ -12,16 +12,21 @@ class User:
         self.__userPK = ""  # 公钥
 
     # 设置用户密钥
-    def setUserSK(self, sk):
-        bytes_sk = bytes.fromhex(sk)
+    def setUserSK(self, sk_string):
+        bytes_sk = bytes.fromhex(sk_string)
         self.__userSK = CipherSuites.getSKFromString(bytes_sk)
+
+    # 设置用户公钥
+    def setUserPK(self, pk_string):
+        bytes_pk = bytes.fromhex(pk_string)
+        self.__userPK = CipherSuites.getPKFromString(bytes_pk)
 
     # 生成用户密钥
     def generateUserSK(self):
         self.__userSK = CipherSuites.generateUserSK()
 
     # 获取用户密钥
-    def getUserSK(self):
+    def getUserSKString(self):
         return self.__userSK.to_string().hex()
 
     # 通过密钥生成公钥
@@ -32,13 +37,19 @@ class User:
     def register(self):
         self.generateUserSK()
         self.generateUserVKBySK()
+        print("-" * 32)
+        print("私钥")
+        print(self.getUserSKString())
+        print("公钥")
+        print(self.getUserPKString())
+        print("-" * 32)
         logger.info("用户已经注册")
         logger.info("公钥为：" + self.getUserPKString())
 
     # 新用户登录
-    def login(self, sk):
-        self.setUserSK(sk)
-        self.generateUserVKBySK()
+    def login(self, sk_string, pk_string):
+        self.setUserSK(sk_string)
+        self.setUserPK(pk_string)
         logger.info("用户已经登录")
         logger.info("公钥为：" + self.getUserPKString())
 

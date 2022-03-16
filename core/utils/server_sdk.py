@@ -30,9 +30,9 @@ class DB:
         from beings_block where is_review = 1 limit 10
         """)
         data_list = cursor.fetchall()
-        id_list = []
+        block_list = []
         for data in data_list:
-            id_list.append({
+            block_list.append({
                 "db_id": data[0],
                 "user_pk": data[1],
                 "body": bytes(data[2]).decode("utf-8"),
@@ -47,13 +47,52 @@ class DB:
             """, (data[0],))
 
         self.__DB.commit()
-        return id_list
+        return block_list
 
     def getWaitingBlockCountOfBeingsToSDK(self):
         cursor = self.__DB.cursor()
         cursor.execute("""
         select count(id)
         from beings_block where is_review = 1
+        """)
+        data = cursor.fetchone()
+        return data[0]
+
+    def getWaitingApplicationFormToSDK(self):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, node_id, user_pk, node_ip, node_create_time, node_signature, 
+        application, application_signature, is_review, create_time
+        from application_form where is_review = 1 limit 2
+        """)
+        data_list = cursor.fetchall()
+        application_form_list = []
+        for data in data_list:
+            application_form_list.append({
+                "db_id": data[0],
+                "node_id": data[1],
+                "user_pk": data[2],
+                "node_ip": data[3],
+                "node_create_time": data[4],
+                "node_signature": data[5],
+                "application": data[6],
+                "application_signature": data[7],
+                "is_review": data[8],
+                "create_time": data[9]
+            })
+            cursor.execute("""
+            update application_form set is_review = 3
+            where id = ?
+            """, (data[0],))
+
+        self.__DB.commit()
+        return application_form_list
+
+    def getWaitingApplicationFormCountToSDK(self):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select count(id)
+        from application_form where is_review = 1
         """)
         data = cursor.fetchone()
         return data[0]
@@ -77,3 +116,22 @@ class SDK:
 
     def getBeingsCount(self):
         return self.db.getWaitingBlockCountOfBeingsToSDK()
+
+    def getApplicationForm(self):
+        data_list = self.db.getWaitingApplicationFormToSDK()
+        application_form_list = []
+        for data in data_list:
+            application_form_list.append({
+                "node_id": data[1],
+                "user_pk": data[2],
+                "node_ip": data[3],
+                "node_create_time": data[4],
+                "node_signature": data[5],
+                "application": data[6],
+                "application_time": data[7],
+                "application_signature": data[8]
+            })
+        return application_form_list
+
+    def getApplicationFormCount(self):
+        return self.db.getWaitingApplicationFormCountToSDK()

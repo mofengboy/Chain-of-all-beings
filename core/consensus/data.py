@@ -103,21 +103,19 @@ class ConformationOfGalaxyBlock:
 
 # 申请书
 class ApplicationForm:
-    def __init__(self, db_id, node_info: NodeInfo, content, new_node_signature):
-        self.dbID = db_id
-        self.nodeId = node_info.nodeId
-        self.nodeInfo = node_info.getInfo()
-        self.nodeSignature = node_info.nodeSignature
+    def __init__(self, node_info: NodeInfo, start_time, content, application_signature_by_new_node):
+        self.newNodeId = node_info.nodeId
+        self.newNodeInfo = node_info.getInfo()
+        self.newNodeSignature = node_info.nodeSignature
         self.application = {
             "content": content,
-            "new_node_signature": new_node_signature,
-            "start_time": None,
-            "main_node_signature": None,
-            "main_node_user_pk": None
+            "start_time": start_time,
         }
-
-    def setStartTime(self, start_time):
-        self.application["start_time"] = start_time
+        self.applicationSignatureByNewNode = application_signature_by_new_node
+        self.mainNode = {
+            "application_signature": None,
+            "user_pk": None
+        }
 
     def setMainNodeSignature(self, main_node_signature):
         self.application["main_node_signature"] = main_node_signature
@@ -128,10 +126,10 @@ class ApplicationForm:
 
 # 申请书回复
 class ReplyApplicationForm:
-    def __init__(self, new_node_id, start_time: int, reply_time: int, is_agree: int):
+    def __init__(self, new_node_id, new_node_user_pk, start_time: int, is_agree: int):
         self.newNodeId = new_node_id
+        self.newNodeUserPk = new_node_user_pk
         self.startTime = start_time
-        self.replyTime = reply_time
         self.isAgree = is_agree
         self.signature = None
         self.userPk = None
@@ -139,9 +137,9 @@ class ReplyApplicationForm:
     def getInfo(self):
         return {
             "new_node_id": self.newNodeId,
-            "start_time": self.startTime,
-            "is_agree": self.isAgree,
-            "reply_time": self.replyTime
+            "new_node_user_pk": self.newNodeUserPk,
+            "new_node_create_time": self.startTime,
+            "is_agree": self.isAgree
         }
 
     def setSignature(self, signature):
@@ -149,41 +147,6 @@ class ReplyApplicationForm:
 
     def setUserPk(self, user_pk):
         self.userPk = user_pk
-
-
-# 新节点申请书回复信息管理
-class ManagerOfReplyNewNode:
-    def __init__(self, db_id, new_node_id, start_time, node_info: NodeInfo):
-        self.dbId = db_id
-        self.newNodeId = new_node_id
-        self.startTime = start_time
-        self.nodeInfo = node_info
-        self.agreeList = []
-        self.disagreeCount = 0
-
-    def addAgreeNode(self, signature, reply_time, user_pk):
-        self.agreeList.append({
-            "info": {
-                "new_node_id": self.newNodeId,
-                "start_time": self.startTime,
-                "is_agree": 1,
-                "reply_time": reply_time
-            },
-            "signature": signature,
-            "user_pk": user_pk
-        })
-
-    def addDisagree(self):
-        self.disagreeCount += 1
-
-    def getAgreeInfo(self):
-        return {
-            "new_node_id": self.newNodeId,
-            "start_time": self.startTime,
-            "node_info": self.nodeInfo.getInfo(),
-            "node_signature": self.nodeInfo.nodeSignature,
-            "agree_list": self.agreeList
-        }
 
 
 # 被选中节点不回复

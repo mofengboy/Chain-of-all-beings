@@ -22,8 +22,12 @@ class CipherSuites:
         return sk
 
     @staticmethod
-    def getSKFromString(string):
-        return SigningKey.from_string(string)
+    def getSKFromString(string_bytes: bytes) -> SigningKey:
+        return SigningKey.from_string(string_bytes)
+
+    @staticmethod
+    def getPKFromString(string_bytes: bytes) -> VerifyingKey:
+        return VerifyingKey.from_string(string_bytes)
 
     # 由用户私钥（签名密钥）得到用户公钥（验证公钥）
     @staticmethod
@@ -33,7 +37,7 @@ class CipherSuites:
     # 对消息进行签名
     @staticmethod
     def sign(sk, message):
-        return sk.sign(message)
+        return sk.sign(message, hashfunc=hashlib.sha256)
 
     # 验证签名
     @staticmethod
@@ -51,10 +55,10 @@ class CipherSuites:
         seed = hashlib.sha256((block_abstract + str(epoch)).encode("utf-8"))
         return seed
 
-
-if __name__ == "__main__":
-    pk = "04e9d2202827c544266b7ce7bfc1f43b4eff15afc9f713371ad367ee4ad2df0e881f1657b516f15df8c195c1c8bc29dbfcb6a37ab3eb4e3e3deeeef5e1f9711de13a1571566d63361518d382d22a014db3cdbebf8b0f3ccefcfd359fbb2ea0c81e"
-    a = str("d04b98f48e8f8bcc15c6ae5ac050801cd6dcfd428fb5f9e65c4e16e7807340fa").encode()
-    sig = "5367c5743591b5573a65cfe2f31fd2010b051dddc8d48c53f0601071dcd47fec139c98881f5255ea8607837e10a3a8abee0fc96b2eed998ac4b1cb1263b46bc468f04dbdfa79aedd6c70906f25a4fb0484d3375542558eca262f21be0e36db61"
-    fl = CipherSuites.verify(pk=pk, signature=sig, message=a)
-    print(fl)
+    # 验证公钥和私钥是否匹配
+    @staticmethod
+    def verifyPublicAndPrivateKeys(sk_string, pk_string):
+        sk = CipherSuites.getSKFromString(sk_string)
+        content = random.random()
+        signature = sk.sign(str(content).encode("utf-8"))
+        return CipherSuites.verify(pk=pk_string, signature=signature, message=str(content).encode("utf-8"))

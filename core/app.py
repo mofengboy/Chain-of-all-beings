@@ -2,15 +2,16 @@ import random
 import logging.config
 from ast import literal_eval
 
+from core.consensus.node_management import NodeManager
 from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
 from core.data.block_of_galaxy import BodyOfGalaxyBlock, BlockOfGalaxy
 from core.data.node_info import NodeInfo
 from core.data.network_message import NetworkMessageType, NetworkMessage, SubscribeTopics
+from core.data.genesis_block import GenesisBlock
 from core.user.user import User
 from core.node.main_node import MainNode
 from core.network.net import PUB, SUB, Server, Client
 from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfGalaxy
-from core.consensus.node_management import ManagerOfReplyNewNode
 from core.consensus.vote import VoteCount
 from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock
 from core.consensus.data import NodeDelApplicationForm
@@ -18,11 +19,11 @@ from core.storage.storage_of_beings import StorageOfBeings
 from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
-from core.utils.system_time import STime
-from core.utils.sdk import SDK
-from core.utils.serialization import SerializationBeings
+from core.utils.server_sdk import SDK
+from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
+    SerializationReplyApplicationForm, SerializationNetworkMessage
 from core.utils.network_request import MainNodeIp
-from core.data.genesis_block import GenesisBlock
+from core.utils.system_time import STime
 
 logger = logging.getLogger("main")
 
@@ -37,10 +38,33 @@ class APP:
         self.storageOfGalaxy = StorageOfGalaxy()  # 银河区块存储类
 
         self.user = User()  # 用户
-        # 注册或者登录用户
-        self.user.register()
+        flag = True
+        print("输入1->生成私钥公钥对，输入2->使用私钥公钥登录")
+        input_content = input()
+        while flag:
+            if input_content == "1":
+                self.user.register()
+                is_yes = ""
+                while is_yes != "yes":
+                    print("请保存以上私钥和公钥")
+                    print("注意：一旦私钥和公钥丢失或被盗，将无法找回！")
+                    print("完成保存后，请输入yes:", end=" ")
+                    is_yes = input()
+                flag = False
+            elif input_content == "2":
+                print("请输入私钥")
+                sk_string = input()
+                print("请输入公钥")
+                pk_string = input()
+                if not CipherSuites.verifyPublicAndPrivateKeys(sk_string, pk_string):
+                    print("私钥与公钥不匹配，请重新输入")
+                    continue
+                self.user.login(sk_string, pk_string)
+                flag = False
 
         self.mainNode = MainNode(self.user)  # 主节点
+        self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
+                                       storage_of_temp=self.storageOfTemp)  # 节点管理
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp)  # 票数计算
@@ -49,8 +73,8 @@ class APP:
         self.pub.start()
         self.subList = []  # 订阅列表
         self.client = Client(main_node_list=self.mainNode.mainNodeList)  # 客户端
-        self.server = Server(user=self.user, manager_of_reply_new_node_list=self.mainNode.managerOfReplyNewNodeList,
-                             manager_of_reply_delete_node_list=[], pub=self.pub, main_node=self.mainNode,
+        self.server = Server(user=self.user, node_manager=self.nodeManager,
+                             pub=self.pub, main_node=self.mainNode,
                              storage_of_temp=self.storageOfTemp, wait_galaxy_block=self.waitGalaxyBlock,
                              vote_count=self.voteCount, getEpoch=self.getEpoch, storage_of_galaxy=self.storageOfGalaxy,
                              getElectionPeriod=self.getElectionPeriod, newBlockOfGalaxy=self.newBlockOfGalaxy,
@@ -83,9 +107,7 @@ class APP:
     # 增加订阅
     def addSub(self, ip):
         sub = SUB(ip=ip, pub=self.pub, blockListOfBeings=self.mainNode.currentBlockList,
-                  node_list_of_apply=self.mainNode.nodeListOfApply, user=self.user, vote_count=self.voteCount,
-                  manager_of_reply_new_node_list=self.mainNode.managerOfReplyNewNodeList,
-                  manager_of_reply_delete_node_list=[],
+                  user=self.user, vote_count=self.voteCount, node_manager=self.nodeManager,
                   main_node=self.mainNode, reSubscribe=self.reSubscribe, storage_of_temp=self.storageOfTemp,
                   getEpoch=self.getEpoch, getElectionPeriod=self.getElectionPeriod,
                   storage_of_galaxy=self.storageOfGalaxy, current_main_node=self.mainNode.currentMainNode,
@@ -111,7 +133,7 @@ class APP:
             count = node
         node_list = random.sample(self.mainNode.mainNodeList.getNodeList(), count)
         for node_i in node_list:
-            ip = node_i["node_info"].nodeIp
+            ip = node_i["node_info"]["node_ip"]
             self.addSub(ip)
         logger.info("订阅完成，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
         # 删除之前订阅
@@ -123,10 +145,11 @@ class APP:
     # 读入主节点列表，通过配置文件提供的种子IP
     def loadMainNodeListBySeed(self):
         ip_list = MainNodeIp().getTpList()
-        data = NetworkMessage(mess_type=NetworkMessageType.Get_Main_Node_List, message=None).getNetMessage()
+        data = NetworkMessage(mess_type=NetworkMessageType.Get_Main_Node_List, message=None)
+        serial_data = SerializationNetworkMessage.serialization(data)
         for ip in ip_list:
             try:
-                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
+                res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                 self.mainNode.mainNodeList.setNodeList(literal_eval(res))
                 break
             except Exception as err:
@@ -138,10 +161,11 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             node_ip_list.append(main_node["node_info"]["node_ip"])
         random.shuffle(node_ip_list)
-        data = NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None).getNetMessage()
+        serial_data = SerializationNetworkMessage.serialization(
+            NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
         for ip in node_ip_list:
             try:
-                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
+                res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                 self.setEpoch(res)
                 break
             except Exception as err:
@@ -154,30 +178,31 @@ class APP:
             node_ip_list.append(main_node["node_info"]["node_ip"])
         logger.info("众生区块开始同步")
         start = 0
-        while True:
-            if start + 10 <= self.getEpoch():
-                end = start + 10
-            else:
-                end = self.getEpoch()
-            data = NetworkMessage(NetworkMessageType.Get_Beings_Data,
-                                  message=[start, end]).getNetMessage()
-            ip = random.choice(node_ip_list)
-            try:
-                res = self.client.sendMessageByIP(ip=ip, data=str(data).encode("utf-8"))
-                block_list = literal_eval(res)
-                block_list_of_beings = []
-                for block_i in block_list:
-                    block = SerializationBeings.deserialization(block_i)
-                    block_list_of_beings.append(block)
-                self.storageOfBeings.saveBatchBlock(block_list_of_beings)
-                logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
+        if self.getEpoch() > 0:
+            while True:
+                if start + 10 <= self.getEpoch():
+                    end = start + 10
+                else:
+                    end = self.getEpoch()
+                serial_data = SerializationNetworkMessage.serialization(
+                    NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
+                ip = random.choice(node_ip_list)
+                try:
+                    res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
+                    block_list = literal_eval(res)
+                    block_list_of_beings = []
+                    for block_i in block_list:
+                        block = SerializationBeings.deserialization(block_i)
+                        block_list_of_beings.append(block)
+                    self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
 
-                if end == self.getEpoch():
-                    logger.info("众生区块同步完成")
-                    break
-                start += 10
-            except Exception as err:
-                logger.warning(err)
+                    if end == self.getEpoch():
+                        logger.info("众生区块同步完成")
+                        break
+                    start += 10
+                except Exception as err:
+                    logger.warning(err)
 
     # 存储创世区块
     def storageGenesisBlock(self):
@@ -218,82 +243,105 @@ class APP:
                                       message=vote_information.getMessage())
         res = self.client.sendMessageByNodeID(node_id=vote_information.mainNodeId,
                                               data=str(network_mess).encode("utf-8"))
-
         # 获取投票结果
         return res
 
+    # 通过检测数据库中的node_join_other表，当存在is_audit=1或2时,即有消息要回复
     # 回复新节点加入申请，同意或拒绝
-    def replyNewNodeJoin(self, new_node_id, start_time, is_agree):
-        reply_time = STime.getTimestamp()
-        reply_application_form = ReplyApplicationForm(new_node_id=new_node_id, start_time=start_time, is_agree=is_agree,
-                                                      reply_time=reply_time)
-        signature = self.mainNode.sign(str(reply_application_form.getInfo()).encode("utf-8"))
-        reply_application_form.setSignature(signature)
-        reply_application_form.setUserPk(self.user.getUserPKString())
-        # 发送同意或拒绝消息
-        net_message = NetworkMessage(mess_type=NetworkMessageType.ReplayNewNodeApplicationJoin,
-                                     message=reply_application_form).getNetMessage()
-
-        res = self.client.sendMessageByNodeID(node_id=new_node_id, data=str(net_message).encode("utf-8"))
-        # 要弄清是异步还是同步
-        if res != b"get":
-            # 抛出错误，发送失败
-            pass
-
-        # 删除暂存区的消息
-        i = 0
-        for application_form in self.mainNode.nodeListOfApply:
-            if application_form.nodeInfo.nodeId != new_node_id:
-                i += 1
-            else:
-                break
-        del self.mainNode.nodeListOfApply[i]
+    def replyNewNodeJoin(self):
+        application_form_list = self.storageOfTemp.getListOfFinishAuditApplicationForm()
+        for info in application_form_list:
+            reply_application_form = ReplyApplicationForm(new_node_id=info["node_id"], new_node_user_pk=info["user_pk"],
+                                                          start_time=info["node_create_time"],
+                                                          is_agree=info["is_audit"])
+            reply_signature = self.user.sign(str(reply_application_form.getInfo()).encode("utf-8"))
+            reply_application_form.setSignature(reply_signature)
+            reply_application_form.setUserPk(self.user.getUserPKString())
+            serial_reply_application_form = SerializationReplyApplicationForm.serialization(reply_application_form)
+            # 消息签名
+            network_message = NetworkMessage(mess_type=NetworkMessageType.ReplayNewNodeApplicationJoin,
+                                             message=serial_reply_application_form)
+            network_message.setClientInfo(user_pk=info["main_node_user_pk"])
+            client_signature = self.user.sign(network_message.getClientAndMessageDigest())
+            network_message.setSignature(client_signature)
+            serial_network_message = SerializationNetworkMessage.serialization(network_message)
+            self.client.sendMessageByMainNodeUserPk(user_pk=info["main_node_user_pk"],
+                                                    data=str(serial_network_message).encode("utf-8"))
 
     # 向全网广播新节点申请请求
     # 此时，当前主节点已经审核通过
-    def applyNewNodeJoin(self, application_form: ApplicationForm):
-        # 验证新节点信息和签名
-        node_signature = application_form.nodeSignature
-        node_info = application_form.nodeInfo
-        new_node_user_pk = node_info["user_pk"]
-        if not CipherSuites.verify(pk=new_node_user_pk, signature=node_signature,
-                                   message=str(node_info).encode("utf-8")):
-            # 抛出错误 新节点信息与签名不匹配
-            pass
+    def applyNewNodeJoin(self):
+        # 调用SDK读取审核通过，但是待广播的主节点加入申请书
+        application_form_dict_list = self.webServerSDK.getApplicationForm()
+        for application_form_dict in application_form_dict_list:
+            node_id = application_form_dict["node_id"]
+            user_pk = application_form_dict["user_pk"]
+            node_ip = application_form_dict["node_ip"]
+            node_create_time = application_form_dict["node_create_time"]
+            node_signature = application_form_dict["node_signature"]
+            application = application_form_dict["application"]
+            application_time = STime.getTimestamp()
+            application_signature = application_form_dict["application_signature"]
+            node_info = NodeInfo(node_id=node_id, user_pk=user_pk, node_ip=node_ip, create_time=node_create_time)
+            node_info.nodeSignature = node_signature
+            application_form = ApplicationForm(node_info=node_info, start_time=application_time, content=application,
+                                               application_signature_by_new_node=application_signature)
+            # 验证新节点信息和签名
+            if not CipherSuites.verify(pk=user_pk, signature=node_signature,
+                                       message=str(node_info.getInfo()).encode("utf-8")):
+                # 新节点信息与签名不匹配
+                logger.warning("新节点信息与签名不匹配")
+                continue
+            # 验证申请书和签名
+            if not CipherSuites.verify(pk=user_pk, signature=application_signature,
+                                       message=str(application_form.application).encode("utf-8")):
+                # 申请书与新节点签名不匹配
+                logger.warning("申请书与新节点签名不匹配")
+                continue
+            # 增加当前主节点签名
+            main_node_signature = self.user.sign(str(application_form.application).encode("utf-8"))
+            application_form.setMainNodeSignature(main_node_signature)
+            application_form.setMainNodeUserPk(self.user.getUserPKString())
+            #  添加数据库数据，准备接受其他主节点的意见
+            self.storageOfTemp.insertApplicationForm(node_id=node_id, user_pk=user_pk, node_ip=node_ip,
+                                                     node_create_time=node_create_time, node_signature=node_signature,
+                                                     application=application, application_time=application_time,
+                                                     application_signature=application_signature,
+                                                     agree_count=1)
+            serial_application_form = SerializationApplicationForm.serialization(application_form)
+            # 全网广播
+            self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=serial_application_form)
 
-        # 验证申请书和签名
-        application_content = application_form.application["content"]
-        new_node_signature = application_form.application["new_node_signature"]
-        if not CipherSuites.verify(pk=new_node_user_pk, signature=new_node_signature, message=application_content):
-            # 抛出错误 申请书与新节点签名不匹配
-            pass
-
-        # 增加当前主节点签名 公钥和开始时间
-        main_node_signature = self.mainNode.sign(message=application_content)
-        main_node_user_pk = self.user.getUserPKString()
-        start_time = STime.getTimestamp()
-        application_form.setMainNodeSignature(main_node_signature)
-        application_form.setMainNodeUserPk(main_node_user_pk)
-        application_form.setStartTime(start_time)
-
-        # 修改数据库数据，准备接受其他主节点的意见
-        self.storageOfTemp.auditNodeOfApplication(db_id=application_form.dbID, is_audit=1,
-                                                  application=application_form.application, start_time=start_time,
-                                                  main_node_signature=main_node_signature,
-                                                  main_node_user_pk=main_node_user_pk)
-        # 创建投票统计
-        new_node_id = application_form.nodeInfo["node_id"]
-        new_user_pk = application_form.nodeInfo["user_pk"]
-        new_node_ip = application_form.nodeInfo["node_ip"]
-        new_create_time = application_form.nodeInfo["create_time"]
-        node_info = NodeInfo(node_id=new_node_id, user_pk=new_user_pk, node_ip=new_node_ip, create_time=new_create_time)
-        manager_of_reply_new_node = ManagerOfReplyNewNode(db_id=application_form.dbID,
-                                                          new_node_id=application_form.nodeId, start_time=start_time,
-                                                          node_info=node_info)
-        self.mainNode.managerOfReplyNewNodeList.append(manager_of_reply_new_node)
-
-        # 全网广播
-        self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=application_form)
+    # 通过检测数据库中的node_join表
+    # 当agree_count的值达到一定标准时，立即广播节点加入确认消息
+    # 当超过规定时间还未收到确认消息时，删除该申请信息
+    def checkNewNodeJoin(self):
+        # 获取node_join表中所有is_audit=0的申请表
+        for node_id in self.storageOfTemp.getNodeIdListOfWaitingAuditApplicationForm():
+            # 检测是否超过有效时间，若超过删除该申请书
+            if not self.nodeManager.isTimeReplyApplicationForm(node_id):
+                continue
+            # 检测是否达到成为新节点的条件
+            res = self.nodeManager.isSuccessReplyApplicationForm(node_id)
+            if res[0]:
+                list_of_serial_reply_application_form = res[1]
+                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
+                serial_application_form = SerializationApplicationForm.serialization(application_form)
+                # 全网广播节点加入确认消息
+                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
+                                     message=[serial_application_form, list_of_serial_reply_application_form])
+                # 将该节点加入主节点列表
+                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
+                node_info = NodeInfo(node_id=application_form.newNodeInfo["node_id"],
+                                     user_pk=application_form.newNodeInfo["user_pk"],
+                                     node_ip=application_form.newNodeInfo["node_ip"],
+                                     create_time=application_form.newNodeInfo["create_time"])
+                node_info.setNodeSignature(application_form.newNodeSignature)
+                self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                # 将该申请书设置为已经完成申请
+                self.storageOfTemp.finishApplicationFormByNodeId(node_id)
+                # 重新计算订阅列表，重新创建32个订阅链接
+                self.reSubscribe()
 
     # 众生区块生成周期
     # 0-30S
@@ -341,9 +389,9 @@ class APP:
 
                     serialization_block = SerializationBeings.serialization(block_of_beings=new_block)
                     # 广播消息
-                    block_mess = NetworkMessage(mess_type=NetworkMessageType.NEW_BLOCK,
-                                                message=serialization_block).getNetMessage()
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
+                    serial_block_mess = SerializationNetworkMessage.serialization(
+                        NetworkMessage(mess_type=NetworkMessageType.NEW_BLOCK, message=serialization_block))
+                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_block_mess)
                     # 保存至当前区块列表
                     self.mainNode.currentBlockList.addBlock(block=new_block)
                 else:
@@ -353,7 +401,8 @@ class APP:
                     signature = self.user.sign(str(empty_block.getInfo()).encode("utf-8"))
                     empty_block.setSignature(signature)
                     mess = NetworkMessage(mess_type=NetworkMessageType.NO_BLOCK, message=empty_block.getMessage())
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=mess.getNetMessage())
+                    serial_mess = SerializationNetworkMessage.serialization(mess)
+                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_mess)
                     # 保存至当前区块列表
                     self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
                 break
@@ -405,11 +454,12 @@ class APP:
                     network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
                                                      message=self.getEpoch())
                     network_message.setClientInfo(user_pk=self.user.getUserPKString())
-                    signature = self.user.sign(message=str(network_message.getCertificationAbstract()).encode("utf-8"))
+                    signature = self.user.sign(message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
                     network_message.setSignature(signature)
-                    network_message.setSignature(signature)
+                    serial_network_message = SerializationNetworkMessage.serialization(network_message)
                     res = self.client.sendMessageByNodeID(node_id=node_id,
-                                                          data=str(network_message.getNetMessage()).encode("utf-8"))
+                                                          data=str(serial_network_message).encode("utf-8"))
+
                     res = literal_eval(res)
                     if res["mess_type"] == NetworkMessageType.NEW_BLOCK:
                         self.mainNode.currentBlockList.addBlock(block=res["message"])
@@ -441,37 +491,33 @@ class APP:
         for node in self.mainNode.mainNodeList.getNodeList():
             ip_list.append(node["node_info"]["node_ip"])
         i = 0
-        last_block_id = ""
         while True:
-            ip = random.choice(ip_list)
-            net_mess = NetworkMessage(NetworkMessageType.Data_Recovery_Req, message=self.getEpoch())
-            # 增加签名
-            net_mess.setClientInfo(user_pk=self.user.getUserPKString())
-            signature = self.user.sign(message=str(net_mess.getCertificationAbstract()).encode("utf-8"))
-            net_mess.setSignature(signature)
-            res = self.client.sendMessageByIP(ip, data=str(net_mess.getNetMessage()).encode("utf-8"))
-            data = literal_eval(res)
-            if data["mess_type"] == NetworkMessageType.No_Data_Recovery:
-                continue
-            if data["mess_type"] == NetworkMessageType.Data_Recovery:
-                block_list = data["message"]
-                block_id = ""
-                for block_i in block_list:
-                    block = SerializationBeings.deserialization(data_of_beings=block_i)
-                    block_id += block.getBlockID()
-                if last_block_id == block_id:
-                    i += 1
-                else:
-                    last_block_id = block_id
-                if i >= 3:
-                    block_list_of_beings = BlockListOfBeings()
-                    for block_i in block_list:
-                        block = SerializationBeings.deserialization(data_of_beings=block_i)
-                        block_list_of_beings.addBlock(block)
-
-                    self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=block_list_of_beings)
+            try:
+                ip = random.choice(ip_list)
+                net_mess = NetworkMessage(NetworkMessageType.Data_Recovery_Req, message=self.getEpoch())
+                # 增加签名
+                net_mess.setClientInfo(user_pk=self.user.getUserPKString())
+                signature = self.user.sign(message=str(net_mess.getClientAndMessageDigest()).encode("utf-8"))
+                net_mess.setSignature(signature)
+                serial_net_mess = SerializationNetworkMessage.serialization(net_mess)
+                serial_res_message = self.client.sendMessageByIP(ip, data=str(serial_net_mess).encode("utf-8"))
+                res_message = SerializationNetworkMessage.deserialization(serial_res_message)
+                if res_message.messType == NetworkMessageType.No_Data_Recovery:
+                    logging.info("正在重新进行数据恢复")
+                    continue
+                if res_message.messType == NetworkMessageType.Data_Recovery:
+                    serial_block_list = res_message.message
+                    beings_list = BlockListOfBeings()
+                    for serial_block in serial_block_list:
+                        beings_block = SerializationBeings.deserialization(serial_block)
+                        beings_list.addBlock(beings_block)
+                    self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=beings_list)
                     logging.info("数据恢复成功")
                     break
+            except Exception as err:
+                i += 1
+                logger.warning("数据恢复出现错误，正在第" + str(i) + "次尝试！")
+                logger.warning(err)
 
     # 生成银河区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:

@@ -39,6 +39,10 @@ app.use(router)
 const dayjs = require('dayjs')
 app.config.globalProperties.$dayjs = dayjs
 
+//host_url
+const url = window.location.href
+app.config.globalProperties.$host_url = url
+
 
 app.mount('#app')
 

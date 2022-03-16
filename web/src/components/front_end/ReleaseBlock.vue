@@ -13,7 +13,7 @@
         <el-form-item label="内容">
           <el-input :autosize="{ minRows: 2 }" v-model="body" type="textarea">
           </el-input>
-          <el-collapse style="width: 100%">
+          <el-collapse style="width: 100%" v-model="collapse_item">
             <el-collapse-item title="预览" name="1">
               <div>
                 <Markdown class="markdown" :source="body"></Markdown>
@@ -107,19 +107,20 @@ export default {
   },
   data() {
     return {
-      path: "http://localhost:8080",
+      path: this.$host_url,
       fullscreenLoading: false,
       publicKeyDialog: false,
       signatureDialog: false,
       privateKeyDialog: false,
       privateKey: "",
       publicKey: "",
-      body: '# markdown文件格式',
+      body: '# 使用Markdown格式渲染',
       signature: "",
       signatureRaw: "",
       computeLoading: false,
       captchaSrc: "",
       captchaInput: "",
+      collapse_item: "1",
       rules: {
         name: [
           {
@@ -294,9 +295,10 @@ export default {
   width: 100%;
   height: 40px;
 }
+
 .markdown {
-   padding: 5px;
-   border-radius: 4px;
-   border: 2px dashed var(--el-border-color-base);
- }
+  padding: 5px;
+  border-radius: 4px;
+  border: 2px dashed var(--el-border-color-base);
+}
 </style>

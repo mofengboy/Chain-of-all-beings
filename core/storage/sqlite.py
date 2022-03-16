@@ -1,21 +1,18 @@
 import sqlite3
 from abc import ABC
-import sys
-import os
-
 
 
 class Sqlite(ABC):
     def __init__(self):
-        self.blockConn = sqlite3.connect('./db/block.db')
+        self.blockConn = sqlite3.connect('./db/block.db', check_same_thread=False)
         self.initBlockDB()
 
-        self.tempConn = sqlite3.connect('./db/temp.db')
+        self.tempConn = sqlite3.connect('./db/temp.db', check_same_thread=False)
         self.initTempDB()
 
     def initBlockDB(self):
         cursor = self.blockConn.cursor()
-        # 众生链 繁星链
+        # 众生链
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'beings'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
@@ -29,7 +26,8 @@ class Sqlite(ABC):
             )
             """)
             self.blockConn.commit()
-        # 银河
+
+        # 时代链
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'galaxy'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
@@ -66,18 +64,64 @@ class Sqlite(ABC):
             """)
             self.tempConn.commit()
 
-        # 存储待审核的新节点加入信息
+        # 新主节点申请信息（当前主节点已经审核通过）
         # is_audit 0代表未审核 1代表审核通过 2代表拒绝 3表示以及申请完成，4超过规定时间未达到要求
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_join'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
             create table node_join(
             id INTEGER PRIMARY KEY,
-            node_info BLOB NOT NULL,
+            node_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            node_ip  TEXT NOT NULL,
+            node_create_time TEXT NOT NULL,
             node_signature TEXT NOT NULL,
-            application BLOB NOT NULL,
+            application TEXT NOT NULL,
+            application_time TEXT NOT NULL,
+            application_signature TEXT NOT NULL,
+            agree_count INTEGER NOT NULL,
             is_audit INTEGER NOT NULL,
+            main_node_signature TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
             create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储接受到的新节点加入同意信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_join_agree'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_join_agree(
+            id INTEGER PRIMARY KEY,
+            new_node_id TEXT NOT NULL,
+            start_time INTEGER NOT NULL,
+            reply_application_form_info BLOB NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            main_node_signature TEXT NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储待审核的新节点加入信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_join_other'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_join_other(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            node_ip  TEXT NOT NULL,
+            node_create_time TEXT NOT NULL,
+            node_signature TEXT NOT NULL,
+            application TEXT NOT NULL,
+            application_time TEXT NOT NULL,
+            application_signature TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            main_node_signature TEXT NOT NULL,
+            is_audit INTEGER NOT NULL,
+            create_time INTEGER NOT NULL
             )
             """)
             self.tempConn.commit()
@@ -128,3 +172,7 @@ class Sqlite(ABC):
             )
             """)
             self.tempConn.commit()
+
+
+if __name__ == "__main__":
+    Sqlite()

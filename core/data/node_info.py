@@ -1,3 +1,4 @@
+import json
 import logging
 
 from core.utils.system_time import STime
@@ -17,12 +18,25 @@ class NodeInfo:
             self.createTime = create_time
         self.nodeSignature = ""
 
+    def setNodeSignature(self, signature):
+        self.nodeSignature = signature
+
     def getInfo(self):
-        return {
+        info = {
             "node_id": self.nodeId,
             "user_pk": self.userPk,
             "node_ip": self.nodeIp,
             "create_time": self.createTime
+        }
+        return info
+
+    def getMessage(self):
+        return {
+            "node_id": self.nodeId,
+            "user_pk": self.userPk,
+            "node_ip": self.nodeIp,
+            "create_time": self.createTime,
+            "signature": self.nodeSignature
         }
 
 

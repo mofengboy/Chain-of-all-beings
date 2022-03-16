@@ -98,27 +98,34 @@ class NetworkMessage:
         }
         self.signature = None
 
-    def setClientInfo(self, user_pk):
+    def setClientInfo(self, user_pk, send_time=0):
         self.clientInfo["user_pk"] = user_pk
-        self.clientInfo["send_time"] = STime.getTimestamp()
-
-    def getCertificationAbstract(self):
-        data = {
-            "client_info": self.clientInfo,
-            "message": self.message
-        }
-        return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
+        if send_time == 0:
+            self.clientInfo["send_time"] = STime.getTimestamp()
+        else:
+            self.clientInfo["send_time"] = send_time
 
     def setSignature(self, signature):
         self.signature = signature
 
-    def getLen(self):
-        return len(self.message)
+    # def getCertificationAbstract(self):
+    #     data = {
+    #         "client_info": self.clientInfo,
+    #         "message": self.message
+    #     }
+    #     return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
 
-    def getNetMessage(self):
-        return {
-            "mess_type": self.messType,
-            "message": self.message,
-            "client_info": self.clientInfo,
-            "signature": self.signature
+    def getClientAndMessageDigest(self):
+        data = {
+            "client": self.clientInfo,
+            "message": self.message
         }
+        return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
+
+    # def getNetMessage(self):
+    #     return {
+    #         "mess_type": self.messType,
+    #         "message": self.message,
+    #         "client_info": self.clientInfo,
+    #         "signature": self.signature
+    #     }
