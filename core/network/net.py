@@ -100,8 +100,7 @@ class SUB(threading.Thread):
     def __init__(self, ip, pub: PUB, client: Client, blockListOfBeings: BlockListOfBeings,
                  user: User, node_manager: NodeManager,
                  storage_of_galaxy: StorageOfGalaxy, vote_count: VoteCount, getEpoch, getElectionPeriod,
-                 main_node: MainNode, reSubscribe, storage_of_temp: StorageOfTemp,
-                 current_main_node, node_del_application_form_list):
+                 main_node: MainNode, reSubscribe, storage_of_temp: StorageOfTemp, node_del_application_form_list):
         super().__init__()
         self.name = str(ip)
         self.reSubscribe = reSubscribe
@@ -116,7 +115,6 @@ class SUB(threading.Thread):
         self.voteCount = vote_count
         self.getEpoch = getEpoch
         self.getElectionPeriod = getElectionPeriod
-        self.currentMainNode = current_main_node
         self.nodeDelApplicationFormList = node_del_application_form_list
 
         self.context = zmq.Context()
@@ -144,260 +142,274 @@ class SUB(threading.Thread):
 
     def receive(self):
         while self.stopFlag:
-            message = self.socket.recv_multipart()
-            logger.info("订阅者收到消息：")
-            logger.debug(message)
+            try:
+                message = self.socket.recv()
+                logger.info("订阅者收到消息：")
+                logger.debug(message)
 
-            # 收集其他节点产生的众生区块
-            if message[0:len(SubscribeTopics.getBlockTopicOfBeings())] == SubscribeTopics.getBlockTopicOfBeings():
-                block_mess = message[len(SubscribeTopics.getBlockTopicOfBeings()):]
-                if block_mess["mess_type"] == NetworkMessageType.NEW_BLOCK:
-                    net_block = block_mess["message"]
-                    # 反序列化
-                    block = SerializationBeings.deserialization(data_of_beings=net_block)
-                    # 是否已经存在
-                    if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()):
-                        continue
-                    # 验证是否在有生成权限的节点内
-                    if not self.currentMainNode.userPKisExit(user_pk=block.getUserPk()):
-                        continue
-                    # 签名验证
-                    header = block.getBlockHeader()
-                    result = True
-                    for i in range(len(header["userPK"])):
-                        result = result and CipherSuites.verify(pk=header["userPK"][i],
-                                                                signature=header["bodySignature"][i],
-                                                                message=block.body)
-                    if result:
-                        # 广播消息
+                # 收集其他节点产生的众生区块
+                if message[0:len(SubscribeTopics.getBlockTopicOfBeings())] == SubscribeTopics.getBlockTopicOfBeings():
+                    block_mess = literal_eval(
+                        bytes(message[len(SubscribeTopics.getBlockTopicOfBeings()):]).decode("utf-8"))
+                    if block_mess["message_type"] == NetworkMessageType.NEW_BLOCK:
+                        net_block = block_mess["message"]
+                        # 反序列化
+                        block = SerializationBeings.deserialization(data_of_beings=net_block)
+                        # 是否已经存在
+                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()):
+                            continue
+                        # 验证是否在有生成权限的节点内
+                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=block.getUserPk()):
+                            continue
+                        # 签名验证
+                        header = block.getBlockHeader()
+                        result = True
+                        for i in range(len(header["userPK"])):
+                            result = result and CipherSuites.verify(pk=header["userPK"][i],
+                                                                    signature=header["bodySignature"][i],
+                                                                    message=block.body)
+                        if result:
+                            # 广播消息
+                            self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
+                            # 保存
+                            self.blockListOfBeings.addBlock(block=block)
+                            logger.info("已保存区块，区块id为：" + block.getBlockID())
+
+                    # 本次被选中，但是不生产区块的消息
+                    if block_mess["message_type"] == NetworkMessageType.NO_BLOCK:
+                        empty_block_dict = block_mess["message"]
+                        empty_block = EmptyBlock(user_pk=empty_block_dict["user_pk"], epoch=empty_block_dict["epoch"])
+                        empty_block.setSignature(empty_block_dict["signature"])
+                        # 是否已经存在
+                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=empty_block.userPk):
+                            continue
+                        # 验证是否在有生成权限的节点内
+                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=empty_block.userPk):
+                            continue
+                        # 验证签名
+                        if not CipherSuites.verify(pk=empty_block.userPk, signature=empty_block.signature,
+                                                   message=str(empty_block.getInfo()).encode("utf-8")):
+                            continue
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
-                        # 保存
-                        self.blockListOfBeings.addBlock(block=block)
+                        self.blockListOfBeings.addMessageOfNoBlock(empty_block=empty_block)
+                        logger.info("已保存不产生区块消息，该消息用户公钥为：" + empty_block.userPk)
 
-                # 本次被选中，但是不生产区块的消息
-                if block_mess["mess_type"] == NetworkMessageType.NO_BLOCK:
-                    empty_block_dict = literal_eval(block_mess["message"])
-                    empty_block = EmptyBlock(user_pk=empty_block_dict["user_pk"], epoch=empty_block_dict["epoch"])
-                    empty_block.setSignature(empty_block_dict["signature"])
-                    # 是否已经存在
-                    if self.mainNode.currentBlockList.userPkIsBlock(user_pk=empty_block.userPk):
-                        continue
-                    # 验证是否在有生成权限的节点内
-                    if not self.currentMainNode.userPKisExit(user_pk=empty_block.userPk):
-                        continue
+                # 收集其他节点产生的时代区块
+                if message[0:len(SubscribeTopics.getBlockTopicOfGalaxy())] == SubscribeTopics.getBlockTopicOfGalaxy():
+                    conformation_Of_galaxy_message = literal_eval(
+                        message[len(SubscribeTopics.getBlockTopicOfGalaxy()):])
+                    block_of_galaxy = conformation_Of_galaxy_message["block_of_galaxy"]
                     # 验证签名
-                    if not CipherSuites.verify(pk=empty_block.userPk, signature=empty_block.signature,
-                                               message=str(empty_block.getInfo()).encode("utf-8")):
+                    header = block_of_galaxy.getBlockHeader()
+                    if not CipherSuites.verify(pk=header["userPK"][0], signature=header["bodySignature"][0],
+                                               message=block_of_galaxy.body):
+                        # 签名验证失败
                         continue
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
-                    self.blockListOfBeings.addMessageOfNoBlock(empty_block=empty_block)
-
-            # 收集其他节点产生的时代区块
-            if message[0:len(SubscribeTopics.getBlockTopicOfGalaxy())] == SubscribeTopics.getBlockTopicOfGalaxy():
-                conformation_Of_galaxy_message = literal_eval(message[len(SubscribeTopics.getBlockTopicOfGalaxy()):])
-                block_of_galaxy = conformation_Of_galaxy_message["block_of_galaxy"]
-                # 验证签名
-                header = block_of_galaxy.getBlockHeader()
-                if not CipherSuites.verify(pk=header["userPK"][0], signature=header["bodySignature"][0],
-                                           message=block_of_galaxy.body):
-                    # 签名验证失败
-                    continue
-                votes = conformation_Of_galaxy_message["votes"]
-                total = conformation_Of_galaxy_message["total"]
-                # 计算票数是否符合
-                if total < self.voteCount.getVotesOfGalaxyGenerate(current_election_cycle=self.getElectionPeriod()):
-                    continue
-                header = block_of_galaxy.getBlockHeader()
-                total = self.voteCount.getAndVerifyVotes(votes=votes, main_node_id_of_block=header["userPK"][0][0:16],
-                                                         block_id_of_block=header["blockID"],
-                                                         election_period_of_block=header["electionPeriod"])
-                if total < self.voteCount.getVotesOfGalaxyGenerate(current_election_cycle=self.getElectionPeriod()):
-                    continue
-                # 广播
-                self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfGalaxy(),
-                                     message=str(conformation_Of_galaxy_message).encode("utf-8"))
-
-                # 存入数据库
-                self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=block_of_galaxy)
-                continue
-
-            # 新节点申请加入 消息
-            # 保存到暂存区（以便审核后回复）广播
-            if message[0:len(SubscribeTopics.getNodeTopicOfApplyJoin())] == SubscribeTopics.getNodeTopicOfApplyJoin():
-                serial_application_form = message[len(SubscribeTopics.getNodeTopicOfApplyJoin()):]
-                application_form = SerializationApplicationForm.deserialization(serial_application_form)
-                # 保证节点不能同时有多个申请书
-                if self.storageOfTemp.isApplicationForm(new_node_user_pk=application_form.newNodeInfo["user_pk"]):
-                    logger.info("该申请书已经存在，新节点用户公钥：" + application_form.newNodeInfo["user_pk"])
-                    continue
-                # 验证申请书新节点信息和签名
-                if not CipherSuites.verify(pk=application_form.newNodeInfo["user_pk"],
-                                           signature=application_form.newNodeSignature,
-                                           message=str(application_form.newNodeInfo).encode("utf-8")):
-                    logger.info("申请书新节点信息和签名不匹配，新节点用户公钥为：" + application_form.newNodeInfo["user_pk"])
-                    continue
-                # 验证新节点对申请书的签名
-                if not CipherSuites.verify(pk=application_form.newNodeInfo["user_pk"],
-                                           signature=application_form.applicationSignatureByNewNode,
-                                           message=str(application_form.application).encode("utf-8")):
-                    logger.info("新节点对申请书的签名不匹配,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
-                    continue
-                # 验证主节点对申请书的签名
-                if not CipherSuites.verify(pk=application_form.mainNode["user_pk"],
-                                           signature=application_form.mainNode["application_signature"],
-                                           message=str(application_form.application).encode("utf-8")):
-                    logger.info("主节点对申请书的签名不匹配,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
-                    continue
-                # 广播
-                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=serial_application_form)
-                # 保存
-                self.storageOfTemp.insertApplicationFormByOtherMainNode(application_form)
-                continue
-
-            # 新节点确认加入主节点消息
-            if message[0:len(SubscribeTopics.getNodeTopicOfJoin())] == SubscribeTopics.getNodeTopicOfJoin():
-                serial_application_form, list_of_serial_reply_application_form = \
-                    literal_eval(message[len(SubscribeTopics.getNodeTopicOfJoin()):])
-                list_of_reply_application_form = []
-                application_form = SerializationApplicationForm.deserialization(serial_application_form)
-                node_info = application_form.newNodeInfo
-                new_node = NodeInfo(node_id=node_info["node_id"], user_pk=node_info["user_pk"],
-                                    node_ip=node_info["node_ip"], create_time=node_info["create_time"])
-                new_node.setNodeSignature(application_form.newNodeSignature)
-                for serial_reply_application_form in list_of_serial_reply_application_form:
-                    reply_application_form = SerializationReplyApplicationForm.deserialization(
-                        serial_reply_application_form)
-                    list_of_reply_application_form.append(reply_application_form)
-                # 验证新节点信息和签名
-                if not CipherSuites.verify(pk=new_node.userPk, signature=new_node.nodeSignature,
-                                           message=str(new_node.getInfo()).encode("utf-8")):
-                    logger.info("新节点签名不匹配，新节点公钥：" + new_node.userPk)
-                    continue
-                # 验证所有同意节点的时间和签名
-                if self.nodeManager.verifyAgreeInfo(application_form=application_form,
-                                                    reply_application_form_list=list_of_reply_application_form):
-                    # 全网广播节点加入确认消息
-                    self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
-                                         message=[serial_application_form, list_of_serial_reply_application_form])
-                    # 将新节点加入数据库
-                    self.mainNode.mainNodeList.addMainNode(node_info=node_info)
-                    # 重新计算订阅列表，重新创建32个订阅链接
-                    self.reSubscribe()
-
-            # 申请删除主节点消息
-            # 被选中，但是没有产生区块
-            # 注意：此处应该先检测投票数量是否符合条件，若投票数量符合条件，则直接删除节点，若不符合条件，再考虑其他情况
-            if message[
-               0:len(SubscribeTopics.getNodeTopicOfApplyDelete())] == SubscribeTopics.getNodeTopicOfApplyDelete():
-                node_del_application_form_mess = literal_eval(
-                    message[len(SubscribeTopics.getNodeTopicOfApplyDelete()):])
-                del_node_id = node_del_application_form_mess["del_node_id"]
-                del_node_user_pk = node_del_application_form_mess["del_node_user_pk"]
-                current_epoch = node_del_application_form_mess["current_epoch"]
-                apply_user_pk = node_del_application_form_mess["apply_user_pk"]
-                apply_signature = node_del_application_form_mess["apply_signature"]
-                votes = node_del_application_form_mess["votes"]
-                node_del_application_form = NodeDelApplicationForm(del_node_id=del_node_id,
-                                                                   del_user_pk=del_node_user_pk,
-                                                                   current_epoch=current_epoch)
-                node_del_application_form.setApplySignature(apply_signature)
-                node_del_application_form.setApplyUserPk(apply_user_pk)
-                # 检测是否有该节点，没有说明已收到过此消息，已经删除
-                if not self.mainNode.mainNodeList.userPKisExit(user_pk=del_node_user_pk):
-                    continue
-                # 检测申请节点是否有申请权限
-                if not self.currentMainNode.userPKisExit(user_pk=apply_user_pk):
-                    continue
-                # 检测申请被删除的节点当前是否应该生成区块
-                if not self.currentMainNode.userPKisExit(user_pk=del_node_user_pk):
-                    continue
-                # 验证申请节点签名
-                if not CipherSuites.verify(pk=apply_user_pk, signature=apply_signature,
-                                           message=(str(node_del_application_form.getInfo()).encode("utf-8"))):
-                    continue
-                # 检测申请书的投票数量是否达到标准
-                if self.nodeManager.confirmDelNodes(node_del_application_form=node_del_application_form):
-                    # 添加该删除节点的不产生区块的消息
-                    self.mainNode.currentBlockList.addMessageOfNoBlock(
-                        empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
-                    # 删除节点
-                    self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
+                    votes = conformation_Of_galaxy_message["votes"]
+                    total = conformation_Of_galaxy_message["total"]
+                    # 计算票数是否符合
+                    if total < self.voteCount.getVotesOfGalaxyGenerate(current_election_cycle=self.getElectionPeriod()):
+                        continue
+                    header = block_of_galaxy.getBlockHeader()
+                    total = self.voteCount.getAndVerifyVotes(votes=votes,
+                                                             main_node_id_of_block=header["userPK"][0][0:16],
+                                                             block_id_of_block=header["blockID"],
+                                                             election_period_of_block=header["electionPeriod"])
+                    if total < self.voteCount.getVotesOfGalaxyGenerate(current_election_cycle=self.getElectionPeriod()):
+                        continue
+                    # 广播
+                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfGalaxy(),
+                                         message=str(conformation_Of_galaxy_message).encode("utf-8"))
+                    # 存入数据库
+                    self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=block_of_galaxy)
                     continue
 
-                # 检测自己是否收到该区块
-                if self.mainNode.currentBlockList.userPkIsExit(user_pk=del_node_user_pk):
-                    if self.mainNode.currentBlockList.userPkIsBlock(user_pk=del_node_user_pk):
-                        block = self.mainNode.currentBlockList.getBlockByUserPk(user_pk=del_node_user_pk)
-                        network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=block)
-                        network_message.setClientInfo(user_pk=self.user.getUserPKString())
-                        signature = self.user.sign(
-                            message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
-                        network_message.setSignature(signature)
-                        serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.client.sendMessageByNodeID(node_id=apply_user_pk[0:16],
-                                                        data=str(serial_network_message).encode("utf-8"))
+                # 新节点申请加入 消息
+                # 保存到暂存区（以便审核后回复）广播
+                if message[
+                   0:len(SubscribeTopics.getNodeTopicOfApplyJoin())] == SubscribeTopics.getNodeTopicOfApplyJoin():
+                    serial_application_form = literal_eval(
+                        bytes(message[len(SubscribeTopics.getNodeTopicOfApplyJoin()):]).decode(
+                            "utf-8"))
+                    application_form = SerializationApplicationForm.deserialization(serial_application_form)
+                    # 保证节点不能同时有多个申请书
+                    if self.storageOfTemp.isApplicationForm(new_node_user_pk=application_form.newNodeInfo["user_pk"]):
+                        logger.info("该申请书已经存在，新节点用户公钥：" + application_form.newNodeInfo["user_pk"])
+                        continue
+                    # 验证申请书新节点信息和签名
+                    if not CipherSuites.verify(pk=application_form.newNodeInfo["user_pk"],
+                                               signature=application_form.newNodeSignature,
+                                               message=str(application_form.newNodeInfo).encode("utf-8")):
+                        logger.info("申请书新节点信息和签名不匹配，新节点用户公钥为：" + application_form.newNodeInfo["user_pk"])
+                        continue
+                    # 验证新节点对申请书的签名
+                    if not CipherSuites.verify(pk=application_form.newNodeInfo["user_pk"],
+                                               signature=application_form.applicationSignatureByNewNode,
+                                               message=str(application_form.application).encode("utf-8")):
+                        logger.info("新节点对申请书的签名不匹配,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
+                        continue
+                    # 验证主节点对申请书的签名
+                    if not CipherSuites.verify(pk=application_form.mainNode["user_pk"],
+                                               signature=application_form.mainNode["application_signature"],
+                                               message=str(application_form.application).encode("utf-8")):
+                        logger.info("主节点对申请书的签名不匹配,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
+                        continue
+                    # 广播
+                    self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(),
+                                         message=serial_application_form)
+                    # 保存
+                    self.storageOfTemp.insertApplicationFormByOtherMainNode(application_form)
+                    logger.info("已保存申请书信息,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
+                    continue
+
+                # 新节点确认加入主节点消息
+                if message[0:len(SubscribeTopics.getNodeTopicOfJoin())] == SubscribeTopics.getNodeTopicOfJoin():
+                    serial_application_form, list_of_serial_reply_application_form = \
+                        literal_eval(bytes(message[len(SubscribeTopics.getNodeTopicOfJoin()):]).decode("utf-8"))
+                    list_of_reply_application_form = []
+                    application_form = SerializationApplicationForm.deserialization(serial_application_form)
+                    node_info = application_form.newNodeInfo
+                    new_node = NodeInfo(node_id=node_info["node_id"], user_pk=node_info["user_pk"],
+                                        node_ip=node_info["node_ip"], create_time=node_info["create_time"])
+                    new_node.setNodeSignature(application_form.newNodeSignature)
+                    for serial_reply_application_form in list_of_serial_reply_application_form:
+                        reply_application_form = SerializationReplyApplicationForm.deserialization(
+                            serial_reply_application_form)
+                        list_of_reply_application_form.append(reply_application_form)
+                    # 验证新节点信息和签名
+                    if not CipherSuites.verify(pk=new_node.userPk, signature=new_node.nodeSignature,
+                                               message=str(new_node.getInfo()).encode("utf-8")):
+                        logger.info("新节点签名不匹配，新节点公钥：" + new_node.userPk)
+                        continue
+                    # 验证所有同意节点的时间和签名
+                    if self.nodeManager.verifyAgreeInfo(application_form=application_form,
+                                                        reply_application_form_list=list_of_reply_application_form):
+                        # 全网广播节点加入确认消息
+                        self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
+                                             message=[serial_application_form, list_of_serial_reply_application_form])
+                        # 将新节点加入数据库
+                        self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                        # 重新计算订阅列表，重新创建32个订阅链接
+                        self.reSubscribe()
+
+                # 申请删除主节点消息
+                # 被选中，但是没有产生区块
+                # 注意：此处应该先检测投票数量是否符合条件，若投票数量符合条件，则直接删除节点，若不符合条件，再考虑其他情况
+                if message[
+                   0:len(SubscribeTopics.getNodeTopicOfApplyDelete())] == SubscribeTopics.getNodeTopicOfApplyDelete():
+                    node_del_application_form_mess = literal_eval(bytes(
+                        message[len(SubscribeTopics.getNodeTopicOfApplyDelete()):]).decode("utf-8"))
+                    del_node_id = node_del_application_form_mess["del_node_id"]
+                    del_node_user_pk = node_del_application_form_mess["del_node_user_pk"]
+                    current_epoch = node_del_application_form_mess["current_epoch"]
+                    apply_user_pk = node_del_application_form_mess["apply_user_pk"]
+                    apply_signature = node_del_application_form_mess["apply_signature"]
+                    votes = node_del_application_form_mess["votes"]
+                    node_del_application_form = NodeDelApplicationForm(del_node_id=del_node_id,
+                                                                       del_user_pk=del_node_user_pk,
+                                                                       current_epoch=current_epoch)
+                    node_del_application_form.setApplySignature(apply_signature)
+                    node_del_application_form.setApplyUserPk(apply_user_pk)
+                    # 检测是否有该节点，没有说明已收到过此消息，已经删除
+                    if not self.mainNode.mainNodeList.userPKisExit(user_pk=del_node_user_pk):
+                        continue
+                    # 检测申请节点是否有申请权限
+                    if not self.mainNode.currentMainNode.userPKisExit(user_pk=apply_user_pk):
+                        continue
+                    # 检测申请被删除的节点当前是否应该生成区块
+                    if not self.mainNode.currentMainNode.userPKisExit(user_pk=del_node_user_pk):
+                        continue
+                    # 验证申请节点签名
+                    if not CipherSuites.verify(pk=apply_user_pk, signature=apply_signature,
+                                               message=(str(node_del_application_form.getInfo()).encode("utf-8"))):
+                        continue
+                    # 检测申请书的投票数量是否达到标准
+                    if self.nodeManager.confirmDelNodes(node_del_application_form=node_del_application_form):
+                        # 添加该删除节点的不产生区块的消息
+                        self.mainNode.currentBlockList.addMessageOfNoBlock(
+                            empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
+                        # 删除节点
+                        self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
+                        continue
+
+                    # 检测自己是否收到该区块
+                    if self.mainNode.currentBlockList.userPkIsExit(user_pk=del_node_user_pk):
+                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=del_node_user_pk):
+                            block = self.mainNode.currentBlockList.getBlockByUserPk(user_pk=del_node_user_pk)
+                            network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=block)
+                            network_message.setClientInfo(user_pk=self.user.getUserPKString())
+                            signature = self.user.sign(
+                                message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
+                            network_message.setSignature(signature)
+                            serial_network_message = SerializationNetworkMessage.serialization(network_message)
+                            self.client.sendMessageByNodeID(node_id=apply_user_pk[0:16],
+                                                            data=str(serial_network_message).encode("utf-8"))
+                        else:
+                            # 不产生区块的消息
+                            network_message = NetworkMessage(NetworkMessageType.NO_BLOCK,
+                                                             message=self.mainNode.currentBlockList.getMessageOfNoBlock(
+                                                                 user_pk=del_node_user_pk).getMessage())
+                            network_message.setClientInfo(user_pk=self.user.getUserPKString())
+                            signature = self.user.sign(
+                                message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
+                            network_message.setSignature(signature)
+                            serial_network_message = SerializationNetworkMessage.serialization(network_message)
+                            self.client.sendMessageByNodeID(node_id=apply_user_pk[0:16],
+                                                            data=str(serial_network_message).encode("utf-8"))
                     else:
-                        # 不产生区块的消息
-                        network_message = NetworkMessage(NetworkMessageType.NO_BLOCK,
-                                                         message=self.mainNode.currentBlockList.getMessageOfNoBlock(
-                                                             user_pk=del_node_user_pk).getMessage())
-                        network_message.setClientInfo(user_pk=self.user.getUserPKString())
-                        signature = self.user.sign(
-                            message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
-                        network_message.setSignature(signature)
-                        serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.client.sendMessageByNodeID(node_id=apply_user_pk[0:16],
-                                                        data=str(serial_network_message).encode("utf-8"))
-                else:
-                    # 检测是否是已经收到过该广播消息
-                    is_receive = False
-                    for node_del_application_form in self.nodeDelApplicationFormList:
-                        if del_node_id == node_del_application_form.delNodeId:
-                            is_receive = True
-                            is_new = False
-                            for vote in votes:
-                                # 加入收集表中没有的签名数据
-                                if node_del_application_form.userPkIsVotes(user_pk=vote["user_pk"]):
-                                    continue
-                                # 验证签名
-                                if not CipherSuites.verify(pk=vote["user_pk"], signature=vote["signature"],
-                                                           message=str(node_del_application_form.getInfo()).encode(
-                                                               "utf-8")):
-                                    continue
-                                node_del_application_form.addVotes(user_pk=vote["user_pk"], signature=vote["signature"])
-                                is_new = True
-                            # 添加新数据，再次广播
-                            if is_new:
-                                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
-                                                     message=node_del_application_form.getMessage())
-                    # 没收到该广播消息
-                    if not is_receive:
-                        self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
-                                             message=node_del_application_form.getMessage())
-                        self.nodeDelApplicationFormList.append(node_del_application_form)
+                        # 检测是否是已经收到过该广播消息
+                        is_receive = False
+                        for node_del_application_form in self.nodeDelApplicationFormList:
+                            if del_node_id == node_del_application_form.delNodeId:
+                                is_receive = True
+                                is_new = False
+                                for vote in votes:
+                                    # 加入收集表中没有的签名数据
+                                    if node_del_application_form.userPkIsVotes(user_pk=vote["user_pk"]):
+                                        continue
+                                    # 验证签名
+                                    if not CipherSuites.verify(pk=vote["user_pk"], signature=vote["signature"],
+                                                               message=str(node_del_application_form.getInfo()).encode(
+                                                                   "utf-8")):
+                                        continue
+                                    node_del_application_form.addVotes(user_pk=vote["user_pk"],
+                                                                       signature=vote["signature"])
+                                    is_new = True
+                                # 添加新数据，再次广播
+                                if is_new:
+                                    self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
+                                                         message=node_del_application_form.getMessage())
+                        # 没收到该广播消息
+                        if not is_receive:
+                            self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyDelete(),
+                                                 message=node_del_application_form.getMessage())
+                            self.nodeDelApplicationFormList.append(node_del_application_form)
 
-            # 投票确认消息
-            if message[0:len(SubscribeTopics.getVoteConfirmation())] == SubscribeTopics.getVoteConfirmation():
-                vote_info = literal_eval(message[len(SubscribeTopics.getVoteConfirmation()):])
-                main_node_id = vote_info["main_node_id"]
-                block_id = vote_info["block_id"]
-                current_election_period = vote_info["current_election_period"]
-                number_of_vote = vote_info["number_of_vote"]
-                user_pk = vote_info["user_pk"]
-                signature = vote_info["signature"]
-                vote_information = VoteInformation(main_node_id=main_node_id, block_id=block_id,
-                                                   election_period=current_election_period,
-                                                   number_of_vote=number_of_vote, user_pk=user_pk)
-                vote_information.setSignature(signature)
-                # 验证签名
-                if CipherSuites.verify(pk=user_pk, signature=signature,
-                                       message=str(vote_information.getVoteInfo()).encode("utf-8")):
-                    # 检测数据库是否存在该组消息
-                    if not self.storageOfTemp.voteIsExit(vote_information=vote_information):
-                        # 存入数据库
-                        self.storageOfTemp.addVotes(vote_information=vote_information)
-                        # 广播
-                        self.pub.sendMessage(topic=SubscribeTopics.getVoteConfirmation(), message=vote_information)
+                # 投票确认消息
+                if message[0:len(SubscribeTopics.getVoteConfirmation())] == SubscribeTopics.getVoteConfirmation():
+                    vote_info = literal_eval(message[len(SubscribeTopics.getVoteConfirmation()):])
+                    main_node_id = vote_info["main_node_id"]
+                    block_id = vote_info["block_id"]
+                    current_election_period = vote_info["current_election_period"]
+                    number_of_vote = vote_info["number_of_vote"]
+                    user_pk = vote_info["user_pk"]
+                    signature = vote_info["signature"]
+                    vote_information = VoteInformation(main_node_id=main_node_id, block_id=block_id,
+                                                       election_period=current_election_period,
+                                                       number_of_vote=number_of_vote, user_pk=user_pk)
+                    vote_information.setSignature(signature)
+                    # 验证签名
+                    if CipherSuites.verify(pk=user_pk, signature=signature,
+                                           message=str(vote_information.getVoteInfo()).encode("utf-8")):
+                        # 检测数据库是否存在该组消息
+                        if not self.storageOfTemp.voteIsExit(vote_information=vote_information):
+                            # 存入数据库
+                            self.storageOfTemp.addVotes(vote_information=vote_information)
+                            # 广播
+                            self.pub.sendMessage(topic=SubscribeTopics.getVoteConfirmation(), message=vote_information)
+
+            except Exception as err:
+                logger.warning(err)
 
 
 # 监听接受消息
@@ -454,7 +466,7 @@ class Server(threading.Thread):
                     continue
                 # 当前Epoch请求
                 if mess_type == NetworkMessageType.Get_Current_Epoch:
-                    self.socket.send(self.getEpoch())
+                    self.socket.send(str(self.getEpoch()).encode("utf-8"))
                     continue
                 # 数据同步请求
                 if mess_type == NetworkMessageType.Get_Beings_Data:
@@ -590,7 +602,7 @@ class Server(threading.Thread):
                 if mess_type == NetworkMessageType.APPLY_GET_BLOCK:
                     current_epoch = network_message.message
                     # 检查当前周期内，自己是否生成众生区块
-                    if not self.currentMainNode.getNodeList().userPKisExit(user_pk=self.user.getUserSK()):
+                    if not self.currentMainNode.getNodeList().userPKisExit(user_pk=self.user.getUserPKString()):
                         self.socket.send(b'0')
                         continue
                     # 检查epoch是否匹配

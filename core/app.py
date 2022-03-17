@@ -87,7 +87,7 @@ class APP:
                   user=self.user, vote_count=self.voteCount, node_manager=self.nodeManager,
                   main_node=self.mainNode, reSubscribe=self.reSubscribe, storage_of_temp=self.storageOfTemp,
                   getEpoch=self.getEpoch, getElectionPeriod=self.getElectionPeriod,
-                  storage_of_galaxy=self.storageOfGalaxy, current_main_node=self.mainNode.currentMainNode,
+                  storage_of_galaxy=self.storageOfGalaxy,
                   node_del_application_form_list=self.mainNode.nodeDelApplicationFormList, client=self.client)
         sub.start()
         self.subList.append(sub)
@@ -134,7 +134,7 @@ class APP:
             logger.info("连接主节点IP:" + str(ip))
             try:
                 res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-                self.mainNode.mainNodeList.setNodeList(literal_eval(res))
+                self.mainNode.mainNodeList.setNodeList(literal_eval(bytes(res).decode("utf-8")))
                 logger.info("连接主节点IP:" + str(ip))
                 is_get = True
                 break
@@ -153,7 +153,7 @@ class APP:
         for ip in node_ip_list:
             try:
                 res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-                self.setEpoch(res)
+                self.setEpoch(int(res))
                 break
             except Exception as err:
                 logger.warning(err)
@@ -446,12 +446,12 @@ class APP:
                     serial_network_message = SerializationNetworkMessage.serialization(network_message)
                     res = self.client.sendMessageByNodeID(node_id=node_id,
                                                           data=str(serial_network_message).encode("utf-8"))
-
-                    res = literal_eval(res)
-                    if res["mess_type"] == NetworkMessageType.NEW_BLOCK:
-                        self.mainNode.currentBlockList.addBlock(block=res["message"])
-                    if res["mess_type"] == NetworkMessageType.NO_BLOCK:
-                        self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
+                    if res != b'0':
+                        res = literal_eval(bytes(res).decode("utf-8"))
+                        if res["message_type"] == NetworkMessageType.NEW_BLOCK:
+                            self.mainNode.currentBlockList.addBlock(block=res["message"])
+                        if res["message_type"] == NetworkMessageType.NO_BLOCK:
+                            self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
 
     # 检查是否收集完成所有区块，收集完成后保存到数据库
     # 后10秒，每秒检查一次

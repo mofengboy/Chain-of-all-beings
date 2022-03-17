@@ -23,11 +23,11 @@ class CipherSuites:
 
     @staticmethod
     def getSKFromString(string_bytes: bytes) -> SigningKey:
-        return SigningKey.from_string(string_bytes)
+        return SigningKey.from_string(string_bytes, curve=NIST384p)
 
     @staticmethod
     def getPKFromString(string_bytes: bytes) -> VerifyingKey:
-        return VerifyingKey.from_string(string_bytes)
+        return VerifyingKey.from_string(string_bytes, curve=NIST384p)
 
     # 由用户私钥（签名密钥）得到用户公钥（验证公钥）
     @staticmethod
@@ -58,7 +58,7 @@ class CipherSuites:
     # 验证公钥和私钥是否匹配
     @staticmethod
     def verifyPublicAndPrivateKeys(sk_string, pk_string):
-        sk = CipherSuites.getSKFromString((bytes.fromhex(sk_string)))
+        sk = CipherSuites.getSKFromString(bytes.fromhex(sk_string))
         content = random.random()
-        signature = sk.sign(str(content).encode("utf-8"))
+        signature = CipherSuites.sign(sk, str(content).encode("utf-8")).hex()
         return CipherSuites.verify(pk=pk_string, signature=signature, message=str(content).encode("utf-8"))

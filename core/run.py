@@ -50,22 +50,9 @@ def run(sk_string, pk_string):
     # 订阅
     app.reSubscribe()
 
-    # 循环获取主节点列表，检查自己是否在主节点列表内
-    # 只有当自己成为主节点列表时，才继续执行，否则在此处等待，即此时只有读取权限，没有写入权限
+    # 检查主节点列表，即此时只有读取权限，没有写入权限
     # 不再主节点列表时，可接受订阅数据
-    i = 0
-    while not app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
-        time.sleep(2)
-        i += 1
-        if i >= 15:
-            logger.info("当前节点不是主节点,请在其他主节点处进行申请")
-            logger.info("节点信息如下：")
-            logger.info(app.mainNode.getNodeInfo())
-            logger.info("节点签名如下：")
-            logger.info(app.mainNode.getNodeSignature())
-            i = 0
 
-    # 成为主节点后周期开始
     phase1 = False
     phase2 = False
     phase3 = False
@@ -73,6 +60,13 @@ def run(sk_string, pk_string):
 
     while True:
         if 0 <= STime.getSecond() < 30 and phase1 is False:
+            if not app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
+                logger.info("当前节点不是主节点,请在其他主节点处进行申请")
+                logger.info("节点信息如下：")
+                logger.info(app.mainNode.getNodeInfo())
+                logger.info("节点签名如下：")
+                logger.info(app.mainNode.getNodeSignature())
+
             app.startNewEpoch()
             phase1 = True
             logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
@@ -121,7 +115,6 @@ def run(sk_string, pk_string):
                 # 主节点进入数据恢复阶段
                 app.startDataRecovery()
                 app.addEpoch()
-                # 此处可能还有未考虑到的情况，例如进行数据恢复时，错过了下一个或下下一个..众生区块生存周期，如何再次进行数据恢复。
 
         time.sleep(1)
 
