@@ -71,6 +71,7 @@ export default {
             // 获取详细信息
             _this.getDetailOfBeings(data[i]["db_id"])
                 .then((detail) => {
+
                   _this.tableData.push({
                     id: data[i]["db_id"],
                     applyTime: _this.$dayjs.unix(data[i]["create_time"]).format(),

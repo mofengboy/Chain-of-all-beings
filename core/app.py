@@ -123,9 +123,17 @@ class APP:
                 del self.subList[i]
                 break
 
+    # 删除所有订阅
+    def stopAllSub(self):
+        lastSub = self.subList.copy()
+        for sub_i in lastSub:
+            ip = sub_i.name
+            self.delSub(ip)
+            sub_i.stop()
+        logger.info("已删除之前订阅，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
+
     # 重新订阅32个链接
     def reSubscribe(self):
-        lastSub = self.subList.copy()
         node = self.mainNode.mainNodeList.getNodeCount()
         NUMBER_OF_SUBSCRIPTION = 32
         count = NUMBER_OF_SUBSCRIPTION
@@ -137,23 +145,25 @@ class APP:
             self.addSub(ip)
         logger.info("订阅完成，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
         # 删除之前订阅
-        for sub_i in lastSub:
-            ip = sub_i.name
-            self.delSub(ip)
-        logger.info("已删除之前订阅，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
+        self.stopAllSub()
 
     # 读入主节点列表，通过配置文件提供的种子IP
     def loadMainNodeListBySeed(self):
         ip_list = MainNodeIp().getTpList()
         data = NetworkMessage(mess_type=NetworkMessageType.Get_Main_Node_List, message=None)
         serial_data = SerializationNetworkMessage.serialization(data)
+        is_get = False
         for ip in ip_list:
+            logger.info("连接主节点IP:" + str(ip))
             try:
                 res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                 self.mainNode.mainNodeList.setNodeList(literal_eval(res))
+                logger.info("连接主节点IP:" + str(ip))
+                is_get = True
                 break
             except Exception as err:
                 logger.warning(err)
+        return is_get
 
     # 通过其他主节点获取当前epoch
     def getCurrentEpochByOtherMainNode(self):

@@ -22,7 +22,7 @@ def run():
     # 校对系统时间，系统时间与NTP服务器时间不得超过1秒
     if not STime.proofreadingTime():
         # 抛出错误
-        logger.info("系统时间与NTP服务器时间不得超过1秒,请核对系统时间")
+        logger.warning("系统时间与NTP服务器时间不得超过1秒,请核对系统时间")
         exit()
 
     # 初始化核心 core
@@ -35,7 +35,12 @@ def run():
     # #
 
     # 获取主节点列表（读取配置文件）
-    app.loadMainNodeListBySeed()
+    # if not app.loadMainNodeListBySeed():
+    #     logger.warning("无法获得任何主节点IP的地址，请检测网络或者配置文件")
+    #     # 关闭所有线程并退出
+    #     app.server.stop()
+    #     app.stopAllSub()
+    #     exit()
     # 同步数据
     app.getCurrentEpochByOtherMainNode()
     app.synchronizedBlockOfBeings()

@@ -1,6 +1,4 @@
-import json
 import logging
-
 from core.utils.system_time import STime
 
 logger = logging.getLogger("main")

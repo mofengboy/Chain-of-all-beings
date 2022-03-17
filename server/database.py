@@ -21,6 +21,7 @@ class DB:
             body BLOB NOT NULL,
             signature TEXT NOT NULL,
             is_review INTEGER NOT NULL,
+            review_username TEXT,
             create_time TEXT NOT NULL
             )
             """)
@@ -102,8 +103,8 @@ class DB:
     def insertBlockOfBeings(self, user_pk, body, signature):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        insert into beings_block(user_pk,body,signature,is_review,create_time) values (?,?,?,0,?)
-        """, (user_pk, body, signature, time.time()))
+        insert into beings_block(user_pk,body,signature,is_review,create_time) values (?,?,?,?,?)
+        """, (user_pk, body, signature, 0, time.time()))
         self.__DB.commit()
 
     def getBlockListOfBeings(self, count):

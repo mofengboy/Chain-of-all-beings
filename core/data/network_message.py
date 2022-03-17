@@ -48,43 +48,43 @@ class SubscribeTopics:
 
 
 # 消息类型
-class NetworkMessageType(Enum):
+class NetworkMessageType:
     # 收到确认
-    RECEIVE_CONFIRMATION = auto()
+    RECEIVE_CONFIRMATION = 1
     # 新区块消息
-    NEW_BLOCK = auto()
+    NEW_BLOCK = 2
     # 申请获取该区块
-    APPLY_GET_BLOCK = auto
+    APPLY_GET_BLOCK = 3
     # 被选中的节点不生成区块
-    NO_BLOCK = auto()
+    NO_BLOCK = 4
     # 新节点申请加入
-    NewNodeApplicationJoin = auto()
+    NewNodeApplicationJoin = 5
     # 新节点确认加入
-    NewNodeJoin = auto()
+    NewNodeJoin = 6
     # 对申请信息的回复
-    ReplayNewNodeApplicationJoin = auto()
+    ReplayNewNodeApplicationJoin = 7
     # 申请删除节点
-    NodeApplicationDelete = auto()
+    NodeApplicationDelete = 8
     # 确认删除节点
-    NewNodeDelete = auto()
+    NewNodeDelete = 9
     # 对删除信息的回复
-    ReplyNodeApplicationDelete = auto()
+    ReplyNodeApplicationDelete = 10
     # 投票信息
-    Vote_Info = auto()
+    Vote_Info = 11
     # 投票信息回复
-    Reply_Vote_Info = auto()
+    Reply_Vote_Info = 12
     # 获取主节点列表
-    Get_Main_Node_List = auto()
+    Get_Main_Node_List = 13
     # 获取当前epoch
-    Get_Current_Epoch = auto()
+    Get_Current_Epoch = 14
     # 申请同步众生区块数据
-    Get_Beings_Data = auto()
+    Get_Beings_Data = 15
     # 数据恢复请求
-    Data_Recovery_Req = auto()
+    Data_Recovery_Req = 16
     # 无法数据恢复（同样没收集完成）
-    No_Data_Recovery = auto()
+    No_Data_Recovery = 17
     # 数据恢复
-    Data_Recovery = auto()
+    Data_Recovery = 18
 
 
 # 网络消息格式

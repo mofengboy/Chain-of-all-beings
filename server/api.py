@@ -322,8 +322,7 @@ def getBeings():
         http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
     except Exception as err:
-        print(err)
-        http_message = HttpMessage(is_success=False, data="参数错误")
+        http_message = HttpMessage(is_success=False, data=err)
         return http_message.getJson()
 
 
