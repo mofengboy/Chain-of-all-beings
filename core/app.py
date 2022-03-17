@@ -29,7 +29,7 @@ logger = logging.getLogger("main")
 
 
 class APP:
-    def __init__(self):
+    def __init__(self, sk_string, pk_string):
         self.currentEpoch = 0  # 当前epoch
         self.electionPeriod = 0  # 选举期次
 
@@ -38,30 +38,7 @@ class APP:
         self.storageOfGalaxy = StorageOfGalaxy()  # 银河区块存储类
 
         self.user = User()  # 用户
-        flag = True
-        print("输入1->生成私钥公钥对，输入2->使用私钥公钥登录")
-        input_content = input()
-        while flag:
-            if input_content == "1":
-                self.user.register()
-                is_yes = ""
-                while is_yes != "yes":
-                    print("请保存以上私钥和公钥")
-                    print("注意：一旦私钥和公钥丢失或被盗，将无法找回！")
-                    print("完成保存后，请输入yes:", end=" ")
-                    is_yes = input()
-                flag = False
-            elif input_content == "2":
-                print("请输入私钥")
-                sk_string = input()
-                print("请输入公钥")
-                pk_string = input()
-                if not CipherSuites.verifyPublicAndPrivateKeys(sk_string, pk_string):
-                    print("私钥与公钥不匹配，请重新输入")
-                    continue
-                self.user.login(sk_string, pk_string)
-                flag = False
-
+        self.user.login(sk_string, pk_string)
         self.mainNode = MainNode(self.user)  # 主节点
         self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
                                        storage_of_temp=self.storageOfTemp)  # 节点管理

@@ -58,7 +58,7 @@ class CipherSuites:
     # 验证公钥和私钥是否匹配
     @staticmethod
     def verifyPublicAndPrivateKeys(sk_string, pk_string):
-        sk = CipherSuites.getSKFromString(sk_string)
+        sk = CipherSuites.getSKFromString((bytes.fromhex(sk_string)))
         content = random.random()
         signature = sk.sign(str(content).encode("utf-8"))
         return CipherSuites.verify(pk=pk_string, signature=signature, message=str(content).encode("utf-8"))

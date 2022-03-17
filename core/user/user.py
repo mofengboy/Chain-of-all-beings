@@ -48,6 +48,10 @@ class User:
 
     # 新用户登录
     def login(self, sk_string, pk_string):
+        # 验证私钥和公钥是否匹配
+        if not CipherSuites.verifyPublicAndPrivateKeys(sk_string, pk_string):
+            logger.warning("私钥与公钥不匹配！")
+            exit()
         self.setUserSK(sk_string)
         self.setUserPK(pk_string)
         logger.info("用户已经登录")

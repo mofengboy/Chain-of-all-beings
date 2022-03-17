@@ -1,3 +1,4 @@
+import getopt
 import sys
 import os
 import logging.config
@@ -8,10 +9,11 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from core.app import APP
+from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
 
 
-def run():
+def run(sk_string, pk_string):
     # 日志
     with open('./config/log_config.yaml', 'r') as f:
         config = yaml.safe_load(f.read())
@@ -26,7 +28,7 @@ def run():
         exit()
 
     # 初始化核心 core
-    app = APP()
+    app = APP(sk_string, pk_string)
     logger.info("全体初始化完成")
 
     # # DEBUG模式 将自己添加到主节点列表
@@ -35,12 +37,12 @@ def run():
     # #
 
     # 获取主节点列表（读取配置文件）
-    # if not app.loadMainNodeListBySeed():
-    #     logger.warning("无法获得任何主节点IP的地址，请检测网络或者配置文件")
-    #     # 关闭所有线程并退出
-    #     app.server.stop()
-    #     app.stopAllSub()
-    #     exit()
+    if not app.loadMainNodeListBySeed():
+        logger.warning("无法获得任何主节点IP的地址，请检测网络或者配置文件")
+        # 关闭所有线程并退出
+        app.stopAllSub()
+        app.server.stop()
+        exit()
     # 同步数据
     app.getCurrentEpochByOtherMainNode()
     app.synchronizedBlockOfBeings()
@@ -125,4 +127,22 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    argv = sys.argv[1:]
+    private_key_string = ""
+    public_key_string = ""
+    try:
+        opts, args = getopt.getopt(argv, "s:p:")  # 短选项模式
+    except Exception as err:
+        print(err)
+        exit()
+
+    for opt, arg in opts:
+        if opt == "-s":
+            private_key_string = arg
+        if opt == "-p":
+            public_key_string = arg
+
+    if not CipherSuites.verifyPublicAndPrivateKeys(private_key_string, public_key_string):
+        print("公钥与私钥不匹配")
+        exit()
+    run(private_key_string, public_key_string)
