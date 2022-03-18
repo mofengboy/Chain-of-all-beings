@@ -15,6 +15,7 @@ from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, New
 from core.consensus.vote import VoteCount
 from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock
 from core.consensus.data import NodeDelApplicationForm
+from core.consensus.block_verify import BlockVerify
 from core.storage.storage_of_beings import StorageOfBeings
 from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
@@ -30,7 +31,7 @@ logger = logging.getLogger("main")
 
 class APP:
     def __init__(self, sk_string, pk_string):
-        self.currentEpoch = 0  # 当前epoch
+        self.currentEpoch = 1  # 当前epoch
         self.electionPeriod = 0  # 选举期次
 
         self.storageOfBeings = StorageOfBeings()  # 众生区块存储类
@@ -45,6 +46,7 @@ class APP:
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp)  # 票数计算
+        self.blockVerify = BlockVerify(storage_of_beings=self.storageOfBeings)
 
         self.pub = PUB()  # 发布者
         self.pub.start()
@@ -101,8 +103,8 @@ class APP:
                 break
 
     # 删除所有订阅
-    def stopAllSub(self):
-        lastSub = self.subList.copy()
+    def stopAllSub(self, last_sub):
+        lastSub = last_sub
         for sub_i in lastSub:
             ip = sub_i.name
             self.delSub(ip)
@@ -111,6 +113,7 @@ class APP:
 
     # 重新订阅32个链接
     def reSubscribe(self):
+        lastSub = self.subList.copy()
         node = self.mainNode.mainNodeList.getNodeCount()
         NUMBER_OF_SUBSCRIPTION = 32
         count = NUMBER_OF_SUBSCRIPTION
@@ -122,7 +125,7 @@ class APP:
             self.addSub(ip)
         logger.info("订阅完成，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
         # 删除之前订阅
-        self.stopAllSub()
+        self.stopAllSub(lastSub)
 
     # 读入主节点列表，通过配置文件提供的种子IP
     def loadMainNodeListBySeed(self):
@@ -164,7 +167,13 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             node_ip_list.append(main_node["node_info"]["node_ip"])
         logger.info("众生区块开始同步")
-        start = 0
+        # 检测已经存储的区块
+        storage_epoch = self.storageOfBeings.getMaxEpoch()
+        logger.info("目前已经存储的区块的epoch为：" + str(storage_epoch))
+        verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
+        logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
+        self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
+        start = verify_epoch
         if self.getEpoch() > 0:
             while True:
                 if start + 10 <= self.getEpoch():
@@ -179,7 +188,7 @@ class APP:
                     block_list = literal_eval(bytes(res).decode("utf-8"))
                     block_list_of_beings = []
                     for block_i in block_list:
-                        block = SerializationBeings.deserialization(block_i)
+                        block = SerializationBeings.deserialization(str(block_i).encode("utf-8"))
                         block_list_of_beings.append(block)
                     self.storageOfBeings.saveBatchBlock(block_list_of_beings)
                     logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
@@ -366,7 +375,7 @@ class APP:
 
                     prev_block_header = []
                     pre_block = []
-                    for block in self.storageOfBeings.currentBlockListOfBeing.list:
+                    for block in self.storageOfBeings.currentBlockListOfBeing.getListOfOrthogonalOrder():
                         prev_block_header.append(block.getBlockHeaderSHA256())
                         pre_block.append(block.getBlockSHA256())
 

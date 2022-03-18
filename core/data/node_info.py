@@ -71,7 +71,6 @@ class MainNodeList:
         })
         # 排序
         self.__nodeList.sort(key=get_node_id)
-        logger.info("主节点列表有新节点加入，当前主节点数量为：" + str(self.getTotal()))
 
     def setMainNodeUpdateTimeByNodeId(self, update_time, node_id):
         for main_node in self.__nodeList:
@@ -87,8 +86,6 @@ class MainNodeList:
 
         # 排序
         self.__nodeList.sort(key=get_node_id)
-        logger.info("主节点列表有节点被删除，节点ID为：" + node_id)
-        logger.info("当前主节点数量为：" + str(self.getTotal()))
 
     def isExit(self, ip):
         for main_node in self.__nodeList:

@@ -1,5 +1,4 @@
 from core.data.block import Block
-from core.user.user import User
 
 
 class BlockOfBeings(Block):
@@ -45,6 +44,12 @@ class BlockListOfBeings:
         self.list = []
         self.listOfNoBlock = []
 
+    # 正序排列获得区块列表
+    def getListOfOrthogonalOrder(self):
+        block_of_list = self.list.copy()
+        block_of_list.sort(key=lambda block: block.getBlockID())
+        return block_of_list
+
     def getCount(self):
         return len(self.list) + len(self.listOfNoBlock)
 
@@ -86,25 +91,3 @@ class BlockListOfBeings:
             if block.getUserPk()[1] == user_pk:
                 return True
         return False
-
-
-if __name__ == "__main__":
-    user = User()
-    user.register()
-    genesis_user_sk = user.getUserSK()
-    genesis_user_pk = user.getUserVKString()
-
-    genesis_block_id = 0
-    genesis_pre_block_header = "0" * 256
-    genesis_pre_block = "0" * 256
-
-    genesis_body = "江畔何人初见月? 江月何年初照人? 人生代代无穷已, 江月年年只相似. 不知江月待何人, 但见长江送流水."
-    genesis_body_signature = [user.sign(genesis_body)]
-
-    GenesisBlock = BlockOfBeings(blockID=genesis_block_id, prev_block_header=genesis_pre_block_header,
-                                 pre_block=genesis_pre_block, user_pk=genesis_user_pk,
-                                 body_signature=genesis_body_signature, body=genesis_body)
-
-    # GenesisBlock.ge
-
-    print(genesis_body)

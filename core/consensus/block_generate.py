@@ -43,11 +43,11 @@ class CurrentMainNode:
 
 # 生产众生区块
 class NewBlockOfBeings:
-    def __init__(self, user_pk: [], body_signature: [], body, epoch, pre_block, prev_block_header):
+    def __init__(self, user_pk: [], body_signature: [], body: bytes, epoch, pre_block, prev_block_header):
         for i in range(len(user_pk)):
             if not CipherSuites.verify(pk=user_pk[i], signature=body_signature[i], message=body):
                 # 用户公钥、签名、内容不匹配 抛出错误
-                pass
+                raise "签名验证失败"
 
         self.newBlock = BlockOfBeings(epoch=epoch, pre_block=pre_block, prev_block_header=prev_block_header,
                                       user_pk=user_pk, body_signature=body_signature, body=body)
@@ -58,7 +58,7 @@ class NewBlockOfBeings:
 
 # 生产众生区块
 class NewBlockOfBeingsByExist:
-    def __init__(self, header, body):
+    def __init__(self, header, body: bytes):
         for i in range(len(header["userPK"])):
             if not CipherSuites.verify(pk=header["userPK"][i], signature=header["bodySignature"][i], message=body):
                 # 用户公钥、签名、内容不匹配 抛出错误

@@ -58,65 +58,90 @@ def run(sk_string, pk_string):
     phase3 = False
     phase4 = False
 
-    while True:
-        if 0 <= STime.getSecond() < 30 and phase1 is False:
-            if not app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
-                logger.info("当前节点不是主节点,请在其他主节点处进行申请")
-                logger.info("节点信息如下：")
-                logger.info(app.mainNode.getNodeInfo())
-                logger.info("节点签名如下：")
-                logger.info(app.mainNode.getNodeSignature())
-
-            app.startNewEpoch()
-            phase1 = True
-            logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
-
-        if 30 <= STime.getSecond() < 40 and phase1 is True and phase2 is False:
-            app.startCheckAndApplyDeleteNode()
-            phase2 = True
-            logger.info("第二阶段完成：此时时间：" + str(STime.getSecond()))
-
-        if 40 <= STime.getSecond() < 50 and phase1 is True and phase2 is True and phase3 is False:
-            app.startCheckAndGetBlock()
-            phase3 = True
-            logger.info("第三阶段完成：此时时间：" + str(STime.getSecond()))
-
-        if 50 <= STime.getSecond() < 60 and phase1 is True and phase2 is True and phase3 is True and phase4 is False:
-            i = 0
-            is_finish = True
-            while not app.startCheckAndSave():
-                i += 1
-                logger.info("第" + str(i) + "次尝试")
-                time.sleep(1)
-                if STime.getSecond() < 50:
-                    logger.warning("当前周期未能成功收集所有区块")
-                    is_finish = False
-                    break
-
-            phase4 = True
-            if is_finish:
-                app.addEpoch()
-                logger.info("第四阶段完成：此时时间：" + str(STime.getSecond()))
-                if app.getEpoch() % 20160 == 0:
-                    # 进入下一个选举周期
-                    app.addElectionPeriod()
-                    logger.info("进入下一个选举周期")
-
-                if app.getEpoch() % 1440 == 0:
-                    # 校对时间
-                    if not STime.proofreadingTime():
-                        logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
-                phase1 = False
-                phase2 = False
-                phase3 = False
-                phase4 = False
-            else:
-                logger.warning("第四阶段任务失败：此时时间：" + str(STime.getSecond()))
-                # 主节点进入数据恢复阶段
-                app.startDataRecovery()
-                app.addEpoch()
-
+    # 保证再前30秒进入
+    while STime.getSecond() >= 30:
+        logger.info("请稍等")
         time.sleep(1)
+
+    while True:
+        if app.mainNode.mainNodeList.userPKisExit(user_pk=app.user.getUserPKString()):
+            if 0 <= STime.getSecond() < 30 and phase1 is False:
+                app.startNewEpoch()
+                phase1 = True
+                logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
+
+            if 30 <= STime.getSecond() < 40 and phase1 is True and phase2 is False:
+                app.startCheckAndApplyDeleteNode()
+                phase2 = True
+                logger.info("第二阶段完成：此时时间：" + str(STime.getSecond()))
+
+            if 40 <= STime.getSecond() < 50 and phase1 is True and phase2 is True and phase3 is False:
+                app.startCheckAndGetBlock()
+                phase3 = True
+                logger.info("第三阶段完成：此时时间：" + str(STime.getSecond()))
+
+            if 50 <= STime.getSecond() < 60 and phase1 is True and phase2 is True and phase3 is True and phase4 is False:
+                i = 0
+                is_finish = True
+                while not app.startCheckAndSave():
+                    i += 1
+                    logger.info("第" + str(i) + "次尝试")
+                    time.sleep(1)
+                    if STime.getSecond() < 50:
+                        logger.warning("当前周期未能成功收集所有区块")
+                        is_finish = False
+                        break
+
+                phase4 = True
+                if is_finish:
+                    app.addEpoch()
+                    logger.info("第四阶段完成：此时时间：" + str(STime.getSecond()))
+                    if app.getEpoch() % 20160 == 0:
+                        # 进入下一个选举周期
+                        app.addElectionPeriod()
+                        logger.info("进入下一个选举周期")
+
+                    if app.getEpoch() % 1440 == 0:
+                        # 校对时间
+                        if not STime.proofreadingTime():
+                            logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
+                    phase1 = False
+                    phase2 = False
+                    phase3 = False
+                    phase4 = False
+                else:
+                    logger.warning("第四阶段任务失败：此时时间：" + str(STime.getSecond()))
+                    # 主节点进入数据恢复阶段
+                    app.startDataRecovery()
+                    app.addEpoch()
+                time.sleep(1)
+        else:
+            try:
+                if 0 <= STime.getSecond() < 30 and phase1 is False:
+                    app.startNewEpoch()
+                    phase1 = True
+                    logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
+                if STime.getSecond() >= 30 and phase1 is True:
+                    logger.info("当前节点不是主节点,请在其他主节点处进行申请")
+                    logger.info("节点信息如下：")
+                    logger.info(app.mainNode.getNodeInfo())
+                    logger.info("节点签名如下：")
+                    logger.info(app.mainNode.getNodeSignature())
+                    if not app.startCheckAndSave():
+                        logger.warning("当前周期未能成功收集所有区块")
+                    phase1 = False
+                    app.addEpoch()
+                    if app.getEpoch() % 20160 == 0:
+                        # 进入下一个选举周期
+                        app.addElectionPeriod()
+                        logger.info("进入下一个选举周期")
+                    if app.getEpoch() % 1440 == 0:
+                        # 校对时间
+                        if not STime.proofreadingTime():
+                            logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
+            except Exception as error:
+                logger.warning(error)
+            time.sleep(1)
 
 
 if __name__ == "__main__":

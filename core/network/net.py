@@ -157,9 +157,11 @@ class SUB(threading.Thread):
                         block = SerializationBeings.deserialization(data_of_beings=net_block)
                         # 是否已经存在
                         if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()):
+                            logger.info("区块已经存在，区块id为：" + block.getBlockID())
                             continue
                         # 验证是否在有生成权限的节点内
                         if not self.mainNode.currentMainNode.userPKisExit(user_pk=block.getUserPk()):
+                            logger.info("当前节点没有生成权限，用户公钥为：" + block.getUserPk()[1])
                             continue
                         # 签名验证
                         header = block.getBlockHeader()
@@ -174,6 +176,8 @@ class SUB(threading.Thread):
                             # 保存
                             self.blockListOfBeings.addBlock(block=block)
                             logger.info("已保存区块，区块id为：" + block.getBlockID())
+                        else:
+                            logger.info("区块签名验证失败，区块id为：" + block.getBlockID())
 
                     # 本次被选中，但是不生产区块的消息
                     if block_mess["message_type"] == NetworkMessageType.NO_BLOCK:
@@ -182,13 +186,16 @@ class SUB(threading.Thread):
                         empty_block.setSignature(empty_block_dict["signature"])
                         # 是否已经存在
                         if self.mainNode.currentBlockList.userPkIsBlock(user_pk=empty_block.userPk):
+                            logger.info("空区块消息已经存在，用户公钥为：" + empty_block.userPk)
                             continue
                         # 验证是否在有生成权限的节点内
                         if not self.mainNode.currentMainNode.userPKisExit(user_pk=empty_block.userPk):
+                            logger.info("当前节点没有生成权限，用户公钥为：" + empty_block.userPk)
                             continue
                         # 验证签名
                         if not CipherSuites.verify(pk=empty_block.userPk, signature=empty_block.signature,
                                                    message=str(empty_block.getInfo()).encode("utf-8")):
+                            logger.info("签名验证失败，用户公钥为：" + empty_block.userPk)
                             continue
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                         self.blockListOfBeings.addMessageOfNoBlock(empty_block=empty_block)
@@ -481,7 +488,7 @@ class Server(threading.Thread):
                 signature = network_message.signature
                 if (STime.getTimestamp() - client_info["send_time"]) > 8:
                     # 超过有效时间
-                    logger.info("超过有效时间，用户公钥：" + client_info["user_pk"])
+                    logger.info("发送方签名时间超过有效时间，用户公钥：" + client_info["user_pk"])
                     self.socket.send(b'0')
                     continue
                 if not self.mainNode.mainNodeList.userPKisExit(user_pk=client_info["user_pk"]):

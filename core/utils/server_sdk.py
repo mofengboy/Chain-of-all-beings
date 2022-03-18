@@ -35,7 +35,7 @@ class DB:
             block_list.append({
                 "db_id": data[0],
                 "user_pk": data[1],
-                "body": bytes(data[2]).decode("utf-8"),
+                "body": data[2],
                 "signature": data[3],
                 "is_review": data[4],
                 "review_username": data[5],

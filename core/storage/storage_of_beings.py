@@ -22,7 +22,7 @@ class StorageOfBeings(Sqlite):
         data_list = []
         for block in blockListOfBeings.list:
             data_list.append(
-                (block.getEpoch(), block.getBlockID(), str(block.getUserPk()),
+                (block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
                  str(block.getBlockHeader()).encode("utf-8"),
                  block.body)
             )
@@ -76,13 +76,19 @@ class StorageOfBeings(Sqlite):
             block_list.append(SerializationBeings.serialization(block_of_beings=block))
         return block_list
 
+    def delBlocksByEpoch(self, start, end):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        delete from beings where epoch >= ? and epoch < ?
+        """, (start, end))
+        self.blockConn.commit()
+
     def saveBatchBlock(self, block_list: [BlockOfBeings]):
         data_list = []
         for block in block_list:
             data_list.append(
                 [block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
-                 str(block.getBlockHeader()).encode("utf-8"),
-                 str(block.body).encode("utf-8")])
+                 str(block.getBlockHeader()).encode("utf-8"), block.body])
         cursor = self.blockConn.cursor()
         cursor.executemany("""
         insert into beings(epoch,block_id,user_pk,header,body) 
@@ -110,6 +116,14 @@ class StorageOfBeings(Sqlite):
         res = cursor.fetchone()
         res = literal_eval(res[0])
         return res
+
+    def getMaxEpoch(self):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select max(epoch) from beings
+        """)
+        res = cursor.fetchone()
+        return res[0]
 
 
 if __name__ == "__main__":

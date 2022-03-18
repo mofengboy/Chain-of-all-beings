@@ -32,6 +32,12 @@ class Block(ABC):
     def getUserPk(self):
         return self.__header["userPK"]
 
+    def getPrevBlock(self):
+        return self.__header["prevBlock"]
+
+    def getPrevBlockHeader(self):
+        return self.__header["prevBlockHeader"]
+
     # 获取区块头
     def getBlockHeader(self):
         return self.__header
@@ -40,12 +46,11 @@ class Block(ABC):
     def getBlockHeaderSHA256(self):
         header = self.__header.copy()
         header["prevBlock"] = []
-        return CipherSuites.generateSHA256(str(header).encode(header["bodyEncoding"])).hexdigest()
+        return CipherSuites.generateSHA256(str(header).encode("utf-8")).hexdigest()
 
     # 获取区块哈希值
     def getBlockSHA256(self):
-        content = str(self.__header).encode(self.__header["bodyEncoding"]) + str(self.body).encode(
-            self.__header["bodyEncoding"])
+        content = str(self.__header).encode("utf-8") + str(self.body).encode("utf-8")
         return CipherSuites.generateSHA256(content).hexdigest()
 
     def setPrevBlock(self, prevBlock):

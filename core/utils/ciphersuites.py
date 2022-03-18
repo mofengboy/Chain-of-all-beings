@@ -1,9 +1,6 @@
 from ecdsa import SigningKey, NIST384p, VerifyingKey
 import hashlib
-import time
 import random
-
-from core.utils.system_time import STime
 
 
 class CipherSuites:
@@ -11,7 +8,7 @@ class CipherSuites:
     # 生成区块ID
     @staticmethod
     def generateBlockID(e, block_type, user_pk):
-        tail = hashlib.md5((str(e) + str(user_pk)).encode("utf-8")).hexdigest()[0:8]
+        tail = hashlib.sha256((str(e) + str(user_pk)).encode("utf-8")).hexdigest()[0:32]
         block_id = block_type + "e" + str(e) + "z" + tail  # 区块ID 构成:类型+e+轮次+z+mad5(轮次+用户公钥）
         return block_id
 

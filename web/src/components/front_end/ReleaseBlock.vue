@@ -228,6 +228,7 @@ export default {
                 message: res.data["data"],
                 type: 'error',
               })
+              _this.getCAPTCHA()
             }
           })
 
@@ -238,6 +239,7 @@ export default {
             message: '请重新计算签名！',
             type: 'error',
           })
+          _this.getCAPTCHA()
         }
       })
 

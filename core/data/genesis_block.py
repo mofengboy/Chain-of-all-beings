@@ -8,8 +8,8 @@ from core.utils.ciphersuites import CipherSuites
 # 创世区块
 class GenesisBlock:
     def __init__(self):
-        genesis_pre_block_header = "0" * 64
-        genesis_pre_block = "0" * 64
+        genesis_pre_block_header = ["0" * 64]
+        genesis_pre_block = ["0" * 64]
         genesis_body = base64.b64encode(str("江畔何人初见月? 江月何年初照人? 人生代代无穷已, 江月年年只相似. 不知江月待何人, 但见长江送流水.").encode("utf-8"))
         genesis_user_pk = [
             '81dfa9833d8487629176c354b4f537a953154a710a677c97a493aa52a4dc12201f39e68566acd8bdae7526a2d148fdd48fa5c56dc07552d50fc80d5efaefe56f155158219394907b2a621b5b442fe7e75656bb11c8092b709fde8b35c82d0f06',

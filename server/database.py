@@ -100,7 +100,7 @@ class DB:
         else:
             return False
 
-    def insertBlockOfBeings(self, user_pk, body, signature):
+    def insertBlockOfBeings(self, user_pk, body: bytes, signature):
         cursor = self.__DB.cursor()
         cursor.execute("""
         insert into beings_block(user_pk,body,signature,is_review,create_time) values (?,?,?,?,?)
