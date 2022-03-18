@@ -71,7 +71,8 @@ class StorageOfBeings(Sqlite):
         res = cursor.fetchall()
         block_list = []
         for block_dict in res:
-            block = NewBlockOfBeingsByExist(header=block_dict[4], body=block_dict[5]).getBlock()
+            block = NewBlockOfBeingsByExist(header=literal_eval(bytes(block_dict[4]).decode("utf-8")),
+                                            body=block_dict[5]).getBlock()
             block_list.append(SerializationBeings.serialization(block_of_beings=block))
         return block_list
 

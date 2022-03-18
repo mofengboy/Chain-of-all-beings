@@ -63,6 +63,9 @@ class Block(ABC):
     def setBodyEncoding(self, bodyEncoding):
         self.__header["bodyEncoding"] = bodyEncoding
 
+    def getBodySignature(self):
+        return self.__header["bodySignature"]
+
     # 用于从数据库直接读入数据的情况
     def setHeader(self, header):
         self.__header = header

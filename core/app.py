@@ -172,11 +172,11 @@ class APP:
                 else:
                     end = self.getEpoch()
                 serial_data = SerializationNetworkMessage.serialization(
-                    NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
+                    NetworkMessage(NetworkMessageType.Get_Beings_Data, message=[start, end]))
                 ip = random.choice(node_ip_list)
                 try:
                     res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-                    block_list = literal_eval(res)
+                    block_list = literal_eval(bytes(res).decode("utf-8"))
                     block_list_of_beings = []
                     for block_i in block_list:
                         block = SerializationBeings.deserialization(block_i)

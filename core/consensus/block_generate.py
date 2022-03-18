@@ -62,7 +62,7 @@ class NewBlockOfBeingsByExist:
         for i in range(len(header["userPK"])):
             if not CipherSuites.verify(pk=header["userPK"][i], signature=header["bodySignature"][i], message=body):
                 # 用户公钥、签名、内容不匹配 抛出错误
-                print("签名验证失败")
+                raise "签名验证失败"
 
         self.newBlock = BlockOfBeings(body=body)
         self.newBlock.setHeader(header)
