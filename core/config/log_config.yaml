@@ -10,13 +10,21 @@ handlers:
     formatter: simple
     level: DEBUG
     stream: ext://sys.stdout
-  file:
+  debugFile:
     class: logging.FileHandler
     formatter: simple
     level: DEBUG
     filename: ./log/debug.log
     encoding: utf8
-  totatingFile:
+  infoFile:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: ./log/info.log
+    maxBytes: 10485760
+    backupCount: 20
+    encoding: utf8
+  errorFile:
     class: logging.handlers.RotatingFileHandler
     level: ERROR
     formatter: simple
@@ -24,10 +32,18 @@ handlers:
     maxBytes: 10485760
     backupCount: 20
     encoding: utf8
+  warningFile:
+    class: logging.handlers.RotatingFileHandler
+    level: WARN
+    formatter: simple
+    filename: ./log/warn.log
+    maxBytes: 10485760
+    backupCount: 20
+    encoding: utf8
 loggers:
   main:
     level: DEBUG
-    handlers: [ console, file, totatingFile ]
+    handlers: [ console, debugFile, infoFile, errorFile,warningFile ]
 #root:
 #  level: DEBUG
 #  handlers: [ console ]

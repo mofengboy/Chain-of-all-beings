@@ -91,3 +91,9 @@ class BlockListOfBeings:
             if block.getUserPk()[1] == user_pk:
                 return True
         return False
+
+    def userPkIsEmptyBlock(self, user_pk):
+        for empty_block in self.listOfNoBlock:
+            if user_pk == empty_block.userPk:
+                return True
+        return False

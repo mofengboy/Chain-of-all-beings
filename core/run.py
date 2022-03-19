@@ -33,19 +33,19 @@ def run(sk_string, pk_string):
 
     # # DEBUG模式 将自己添加到主节点列表
     # # 仅限DEBUG模式，线上模式需要申请加入主节点
-    # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+    app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
     # #
 
     # 获取主节点列表（读取配置文件）
-    if not app.loadMainNodeListBySeed():
-        logger.error("无法获得任何主节点IP的地址，请检测网络或者配置文件")
-        # 关闭所有线程并退出
-        app.stopAllSub()
-        app.server.stop()
-        exit()
-    # 同步数据
-    app.getCurrentEpochByOtherMainNode()
-    app.synchronizedBlockOfBeings()
+    # if not app.loadMainNodeListBySeed():
+    #     logger.error("无法获得任何主节点IP的地址，请检测网络或者配置文件")
+    #     # 关闭所有线程并退出
+    #     app.stopAllSub(app.subList)
+    #     app.server.stop()
+    #     exit()
+    # # 同步数据
+    # app.getCurrentEpochByOtherMainNode()
+    # app.synchronizedBlockOfBeings()
 
     # 订阅
     app.reSubscribe()
@@ -114,7 +114,7 @@ def run(sk_string, pk_string):
                     # 主节点进入数据恢复阶段
                     app.startDataRecovery()
                     app.addEpoch()
-                time.sleep(1)
+            time.sleep(1)
         else:
             try:
                 if 0 <= STime.getSecond() < 30 and phase1 is False:

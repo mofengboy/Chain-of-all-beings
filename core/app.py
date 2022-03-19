@@ -398,9 +398,9 @@ class APP:
                     empty_block.setSignature(signature)
                     mess = NetworkMessage(mess_type=NetworkMessageType.NO_BLOCK, message=empty_block.getMessage())
                     serial_mess = SerializationNetworkMessage.serialization(mess)
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_mess)
                     # 保存至当前区块列表
                     self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
+                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_mess)
                 break
             # 没被选中
         if not is_selected:

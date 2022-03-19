@@ -171,10 +171,10 @@ class SUB(threading.Thread):
                                                                     signature=header["bodySignature"][i],
                                                                     message=block.body)
                         if result:
-                            # 广播消息
-                            self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                             # 保存
                             self.blockListOfBeings.addBlock(block=block)
+                            # 广播消息
+                            self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                             logger.info("已保存区块，区块id为：" + block.getBlockID())
                         else:
                             logger.info("区块签名验证失败，区块id为：" + block.getBlockID())
@@ -185,7 +185,7 @@ class SUB(threading.Thread):
                         empty_block = EmptyBlock(user_pk=empty_block_dict["user_pk"], epoch=empty_block_dict["epoch"])
                         empty_block.setSignature(empty_block_dict["signature"])
                         # 是否已经存在
-                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=empty_block.userPk):
+                        if self.mainNode.currentBlockList.userPkIsEmptyBlock(user_pk=empty_block.userPk):
                             logger.info("空区块消息已经存在，用户公钥为：" + empty_block.userPk)
                             continue
                         # 验证是否在有生成权限的节点内
@@ -197,8 +197,8 @@ class SUB(threading.Thread):
                                                    message=str(empty_block.getInfo()).encode("utf-8")):
                             logger.info("签名验证失败，用户公钥为：" + empty_block.userPk)
                             continue
-                        self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                         self.blockListOfBeings.addMessageOfNoBlock(empty_block=empty_block)
+                        self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                         logger.info("已保存不产生区块消息，该消息用户公钥为：" + empty_block.userPk)
 
                 # 收集其他节点产生的时代区块
