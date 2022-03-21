@@ -25,11 +25,11 @@ class StorageOfTemp(Sqlite):
         data_list = []
         for beings in beings_list:
             data_list.append(
-                (beings["user_pk"], beings["body_signature"], str(beings["body"]).encode("utf-8"), create_time)
+                (beings["user_pk"], beings["body_signature"], beings["body"], 0, create_time)
             )
         cursor.executemany("""
         insert into block(user_pk, body_signature, body, is_release, create_time) 
-        values (?,?,?,0,?)
+        values (?,?,?,?,?)
         """, data_list)
         self.tempConn.commit()
 

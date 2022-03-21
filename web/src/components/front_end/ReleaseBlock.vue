@@ -3,7 +3,7 @@
     <el-form :rules="rules" label-position="right" label-width="70px"
              size="default">
       <el-form-item label="用户公钥">
-        <el-input v-model="publicKey" :autosize="{minRows: 1}" type="textarea">
+        <el-input v-model="publicKeyRaw" :autosize="{minRows: 1}" type="textarea">
         </el-input>
         <div>
           <el-link type="primary" v-on:click="publicKeyDialog = true">没有公钥？</el-link>
@@ -59,7 +59,7 @@
             </el-input>
           </el-form-item>
           <el-form-item label="用户公钥：">
-            <el-input v-model="publicKey" autosize type="textarea" readonly>
+            <el-input v-model="publicKeyRaw" autosize type="textarea" readonly>
             </el-input>
           </el-form-item>
         </el-form>
@@ -113,6 +113,7 @@ export default {
       signatureDialog: false,
       privateKeyDialog: false,
       privateKey: "",
+      publicKeyRaw: "",
       publicKey: "",
       body: '# 使用Markdown格式渲染',
       signature: "",
@@ -149,6 +150,7 @@ export default {
       }, [this.path]).then((res) => {
         _this.publicKey = res[0]
         _this.privateKey = res[1]
+        _this.publicKeyRaw = res[0].substring(2)
         loading.close()
       })
     },
@@ -205,7 +207,7 @@ export default {
             method: 'post',
             url: '/block/beings/save',
             data: JSON.stringify({
-              "user_pk": _this.publicKey,
+              "user_pk": _this.publicKeyRaw,
               "body": _this.getBase64Body(),
               "signature": _this.signatureRaw,
               "captcha": {

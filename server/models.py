@@ -2,7 +2,7 @@ import time
 
 from server.utils.captcha import Captcha
 from server.utils.ciphersuites import CipherSuites
-from server.utils.core_sdk import DBOfTemp
+from server.utils.core_sdk import DBOfTemp, DBOfBlock
 from server.database import DB
 import hashlib
 
@@ -66,6 +66,7 @@ class Auth:
         return self.captcha.verify(uuid=uuid, word=word)
 
 
+# 众生区块（待发布）
 class BlockOfBeings:
     def __init__(self, db: DB):
         self.db = db
@@ -101,6 +102,23 @@ class BlockOfBeings:
 
     def reviewBlock(self, db_id, is_review):
         self.db.reviewBlockOfBeingsDBId(db_id=db_id, is_review=is_review)
+
+
+# 众生链（已经发布的区块）
+class ChainOfBeings:
+    def __init__(self):
+        self.dbOfBeings = DBOfBlock()
+
+    def getIDListOfBlockByEpoch(self, start, end):
+        id_list = self.dbOfBeings.getIDListOfBeingsByEpoch(start, end)
+        return id_list
+
+    def getBlockByID(self, db_id):
+        block_dict = self.dbOfBeings.getBlockOfBeings(db_id)
+        return block_dict
+
+    def getMaxEpoch(self):
+        return self.dbOfBeings.getMaxEpoch()
 
 
 class MainNodeManager:

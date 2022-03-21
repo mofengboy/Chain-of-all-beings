@@ -50,7 +50,7 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfBeings">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfMainNodeApplication">获取更多</el-button>
       </div>
     </div>
   </div>

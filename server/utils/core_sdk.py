@@ -1,4 +1,5 @@
 import sqlite3
+from ast import literal_eval
 
 
 class DBOfTemp:
@@ -52,3 +53,50 @@ class DBOfTemp:
         where id = ?
         """, (is_audit, db_id))
         self.tempConn.commit()
+
+
+class DBOfBlock:
+    def __init__(self):
+        self.blockConn = sqlite3.connect('../core/db/block.db', check_same_thread=False)
+
+    def getMaxEpoch(self):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select max(epoch) from beings
+        """)
+        res = cursor.fetchone()
+        return res[0]
+
+    # 获取众生区块id列表
+    def getIDListOfBeingsByEpoch(self, start, end):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select id from beings 
+        where epoch >= ? and epoch < ?
+        """, (start, end))
+        res = cursor.fetchall()
+        id_list = []
+        for id_i in res:
+            id_list.append(id_i[0])
+        return id_list
+
+    def getBlockOfBeings(self, db_id):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select id,header,body from beings
+        where id = ?
+        """, (db_id,))
+        res = cursor.fetchone()
+        header = literal_eval(bytes(res[1]).decode("utf-8"))
+        beings_dict = {
+            "id": res[0],
+            "block_id": header["blockID"],
+            "epoch": header["epoch"],
+            "prev_block": header["prevBlock"],
+            "prev_block_header": header["prevBlockHeader"],
+            "user_pk": header["userPK"],
+            "body_signature": header["bodySignature"],
+            "body": bytes(res[2]).decode("utf-8"),
+            "timestamp": header["timestamp"]
+        }
+        return beings_dict

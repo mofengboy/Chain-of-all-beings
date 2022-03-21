@@ -8,7 +8,7 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from server.database import DB
-from server.models import Auth, BlockOfBeings, MainNodeManager
+from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -18,6 +18,7 @@ db = DB()
 auth = Auth(db=db)
 blockOfBeings = BlockOfBeings(db)
 mainNodeManager = MainNodeManager(db)
+chainOfBlock = ChainOfBeings()
 
 
 @api.route('/')
@@ -143,7 +144,88 @@ def saveNewApply():
         return http_message.getJson()
 
 
+@api.route("/chain/beings/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getBeingsOfChain():
+    """获取众生链区块
+   Content-Type: application/json
+   {
+     ?db_id=1
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {
+            "id": "",
+            "block_id": "",
+            "epoch": "",
+            "prev_block": "",
+            "prev_block_header": "",
+            "user_pk": "",
+            "body_signature": "",
+            "body": "",
+            "timestamp":""
+        }
+   """
+    try:
+        db_id = request.args.get("db_id")
+        block_dict = chainOfBlock.getBlockByID(db_id)
+        http_message = HttpMessage(is_success=True, data=block_dict)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/beings_list/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getBeingsListOfChain():
+    """获取众生链区块ID列表
+   {
+     ?start=0&?end=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [id...]
+   """
+    try:
+        start = int(request.args.get("start"))
+        end = int(request.args.get("end"))
+        if start - end > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多查询8个Epoch的区块")
+            return http_message.getJson()
+        id_list = chainOfBlock.getIDListOfBlockByEpoch(start=start, end=end)
+        http_message = HttpMessage(is_success=True, data=id_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/beings/max_epoch", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getMaxEpoch():
+    """获取众生链区块最大期次
+   返回 json
+   {
+   "is_success":bool,
+   "data": int
+   """
+    try:
+        epoch = chainOfBlock.getMaxEpoch()
+        http_message = HttpMessage(is_success=True, data=epoch)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 # 以下为后台接口，需要权限认证
+# 登录
 @api.route("/backstage/login", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def login():

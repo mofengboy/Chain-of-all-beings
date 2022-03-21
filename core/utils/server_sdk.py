@@ -18,6 +18,7 @@ class DB:
             body BLOB NOT NULL,
             signature TEXT NOT NULL,
             is_review INTEGER NOT NULL,
+            review_username TEXT,
             create_time TEXT NOT NULL
             )
             """)
@@ -26,7 +27,7 @@ class DB:
     def getWaitingBlockListOfBeingsToSDK(self):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,user_pk,body,signature,is_review,review_username,create_time 
+        select id,user_pk,body,signature,is_review,create_time 
         from beings_block where is_review = 1 limit 10
         """)
         data_list = cursor.fetchall()
@@ -38,8 +39,7 @@ class DB:
                 "body": data[2],
                 "signature": data[3],
                 "is_review": data[4],
-                "review_username": data[5],
-                "create_time": data[6]
+                "create_time": data[5]
             })
             cursor.execute("""
             update beings_block set is_review = 3

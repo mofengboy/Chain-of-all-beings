@@ -60,8 +60,6 @@ class APP:
                              current_main_node=self.mainNode.currentMainNode,
                              storage_of_beings=self.storageOfBeings)  # 服务端
         self.server.start()
-        # 存储创世区块
-        self.storageGenesisBlock()
         # 后端sdk
         self.webServerSDK = SDK()
 
@@ -171,6 +169,9 @@ class APP:
         storage_epoch = self.storageOfBeings.getMaxEpoch()
         logger.info("目前已经存储的区块的epoch为：" + str(storage_epoch))
         verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
+        if verify_epoch == 0:
+            # 存储创世区块
+            self.storageGenesisBlock()
         logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
         self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
         start = verify_epoch
@@ -375,21 +376,36 @@ class APP:
 
                     prev_block_header = []
                     pre_block = []
-                    for block in self.storageOfBeings.currentBlockListOfBeing.getListOfOrthogonalOrder():
+                    # 应该获取上次
+                    for block in self.storageOfBeings.getLastBlockList().getListOfOrthogonalOrder():
                         prev_block_header.append(block.getBlockHeaderSHA256())
                         pre_block.append(block.getBlockSHA256())
-
                     epoch = self.getEpoch()
-                    new_block = NewBlockOfBeings(user_pk=user_pk, body_signature=body_signature, body=body, epoch=epoch,
-                                                 pre_block=pre_block, prev_block_header=prev_block_header).getBlock()
-
-                    serialization_block = SerializationBeings.serialization(block_of_beings=new_block)
-                    # 广播消息
-                    serial_block_mess = SerializationNetworkMessage.serialization(
-                        NetworkMessage(mess_type=NetworkMessageType.NEW_BLOCK, message=serialization_block))
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_block_mess)
-                    # 保存至当前区块列表
-                    self.mainNode.currentBlockList.addBlock(block=new_block)
+                    try:
+                        new_block = NewBlockOfBeings(user_pk=user_pk, body_signature=body_signature, body=body,
+                                                     epoch=epoch,
+                                                     pre_block=pre_block,
+                                                     prev_block_header=prev_block_header).getBlock()
+                        serialization_block = SerializationBeings.serialization(block_of_beings=new_block)
+                        # 广播消息
+                        serial_block_mess = SerializationNetworkMessage.serialization(
+                            NetworkMessage(mess_type=NetworkMessageType.NEW_BLOCK, message=serialization_block))
+                        self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_block_mess)
+                        # 保存至当前区块列表
+                        self.mainNode.currentBlockList.addBlock(block=new_block)
+                    except Exception as err:
+                        # 产生错误（如签名验证错误）后，发送不产生区块消息
+                        logger.error(err)
+                        # 广播无区块产生的消息
+                        logger.info("当前节点不生成区块")
+                        empty_block = EmptyBlock(user_pk=self.user.getUserPKString(), epoch=self.getEpoch())
+                        signature = self.user.sign(str(empty_block.getInfo()).encode("utf-8"))
+                        empty_block.setSignature(signature)
+                        mess = NetworkMessage(mess_type=NetworkMessageType.NO_BLOCK, message=empty_block.getMessage())
+                        serial_mess = SerializationNetworkMessage.serialization(mess)
+                        # 保存至当前区块列表
+                        self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
+                        self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_mess)
                 else:
                     # 广播无区块产生的消息
                     logger.info("当前节点不生成区块")
@@ -515,7 +531,7 @@ class APP:
                 logger.warning("数据恢复出现错误，正在第" + str(i) + "次尝试！")
                 logger.warning(err)
 
-    # 生成银河区块
+    # 生成时代区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:
         # 获取生成该众生区块的用户公钥列表（简单节点用户公钥和主节点用户公钥）
         users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=block_id)

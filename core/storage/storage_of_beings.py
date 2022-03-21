@@ -34,6 +34,41 @@ class StorageOfBeings(Sqlite):
         self.blockConn.commit()
         logger.info("已保存当前众生区块列表，数量为：" + str(len(data_list)))
 
+    def getBlockListByLastEpoch(self) -> BlockListOfBeings:
+        if len(self.currentBlockListOfBeing.list) > 0:
+            return self.currentBlockListOfBeing
+        else:
+            # 上一轮没有产生众生区块
+            # 向前寻找
+            return self.getLastBlockList()
+
+    def getLastBlockList(self) -> BlockListOfBeings:
+        cursor = self.blockConn.cursor()
+        # 其中order by id desc 是按照id降序排列；limit 0,1中0是指从偏移量为0（也就是从第1条记录）开始，1是指需要查询的记录数，这里只查询1条记录
+        cursor.execute("""
+        select max(epoch)
+        from beings 
+        """)
+        res1 = cursor.fetchone()
+        max_epoch = res1[0]
+        cursor.execute("""
+        select header,body,user_pk
+        from beings where epoch = ?
+        """, (max_epoch,))
+        res2 = cursor.fetchall()
+        block_list_of_beings = BlockListOfBeings()
+        for block_dict in res2:
+            block_header = literal_eval(bytes.decode(block_dict[0]))
+            prevBlock = block_header["prevBlock"]
+            prevBlockHeader = block_header["prevBlockHeader"]
+            bodySignature = block_header["bodySignature"]
+            body = block_dict[1]
+            block_of_beings = BlockOfBeings(epoch=max_epoch, prev_block_header=prevBlockHeader, user_pk=block_dict[2],
+                                            pre_block=prevBlock, body_signature=bodySignature, body=body)
+            block_of_beings.setHeader(header=block_header)
+            block_list_of_beings.addBlock(block_of_beings)
+        return block_list_of_beings
+
     def getLastBlockByCache(self) -> BlockOfBeings:
         if len(self.currentBlockListOfBeing.list) > 0:
             return self.currentBlockListOfBeing.getBlockByMaxBlockId()

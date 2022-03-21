@@ -108,7 +108,7 @@ export default {
 
 <style scoped>
 .login {
-  margin: 30% auto;
+  margin: 15% auto;
   padding: 10px 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
