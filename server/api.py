@@ -595,7 +595,7 @@ def reviewNewApply():
             http_message = HttpMessage(is_success=False, data="Token无效")
             return http_message.getJson()
         db_id = info["db_id"]
-        review = info["review"]
+        review = info["is_review"]
         mainNodeManager.reviewApplicationFormByDBId(db_id, review)
         http_message = HttpMessage(is_success=True, data="审核完成")
         return http_message.getJson()

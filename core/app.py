@@ -376,7 +376,6 @@ class APP:
 
                     prev_block_header = []
                     pre_block = []
-                    # 应该获取上次
                     for block in self.storageOfBeings.getLastBlockList().getListOfOrthogonalOrder():
                         prev_block_header.append(block.getBlockHeaderSHA256())
                         pre_block.append(block.getBlockSHA256())
@@ -420,9 +419,16 @@ class APP:
                 break
             # 没被选中
         if not is_selected:
+            # 读取待发布的众生区块
             if self.storageOfTemp.getDataCount() < 5:
                 webserver_beings_list = self.webServerSDK.getBeings()
                 self.storageOfTemp.saveBatchData(webserver_beings_list)
+            # 检测有无已经审核通过的，提交在本节点的申请书
+            self.applyNewNodeJoin()
+            # 检测有无已经审核通过的，从其他主节点接受到的申请书
+            self.replyNewNodeJoin()
+            # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+            self.checkNewNodeJoin()
 
     # 新周期开始30秒后，检查并执行
     def startCheckAndApplyDeleteNode(self):
@@ -477,6 +483,13 @@ class APP:
                             self.mainNode.currentBlockList.addBlock(block=res["message"])
                         if res["message_type"] == NetworkMessageType.NO_BLOCK:
                             self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
+        else:
+            # 检测有无已经审核通过的，提交在本节点的申请书
+            self.applyNewNodeJoin()
+            # 检测有无已经审核通过的，从其他主节点接受到的申请书
+            self.replyNewNodeJoin()
+            # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+            self.checkNewNodeJoin()
 
     # 检查是否收集完成所有区块，收集完成后保存到数据库
     # 后10秒，每秒检查一次

@@ -38,6 +38,8 @@ class CurrentMainNode:
                 main_node_list.addMainNode(node_info=node_info)
 
         logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
+        logger.debug("去重后的主节点分别为:")
+        logger.debug(main_node_list.getNodeList())
         return main_node_list
 
 

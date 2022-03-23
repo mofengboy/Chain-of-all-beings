@@ -142,8 +142,8 @@ class StorageOfTemp(Sqlite):
         cursor.execute("""
         insert into node_join(node_id, user_pk, node_ip, node_create_time, node_signature, 
         application, application_time, application_signature, agree_count, 
-        is_audit ,create_time)
-        values (?,?,?,?,?,?,?,?,?,?,?)
+        is_audit ,main_node_signature,main_node_user_pk,create_time)
+        values (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (node_id, user_pk, node_ip, node_create_time, node_signature,
               application, application_time, application_signature, agree_count, 0, STime.getTimestamp()))
         self.tempConn.commit()

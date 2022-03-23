@@ -26,18 +26,24 @@ class STime:
     def proofreadingTime() -> bool:
         system_time = STime.getTimestamp()
         NTP_time = STime.getNTPTime()
-        if abs(system_time - NTP_time) > 1000:
-            return False
-        else:
-            return True
+        span_time = abs(system_time - NTP_time)
+        i = 0
+        while span_time > 1000:
+            i += 1
+            if i > 2:
+                return False
+            span_time = abs(system_time - NTP_time)
+        return True
 
     # 获取NTP时间
     @staticmethod
     def getNTPTime():
+        ntp_list = ["cn.pool.ntp.org", "time1.cloud.tencent.com", "time2.cloud.tencent.com", "ntp.aliyun.com",
+                    "ntp1.aliyun.com", "time.google.com", "time.apple.com", 'pool.ntp.org']
         c = ntplib.NTPClient()
-        for i in range(5):
+        for i in range(8):
             try:
-                response = c.request('cn.pool.ntp.org')
+                response = c.request(ntp_list[i])
                 return int(str(response.tx_time * 1000)[0:13])
             except Exception as err:
                 logger.warning(err)
@@ -47,4 +53,4 @@ class STime:
 
 
 if __name__ == "__main__":
-    print(STime.getSecond())
+    print(STime.getNTPTime())

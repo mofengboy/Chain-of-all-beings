@@ -50,7 +50,8 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfMainNodeApplication">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfMainNodeApplication">获取更多
+        </el-button>
       </div>
     </div>
   </div>
@@ -101,7 +102,7 @@ export default {
                     nodeID: detail["node_id"],
                     userPK: detail["user_pk"],
                     nodeIP: detail["node_ip"],
-                    nodeCreateTime: _this.$dayjs.unix(detail["node_create_time"]).format(),
+                    nodeCreateTime: _this.$dayjs.unix(parseInt((detail["node_create_time"]).toString().substring(0, 10))).format(),
                     nodeSignature: detail["node_signature"],
                     application: Buffer.from(detail["application"], "base64").toString("utf-8"),
                     applicationSignature: detail["application_signature"],

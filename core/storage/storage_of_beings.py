@@ -77,7 +77,7 @@ class StorageOfBeings(Sqlite):
             # 向前寻找
             return self.getLastBlock()
 
-    def getLastBlock(self) -> BlockOfBeings:
+    def getLastBlock(self) -> BlockOfBeings | None:
         cursor = self.blockConn.cursor()
         # 其中order by id desc 是按照id降序排列；limit 0,1中0是指从偏移量为0（也就是从第1条记录）开始，1是指需要查询的记录数，这里只查询1条记录
         cursor.execute("""
@@ -85,16 +85,19 @@ class StorageOfBeings(Sqlite):
          from beings order by epoch,block_id desc limit 0,1;
         """)
         res = cursor.fetchone()
-        block_header = literal_eval(bytes.decode(res[3]))
-        prevBlock = block_header["prevBlock"]
-        prevBlockHeader = block_header["prevBlockHeader"]
-        bodySignature = block_header["bodySignature"]
-        body = res[4]
+        if res[0] is None:
+            return None
+        else:
+            block_header = literal_eval(bytes.decode(res[3]))
+            prevBlock = block_header["prevBlock"]
+            prevBlockHeader = block_header["prevBlockHeader"]
+            bodySignature = block_header["bodySignature"]
+            body = res[4]
 
-        block_of_beings = BlockOfBeings(epoch=res[0], prev_block_header=prevBlockHeader, user_pk=res[2],
-                                        pre_block=prevBlock, body_signature=bodySignature, body=body)
-        block_of_beings.setHeader(header=block_header)
-        return block_of_beings
+            block_of_beings = BlockOfBeings(epoch=res[0], prev_block_header=prevBlockHeader, user_pk=res[2],
+                                            pre_block=prevBlock, body_signature=bodySignature, body=body)
+            block_of_beings.setHeader(header=block_header)
+            return block_of_beings
 
     # 包括start不包括end
     def getBlocksByEpoch(self, start, end) -> []:
@@ -158,6 +161,8 @@ class StorageOfBeings(Sqlite):
         select max(epoch) from beings
         """)
         res = cursor.fetchone()
+        if res[0] is None:
+            return 0
         return res[0]
 
 

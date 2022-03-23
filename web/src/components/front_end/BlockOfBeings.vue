@@ -11,6 +11,9 @@
           </template>
         </el-table-column>
       </el-table>
+      <div>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getMore">获取更多</el-button>
+      </div>
     </div>
     <div v-show="is_detail" class="detail">
       <el-page-header content="区块详细信息" @back="this.is_detail=false"/>
@@ -23,11 +26,11 @@
         <el-collapse>
           <el-collapse-item title="区块头部信息" name="1">
             <el-form label-width="100px">
-              <el-form-item label="前一个区块的头部哈希值">
+              <el-form-item label="上一期次区块头部哈希列表">
                 <el-input v-model="preBlockHeaderHash" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
-              <el-form-item label="前一个区块的哈希值">
+              <el-form-item label="上一期次区块哈希列表">
                 <el-input v-model="preBlockHash" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
@@ -85,8 +88,13 @@ export default {
     Markdown
   },
   created() {
+    const _this = this
     this.getMaxEpoch()
-    this.getIdListOfBeings()
+        .then((max_epoch) => {
+          _this.start = max_epoch - 8
+          _this.end = max_epoch
+          this.getIdListOfBeings()
+        })
   },
   methods: {
     openDetail: function (event) {
@@ -107,14 +115,12 @@ export default {
       }
     },
     getMaxEpoch: function () {
-      const _this = this
-      this.axios({
+      return this.axios({
         method: 'get',
         url: '/chain/beings/max_epoch'
       }).then((res) => {
         if (res.data["is_success"]) {
-          _this.start = parseInt(res.data["data"]) - 8
-          _this.end = parseInt(res.data["data"])
+          return parseInt(res.data["data"])
         } else {
           ElNotification({
             title: '获取max epoch失败',
@@ -123,6 +129,11 @@ export default {
           })
         }
       })
+    },
+    getMore: function () {
+      this.start -= 8
+      this.end -= 8
+      this.getIdListOfBeings()
     },
     getIdListOfBeings: function () {
       const _this = this

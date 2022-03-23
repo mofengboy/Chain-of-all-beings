@@ -1,7 +1,6 @@
 <template>
   <div>
-    <el-form :rules="rules" label-position="right" label-width="70px"
-             size="default">
+    <el-form :rules="rules" label-position="right" label-width="70px" size="default">
       <div>
         <el-form-item label="节点ID">
           <el-input v-model="nodeID" :autosize="{minRows: 1}" type="textarea">
@@ -81,26 +80,6 @@
     </el-form>
   </div>
   <div>
-    <!--公钥生成弹框-->
-    <el-dialog v-model="publicKeyDialog" title="在线生成" width="80%">
-      <div>
-        <el-form>
-          <p>此处不会存储您的私钥，计算任务全部都在本地进行。</p>
-          <p class="sk-alert">注意：请务必谨慎保存您的私钥和公钥，私钥一旦丢失或被盗，将无法找回！</p>
-          <el-form-item label="用户私钥：">
-            <el-input v-model="privateKey" autosize type="textarea" autofocus>
-            </el-input>
-          </el-form-item>
-          <el-form-item label="用户公钥：">
-            <el-input v-model="publicKey" autosize type="textarea" readonly>
-            </el-input>
-          </el-form-item>
-        </el-form>
-        <div class="button-sk-to-pk">
-          <el-button type="primary" v-on:click="generatePK">在线生成密钥对</el-button>
-        </div>
-      </div>
-    </el-dialog>
     <!--签名弹框-->
     <el-dialog v-model="signatureDialog" title="计算签名" width="80%">
       <div>
@@ -161,7 +140,7 @@ export default {
       captchaSrc: "",
       captchaInput: "",
       collapse_item: "1",
-      remarks: "### 添加备注信息是为了更好的进行沟通交流。备注信息不会出现再申请书内",
+      remarks: "### 添加备注信息是为了更好的进行沟通交流。备注信息不会出现在申请书内",
       rules: {
         name: [
           {
@@ -174,25 +153,6 @@ export default {
     }
   },
   methods: {
-    //生成密钥对
-    generatePK: function () {
-      const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
-      const _this = this
-      this.$worker.run((path) => {
-        this.importScripts(path + "/static/js/jsrsasign/jsrsasign-all-min.js")
-        const ec = new this.KJUR.crypto.ECDSA({'curve': 'NIST P-384'});
-        // EC公钥的十六进制字符串
-        const keyPairHex = ec.generateKeyPairHex()
-        const pubHex = keyPairHex.ecpubhex
-        const prvHex = keyPairHex.ecprvhex
-        // const pubHexRaw = keyPairHex
-        return [pubHex, prvHex]
-      }, [this.path]).then((res) => {
-        _this.publicKey = res[0]
-        _this.privateKey = res[1]
-        loading.close()
-      })
-    },
     //签名
     sign: function () {
       const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
@@ -312,6 +272,7 @@ export default {
                     message: res.data["data"],
                     type: 'error',
                   })
+                  _this.getCAPTCHA()
                 }
               })
             } else {
@@ -321,6 +282,7 @@ export default {
                 message: '请重新计算签名！',
                 type: 'error',
               })
+              _this.getCAPTCHA()
             }
           })
         } else {
@@ -329,6 +291,7 @@ export default {
             message: '请重新计算签名！',
             type: 'error',
           })
+          _this.getCAPTCHA()
         }
       })
     }

@@ -152,15 +152,15 @@ class SUB(threading.Thread):
                     block_mess = literal_eval(
                         bytes(message[len(SubscribeTopics.getBlockTopicOfBeings()):]).decode("utf-8"))
                     if block_mess["message_type"] == NetworkMessageType.NEW_BLOCK:
-                        net_block = block_mess["message"]
+                        net_block_dict = block_mess["message"]
                         # 反序列化
-                        block = SerializationBeings.deserialization(data_of_beings=net_block)
+                        block = SerializationBeings.deserialization(data_of_beings=str(net_block_dict).encode("utf-8"))
                         # 是否已经存在
-                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()):
+                        if self.mainNode.currentBlockList.userPkIsBlock(user_pk=block.getUserPk()[1]):
                             logger.info("区块已经存在，区块id为：" + block.getBlockID())
                             continue
                         # 验证是否在有生成权限的节点内
-                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=block.getUserPk()):
+                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=block.getUserPk()[1]):
                             logger.info("当前节点没有生成权限，用户公钥为：" + block.getUserPk()[1])
                             continue
                         # 签名验证
@@ -338,7 +338,6 @@ class SUB(threading.Thread):
                         # 删除节点
                         self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
                         continue
-
                     # 检测自己是否收到该区块
                     if self.mainNode.currentBlockList.userPkIsExit(user_pk=del_node_user_pk):
                         if self.mainNode.currentBlockList.userPkIsBlock(user_pk=del_node_user_pk):
@@ -496,7 +495,6 @@ class Server(threading.Thread):
                     logger.info("发送方不是主节点，用户公钥：" + client_info["user_pk"])
                     self.socket.send(b'0')
                     continue
-
                 certification_digest = network_message.getClientAndMessageDigest()
                 if not CipherSuites.verify(pk=client_info["user_pk"], signature=signature,
                                            message=str(certification_digest).encode("utf-8")):
@@ -504,14 +502,12 @@ class Server(threading.Thread):
                     logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
                     self.socket.send(b'0')
                     continue
-
                 # 新节点加入申请的回复消息
                 if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
                     reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
                     # 处理回复消息
                     self.nodeManager.replyApplyJoin(reply_application_form)
                     self.socket.send(b'1')
-
                 # 投票信息
                 if mess_type == NetworkMessageType.Vote_Info:
                     vote_info = network_message.message
