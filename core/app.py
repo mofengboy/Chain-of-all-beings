@@ -184,24 +184,25 @@ class APP:
                 serial_data = SerializationNetworkMessage.serialization(
                     NetworkMessage(NetworkMessageType.Get_Beings_Data, message=[start, end]))
                 ip = random.choice(node_ip_list)
+                block_list_of_beings = []
                 try:
                     res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                     block_list = literal_eval(bytes(res).decode("utf-8"))
-                    block_list_of_beings = []
                     for block_i in block_list:
                         block = SerializationBeings.deserialization(str(block_i).encode("utf-8"))
                         block_list_of_beings.append(block)
-                    self.storageOfBeings.saveBatchBlock(block_list_of_beings)
-                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
-
-                    if end == self.getEpoch():
-                        logger.info("众生区块同步完成")
-                        break
                     start += 10
                 except Exception as err:
                     logger.warning(err)
-        # 去除重复保存的区块
-        pass
+
+                try:
+                    self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
+                    if end == self.getEpoch():
+                        logger.info("众生区块同步完成")
+                        break
+                except Exception as err:
+                    logger.warning(err)
 
     # 存储创世区块
     def storageGenesisBlock(self):

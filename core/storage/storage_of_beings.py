@@ -17,22 +17,24 @@ class StorageOfBeings(Sqlite):
     def saveCurrentBlockOfBeings(self, blockListOfBeings: BlockListOfBeings):
         self.currentBlockListOfBeing.list = blockListOfBeings.list.copy()
         self.currentBlockListOfBeing.listOfNoBlock = blockListOfBeings.listOfNoBlock.copy()
+        try:
+            cursor = self.blockConn.cursor()
+            data_list = []
+            for block in blockListOfBeings.list:
+                data_list.append(
+                    (block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
+                     str(block.getBlockHeader()).encode("utf-8"),
+                     block.body)
+                )
 
-        cursor = self.blockConn.cursor()
-        data_list = []
-        for block in blockListOfBeings.list:
-            data_list.append(
-                (block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
-                 str(block.getBlockHeader()).encode("utf-8"),
-                 block.body)
-            )
-
-        cursor.executemany("""
-            insert into beings (epoch,block_id,user_pk,header,body)
-            values (?,?,?,?,?);
-            """, data_list)
-        self.blockConn.commit()
-        logger.info("已保存当前众生区块列表，数量为：" + str(len(data_list)))
+            cursor.executemany("""
+                insert into beings (epoch,block_id,user_pk,header,body)
+                values (?,?,?,?,?);
+                """, data_list)
+            self.blockConn.commit()
+            logger.info("已保存当前众生区块列表，数量为：" + str(len(data_list)))
+        except Exception as err:
+            logger.warning(err)
 
     def getBlockListByLastEpoch(self) -> BlockListOfBeings:
         if len(self.currentBlockListOfBeing.list) > 0:

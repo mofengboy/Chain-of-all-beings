@@ -147,7 +147,6 @@ class SDK:
                 "node_create_time": data["node_create_time"],
                 "node_signature": data["node_signature"],
                 "application": data["application"],
-                "application_time": data["application_time"],
                 "application_signature": data["application_signature"]
             })
         return application_form_list
