@@ -200,12 +200,14 @@ class APP:
                     start += 10
                 except Exception as err:
                     logger.warning(err)
+        # 去除重复保存的区块
+        pass
 
     # 存储创世区块
     def storageGenesisBlock(self):
-        genesis_block = GenesisBlock()
+        genesis_block = GenesisBlock().getBlockOfBeings()
         block_list_of_beings = BlockListOfBeings()
-        block_list_of_beings.addBlock(block=genesis_block.getBlockOfBeings())
+        block_list_of_beings.addBlock(block=genesis_block)
         self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=block_list_of_beings)
         logger.info("创世区块存储完成")
 
@@ -421,13 +423,17 @@ class APP:
         if not is_selected:
             # 读取待发布的众生区块
             if self.storageOfTemp.getDataCount() < 5:
+                logger.info("检测server是否有待发布的区块")
                 webserver_beings_list = self.webServerSDK.getBeings()
                 self.storageOfTemp.saveBatchData(webserver_beings_list)
             # 检测有无已经审核通过的，提交在本节点的申请书
+            logger.info("检测有无已经审核通过的，提交在本节点的申请书")
             self.applyNewNodeJoin()
             # 检测有无已经审核通过的，从其他主节点接受到的申请书
+            logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
             self.replyNewNodeJoin()
             # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+            logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
             self.checkNewNodeJoin()
 
     # 新周期开始30秒后，检查并执行
@@ -485,10 +491,13 @@ class APP:
                             self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
         else:
             # 检测有无已经审核通过的，提交在本节点的申请书
+            logger.info("检测有无已经审核通过的，提交在本节点的申请书")
             self.applyNewNodeJoin()
             # 检测有无已经审核通过的，从其他主节点接受到的申请书
+            logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
             self.replyNewNodeJoin()
             # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+            logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
             self.checkNewNodeJoin()
 
     # 检查是否收集完成所有区块，收集完成后保存到数据库

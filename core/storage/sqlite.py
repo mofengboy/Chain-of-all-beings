@@ -19,7 +19,7 @@ class Sqlite(ABC):
             create table beings(
             id INTEGER PRIMARY KEY,
             epoch INTEGER NOT NULL,
-            block_id TEXT NOT NULL,
+            block_id TEXT NOT NULL UNIQUE,
             user_pk TEXT NOT NULL,
             header BLOB NOT NULL,
             body BLOB NOT NULL
@@ -34,7 +34,7 @@ class Sqlite(ABC):
             create table galaxy(
             id INTEGER PRIMARY KEY,
             election_period INTEGER NOT NULL,
-            block_id TEXT NOT NULL,
+            block_id TEXT NOT NULL UNIQUE,
             user_pk TEXT NOT NULL,
             header BLOB NOT NULL,
             body BLOB NOT NULL

@@ -24,6 +24,26 @@ class DB:
             """)
             self.__DB.commit()
 
+        # 用户为了成为主节点提交的申请书
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'application_form'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table application_form(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            node_ip  TEXT NOT NULL,
+            node_create_time TEXT NOT NULL,
+            node_signature TEXT NOT NULL,
+            application TEXT NOT NULL,
+            application_signature TEXT NOT NULL,
+            is_review INTEGER NOT NULL,
+            remarks TEXT NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
     def getWaitingBlockListOfBeingsToSDK(self):
         cursor = self.__DB.cursor()
         cursor.execute("""
@@ -84,7 +104,6 @@ class DB:
             update application_form set is_review = 3
             where id = ?
             """, (data[0],))
-
         self.__DB.commit()
         return application_form_list
 
@@ -122,14 +141,14 @@ class SDK:
         application_form_list = []
         for data in data_list:
             application_form_list.append({
-                "node_id": data[1],
-                "user_pk": data[2],
-                "node_ip": data[3],
-                "node_create_time": data[4],
-                "node_signature": data[5],
-                "application": data[6],
-                "application_time": data[7],
-                "application_signature": data[8]
+                "node_id": data["node_id"],
+                "user_pk": data["user_pk"],
+                "node_ip": data["node_ip"],
+                "node_create_time": data["node_create_time"],
+                "node_signature": data["node_signature"],
+                "application": data["application"],
+                "application_time": data["application_time"],
+                "application_signature": data["application_signature"]
             })
         return application_form_list
 

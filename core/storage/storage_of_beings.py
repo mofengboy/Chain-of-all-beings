@@ -77,12 +77,12 @@ class StorageOfBeings(Sqlite):
             # 向前寻找
             return self.getLastBlock()
 
-    def getLastBlock(self) -> BlockOfBeings | None:
+    def getLastBlock(self) -> BlockOfBeings:
         cursor = self.blockConn.cursor()
         # 其中order by id desc 是按照id降序排列；limit 0,1中0是指从偏移量为0（也就是从第1条记录）开始，1是指需要查询的记录数，这里只查询1条记录
         cursor.execute("""
         select epoch,block_id,user_pk,header,body
-         from beings order by epoch,block_id desc limit 0,1;
+        from beings order by epoch,block_id desc limit 0,1;
         """)
         res = cursor.fetchone()
         if res[0] is None:

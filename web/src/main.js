@@ -26,7 +26,14 @@ app.config.globalProperties.$worker = vueWorker
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 
-axios.defaults.baseURL = config.server_url;
+axios.defaults.baseURL = config.server_url
+//axios 拦截token失效
+axios.interceptors.response.use(res => {
+    if (res.data["data"] === "Token无效") {
+        // location.reload();
+    }
+    return res
+})
 
 app.use(VueAxios, axios)
 

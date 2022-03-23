@@ -1,6 +1,20 @@
 <template>
   <div>
     <div v-show="!is_detail">
+      <div class="search-epoch">
+        <el-form label-position="top">
+          <div>
+            <el-form-item label="上链期次范围查询（包含开始，不包含结束):">
+              <el-input-number class="epoch-input" v-model="start_epoch" :min=0
+                               @change="changeStartEpoch"></el-input-number>
+              <el-input-number class="epoch-input" v-model="end_epoch" :min=0 @change="changeEndEpoch"></el-input-number>
+            </el-form-item>
+          </div>
+          <div>
+            <el-button type="primary" style="width: 100%" v-on:click="getIdListOfBeingsByEpoch">查找</el-button>
+          </div>
+        </el-form>
+      </div>
       <el-table :data="tableData" style="width: 100%" @row-click="openDetail">
         <el-table-column prop="epoch" label="上链期次" width="100"></el-table-column>
         <el-table-column label="内容摘要">
@@ -79,7 +93,9 @@ export default {
       general_user_public_key: "",
       general_user_signature: "",
       main_node_public_key: "",
-      main_node_signature: ""
+      main_node_signature: "",
+      start_epoch: 0,
+      end_epoch: 8,
     }
   },
   components: {
@@ -114,13 +130,29 @@ export default {
         }
       }
     },
+    changeStartEpoch: function (value) {
+      if (this.end_epoch - value > 8) {
+        this.end_epoch = value + 8
+      }
+      if (value > this.end_epoch) {
+        this.end_epoch = value
+      }
+    },
+    changeEndEpoch: function (value) {
+      if (value - this.start_epoch > 8) {
+        this.start_epoch = value - 8
+      }
+      if (value < this.start_epoch) {
+        this.start_epoch = value
+      }
+    },
     getMaxEpoch: function () {
       return this.axios({
         method: 'get',
         url: '/chain/beings/max_epoch'
       }).then((res) => {
         if (res.data["is_success"]) {
-          return parseInt(res.data["data"])
+          return parseInt(res.data["data"]) + 1
         } else {
           ElNotification({
             title: '获取max epoch失败',
@@ -131,15 +163,43 @@ export default {
       })
     },
     getMore: function () {
-      this.start -= 8
-      this.end -= 8
-      this.getIdListOfBeings()
+      if (this.start >= 0) {
+        this.start -= 8
+        this.end -= 8
+        this.getIdListOfBeings()
+      } else {
+        ElNotification({
+          title: '没有更多了',
+          message: "去发布一个吧",
+          type: 'error',
+        })
+      }
     },
     getIdListOfBeings: function () {
       const _this = this
       this.axios({
         method: 'get',
         url: '/chain/beings_list/get?start=' + _this.start + "&end=" + _this.end
+      }).then((res) => {
+        if (res.data["is_success"]) {
+          const id_list = res.data["data"]
+          for (let i = 0; i < id_list.length; i++) {
+            _this.getBlockOfBeings(id_list[i])
+          }
+        } else {
+          ElNotification({
+            title: '获取区块列表ID失败',
+            message: res.data["data"],
+            type: 'error',
+          })
+        }
+      })
+    },
+    getIdListOfBeingsByEpoch: function () {
+      const _this = this
+      this.axios({
+        method: 'get',
+        url: '/chain/beings_list/get?start=' + _this.start_epoch + "&end=" + _this.end_epoch
       }).then((res) => {
         if (res.data["is_success"]) {
           const id_list = res.data["data"]
@@ -163,6 +223,12 @@ export default {
       }).then((res) => {
         if (res.data["is_success"]) {
           const block = res.data["data"]
+          let is_exist = false
+          for (let i = 0; i < _this.tableData.length; i++) {
+            if (_this.tableData[i]["id"] === block["id"]) {
+              is_exist = true
+            }
+          }
           const block_dict = {
             "id": block["id"],
             "epoch": block["epoch"],
@@ -176,7 +242,9 @@ export default {
             "body_digest": (Buffer.from(block["body"], "base64").toString("utf-8")).substring(0, 32),
             "timestamp": block["timestamp"]
           }
-          _this.tableData.push(block_dict)
+          if (!is_exist) {
+            _this.tableData.unshift(block_dict)
+          }
         } else {
           ElNotification({
             title: '获取众生区块失败',
@@ -208,5 +276,13 @@ export default {
   padding: 0 10px;
   border-radius: 4px;
   border: 2px dashed var(--el-border-color-base);
+}
+
+.search-epoch {
+  margin-bottom: 10px;
+}
+
+.epoch-input {
+  margin: 0 25px 0 0;
 }
 </style>

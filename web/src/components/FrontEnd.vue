@@ -75,8 +75,8 @@ export default {
 }
 
 .main {
-  margin: 20px 0;
-  padding: 25px 10px 10px 10px;
+  margin: 10px 0;
+  padding: 10px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
 
