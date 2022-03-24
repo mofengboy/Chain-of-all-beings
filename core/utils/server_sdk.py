@@ -144,7 +144,7 @@ class SDK:
                 "node_id": data["node_id"],
                 "user_pk": data["user_pk"],
                 "node_ip": data["node_ip"],
-                "node_create_time": data["node_create_time"],
+                "node_create_time": int(data["node_create_time"]),
                 "node_signature": data["node_signature"],
                 "application": data["application"],
                 "application_signature": data["application_signature"]

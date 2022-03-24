@@ -277,7 +277,7 @@ class APP:
             node_id = application_form_dict["node_id"]
             user_pk = application_form_dict["user_pk"]
             node_ip = application_form_dict["node_ip"]
-            node_create_time = application_form_dict["node_create_time"]
+            node_create_time = int(application_form_dict["node_create_time"])
             node_signature = application_form_dict["node_signature"]
             application = application_form_dict["application"]
             application_time = STime.getTimestamp()

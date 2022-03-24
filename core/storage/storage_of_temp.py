@@ -112,7 +112,7 @@ class StorageOfTemp(Sqlite):
             application_form_list.append({
                 "node_id": data[1],
                 "user_pk": data[2],
-                "node_create_time": data[3],
+                "node_create_time": int(data[3]),
                 "is_audit": data[4],
                 "main_node_user_pk": data[5]
             })
@@ -323,11 +323,11 @@ class StorageOfTemp(Sqlite):
     # 返回该用户在该阶段已经使用的票数
     def getVotesByUserPk(self, user_pk, election_period) -> float:
         cursor = self.tempConn.cursor()
-        res = cursor.execute("""
+        cursor.execute("""
         select sum(votes) from votes
         where user_pk = ? and election_period = ?
         """, (user_pk, election_period))
-        res = next(res)
+        res = cursor.fetchone()
         return res[0]
 
     # 判断该投票是否已经存在
