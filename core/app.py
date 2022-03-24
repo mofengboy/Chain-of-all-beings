@@ -111,6 +111,7 @@ class APP:
 
     # 重新订阅32个链接
     def reSubscribe(self):
+        logger.info("开始重新订阅")
         lastSub = self.subList.copy()
         node = self.mainNode.mainNodeList.getNodeCount()
         NUMBER_OF_SUBSCRIPTION = 32
@@ -124,6 +125,7 @@ class APP:
         logger.info("订阅完成，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
         # 删除之前订阅
         self.stopAllSub(lastSub)
+        logger.info("重新订阅完成")
 
     # 读入主节点列表，通过配置文件提供的种子IP
     def loadMainNodeListBySeed(self):
