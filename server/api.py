@@ -134,10 +134,13 @@ def saveNewApply():
         application = info["application"]
         application_signature = info["application_signature"]
         remarks = info["remarks"]
-        mainNodeManager.addApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature,
-                                           application, application_signature, remarks)
-        http_message = HttpMessage(is_success=True, data="保存成功")
-        return http_message.getJson()
+        if mainNodeManager.addApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature,
+                                              application, application_signature, remarks):
+            http_message = HttpMessage(is_success=True, data="保存成功")
+            return http_message.getJson()
+        else:
+            http_message = HttpMessage(is_success=False, data="服务端签名校验失败，保存失败")
+            return http_message.getJson()
     except Exception as err:
         print(err)
         http_message = HttpMessage(is_success=False, data="参数错误")
@@ -256,7 +259,6 @@ def login():
             username = info["username"]
             password = info["password"]
             token = auth.generateTokenByUsernameAndPassword(username=username, password=password)
-            print(token)
             if token == "false":
                 http_message = HttpMessage(is_success=False, data="用户名或密码错误")
                 return http_message.getJson()

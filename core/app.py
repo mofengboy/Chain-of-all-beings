@@ -186,6 +186,7 @@ class APP:
                 ip = random.choice(node_ip_list)
                 block_list_of_beings = []
                 try:
+                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
                     res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                     block_list = literal_eval(bytes(res).decode("utf-8"))
                     for block_i in block_list:
@@ -194,10 +195,10 @@ class APP:
                     start += 10
                 except Exception as err:
                     logger.warning(err)
+                    continue
 
                 try:
                     self.storageOfBeings.saveBatchBlock(block_list_of_beings)
-                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
                     if end == self.getEpoch():
                         logger.info("众生区块同步完成")
                         break
@@ -294,7 +295,7 @@ class APP:
                 continue
             # 验证申请书和签名
             if not CipherSuites.verify(pk=user_pk, signature=application_signature,
-                                       message=str(application_form.application).encode("utf-8")):
+                                       message=str(application).encode("utf-8")):
                 # 申请书与新节点签名不匹配
                 logger.warning("申请书与新节点签名不匹配")
                 continue
@@ -302,12 +303,14 @@ class APP:
             main_node_signature = self.user.sign(str(application_form.application).encode("utf-8"))
             application_form.setMainNodeSignature(main_node_signature)
             application_form.setMainNodeUserPk(self.user.getUserPKString())
+            print(application_form)
             #  添加数据库数据，准备接受其他主节点的意见
             self.storageOfTemp.insertApplicationForm(node_id=node_id, user_pk=user_pk, node_ip=node_ip,
                                                      node_create_time=node_create_time, node_signature=node_signature,
                                                      application=application, application_time=application_time,
                                                      application_signature=application_signature,
-                                                     agree_count=1)
+                                                     agree_count=1, main_node_user_pk=self.user.getUserPKString(),
+                                                     main_node_signature=main_node_signature)
             serial_application_form = SerializationApplicationForm.serialization(application_form)
             # 全网广播
             self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=serial_application_form)
@@ -320,6 +323,7 @@ class APP:
         for node_id in self.storageOfTemp.getNodeIdListOfWaitingAuditApplicationForm():
             # 检测是否超过有效时间，若超过删除该申请书
             if not self.nodeManager.isTimeReplyApplicationForm(node_id):
+                logger.info("该申请书已经超过有效时间，申请书新节点ID为：" + node_id)
                 continue
             # 检测是否达到成为新节点的条件
             res = self.nodeManager.isSuccessReplyApplicationForm(node_id)

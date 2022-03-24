@@ -13,7 +13,7 @@ class NodeInfo:
         if create_time is None:
             self.createTime = STime.getTimestamp()
         else:
-            self.createTime = create_time
+            self.createTime = int(create_time)
         self.nodeSignature = ""
 
     def setNodeSignature(self, signature):

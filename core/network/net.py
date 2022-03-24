@@ -239,6 +239,10 @@ class SUB(threading.Thread):
                         bytes(message[len(SubscribeTopics.getNodeTopicOfApplyJoin()):]).decode(
                             "utf-8"))
                     application_form = SerializationApplicationForm.deserialization(serial_application_form)
+                    # 检测是当前主节点申请的
+                    if self.user.getUserPKString() == application_form.mainNode["user_pk"]:
+                        logger.info("该申请书为当前节点主动申请，新节点用户公钥：" + application_form.newNodeInfo["user_pk"])
+                        continue
                     # 保证节点不能同时有多个申请书
                     if self.storageOfTemp.isApplicationForm(new_node_user_pk=application_form.newNodeInfo["user_pk"]):
                         logger.info("该申请书已经存在，新节点用户公钥：" + application_form.newNodeInfo["user_pk"])
@@ -252,7 +256,7 @@ class SUB(threading.Thread):
                     # 验证新节点对申请书的签名
                     if not CipherSuites.verify(pk=application_form.newNodeInfo["user_pk"],
                                                signature=application_form.applicationSignatureByNewNode,
-                                               message=str(application_form.application).encode("utf-8")):
+                                               message=str(application_form.application["content"]).encode("utf-8")):
                         logger.info("新节点对申请书的签名不匹配,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
                         continue
                     # 验证主节点对申请书的签名
@@ -276,6 +280,10 @@ class SUB(threading.Thread):
                     list_of_reply_application_form = []
                     application_form = SerializationApplicationForm.deserialization(serial_application_form)
                     node_info = application_form.newNodeInfo
+                    # 检测该节点是否已经是主节点
+                    if self.mainNode.mainNodeList.userPKisExit(node_info["user_pk"]):
+                        logger.info("当前节点已经存在，节点用户公钥为：" + node_info["user_pk"])
+                        continue
                     new_node = NodeInfo(node_id=node_info["node_id"], user_pk=node_info["user_pk"],
                                         node_ip=node_info["node_ip"], create_time=node_info["create_time"])
                     new_node.setNodeSignature(application_form.newNodeSignature)
@@ -295,7 +303,9 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
                                              message=[serial_application_form, list_of_serial_reply_application_form])
                         # 将新节点加入数据库
-                        self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                        self.mainNode.mainNodeList.addMainNode(node_info=new_node)
+                        logger.info("新节点已加入，节点信息为：")
+                        logger.info(new_node.getInfo())
                         # 重新计算订阅列表，重新创建32个订阅链接
                         self.reSubscribe()
 

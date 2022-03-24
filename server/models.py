@@ -142,20 +142,36 @@ class MainNodeManager:
 
     # 增加申请表列表
     def addApplicationForm(self, node_id, user_pk, node_ip, node_create_time, node_signature, application
-                           , application_signature, remarks):
+                           , application_signature, remarks) -> bool:
+        # 验证签名
+        # 验证新节点信息和签名
+        node_info = "{'node_id': '" + node_id + "', 'user_pk': '" + user_pk + "', 'node_ip': '" + node_ip + "', 'create_time': " + node_create_time + "}"
+        if not CipherSuites.verify(pk=user_pk, signature=node_signature,
+                                   message=str(node_info).encode("utf-8")):
+            # 新节点信息与签名不匹配
+            return False
+        # 验证申请书和签名
+        if not CipherSuites.verify(pk=user_pk, signature=application_signature,
+                                   message=str(application).encode("utf-8")):
+            # 申请书与新节点签名不匹配
+            return False
         self.db.insertApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature, application,
                                       application_signature, remarks)
+        return True
 
-    # 获取从其他主节点接受到的等待审核的申请表列表id
-    def getApplicationOfOtherMainNode(self, offset, count):
-        id_list = self.DBOfTemp.getListOfWaitingApplicationForm(offset, count)
-        return id_list
 
-    # 获取从其他主节点接受到的等待审核的申请表
-    def getOtherNodeApplicationFormByDBId(self, db_id):
-        application_form = self.DBOfTemp.getWaitingApplicationForm(db_id)
-        return application_form
+# 获取从其他主节点接受到的等待审核的申请表列表id
+def getApplicationOfOtherMainNode(self, offset, count):
+    id_list = self.DBOfTemp.getListOfWaitingApplicationForm(offset, count)
+    return id_list
 
-    # 审核从其他主节点接受到的等待审核的申请表
-    def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
-        self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)
+
+# 获取从其他主节点接受到的等待审核的申请表
+def getOtherNodeApplicationFormByDBId(self, db_id):
+    application_form = self.DBOfTemp.getWaitingApplicationForm(db_id)
+    return application_form
+
+
+# 审核从其他主节点接受到的等待审核的申请表
+def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
+    self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)

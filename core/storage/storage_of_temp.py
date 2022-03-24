@@ -136,8 +136,8 @@ class StorageOfTemp(Sqlite):
     # 将新节点申请表加入数据库,准备接受其他主节点的意见
     # is_audit = 0表示正在申请阶段，=1表示申请通过，=2表示申请失败或者已经过期
     def insertApplicationForm(self, node_id, user_pk, node_ip, node_create_time, node_signature,
-                              application, application_time, application_signature, agree_count
-                              ):
+                              application, application_time, application_signature, agree_count, main_node_signature,
+                              main_node_user_pk):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         insert into node_join(node_id, user_pk, node_ip, node_create_time, node_signature, 
@@ -145,7 +145,8 @@ class StorageOfTemp(Sqlite):
         is_audit ,main_node_signature,main_node_user_pk,create_time)
         values (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (node_id, user_pk, node_ip, node_create_time, node_signature,
-              application, application_time, application_signature, agree_count, 0, STime.getTimestamp()))
+              application, application_time, application_signature, agree_count, 0, main_node_signature,
+              main_node_user_pk, STime.getTimestamp()))
         self.tempConn.commit()
 
     # 增加对该节点的同意数量
@@ -198,7 +199,7 @@ class StorageOfTemp(Sqlite):
         res = cursor.fetchone()
         node_info = NodeInfo(node_id=res[0], user_pk=res[1], node_ip=res[2], create_time=res[3])
         node_info.setNodeSignature(res[4])
-        application_form = ApplicationForm(node_info=node_info, start_time=res[6], content=res[5],
+        application_form = ApplicationForm(node_info=node_info, start_time=int(res[6]), content=res[5],
                                            application_signature_by_new_node=res[7])
         application_form.setMainNodeUserPk(res[8])
         application_form.setMainNodeSignature(res[7])
@@ -265,13 +266,14 @@ class StorageOfTemp(Sqlite):
     def getListOfReplyApplicationFormInfo(self, new_node_id, start_time):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select reply_application_form_info,main_node_signature,main_node_user_pk from node_join_agree
+        select reply_application_form_info, main_node_signature, main_node_user_pk 
+        from node_join_agree
         where new_node_id = ? and start_time = ?
         """, (new_node_id, start_time))
         res = cursor.fetchall()
         reply_application_form_list = []
         for data in res:
-            reply_application_form_info = literal_eval(data[0])
+            reply_application_form_info = literal_eval(bytes(data[0]).decode("utf-8"))
             reply_application_form = ReplyApplicationForm(new_node_id=reply_application_form_info["new_node_id"],
                                                           new_node_user_pk=reply_application_form_info[
                                                               "new_node_user_pk"],
@@ -281,6 +283,7 @@ class StorageOfTemp(Sqlite):
             reply_application_form.setSignature(data[1])
             reply_application_form.setUserPk(data[2])
             reply_application_form_list.append(reply_application_form)
+        return reply_application_form_list
 
     # 审核新节点请求
     def auditNodeOfApplication(self, db_id, is_audit, application, start_time=None, main_node_signature=None,

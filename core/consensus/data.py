@@ -118,10 +118,10 @@ class ApplicationForm:
         }
 
     def setMainNodeSignature(self, main_node_signature):
-        self.application["main_node_signature"] = main_node_signature
+        self.mainNode["application_signature"] = main_node_signature
 
     def setMainNodeUserPk(self, main_node_user_pk):
-        self.application["main_node_user_pk"] = main_node_user_pk
+        self.mainNode["user_pk"] = main_node_user_pk
 
 
 # 申请书回复
