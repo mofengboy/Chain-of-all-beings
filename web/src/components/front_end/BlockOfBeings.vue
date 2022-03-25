@@ -1,20 +1,6 @@
 <template>
   <div>
     <div v-show="!is_detail">
-      <div class="search-epoch">
-        <el-form label-position="top">
-          <div>
-            <el-form-item label="上链期次范围查询（包含开始，不包含结束):">
-              <el-input-number class="epoch-input" v-model="start_epoch" :min=0
-                               @change="changeStartEpoch"></el-input-number>
-              <el-input-number class="epoch-input" v-model="end_epoch" :min=0 @change="changeEndEpoch"></el-input-number>
-            </el-form-item>
-          </div>
-          <div>
-            <el-button type="primary" style="width: 100%" v-on:click="getIdListOfBeingsByEpoch">查找</el-button>
-          </div>
-        </el-form>
-      </div>
       <el-table :data="tableData" style="width: 100%" @row-click="openDetail">
         <el-table-column prop="epoch" label="上链期次" width="100"></el-table-column>
         <el-table-column label="内容摘要">
@@ -27,6 +13,21 @@
       </el-table>
       <div>
         <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getMore">获取更多</el-button>
+      </div>
+      <div class="search-epoch">
+        <el-form label-position="top">
+          <div>
+            <el-form-item label="上链期次范围查询（包含开始，不包含结束):">
+              <el-input-number class="epoch-input" v-model="start_epoch" :min=0
+                               @change="changeStartEpoch"></el-input-number>
+              <el-input-number class="epoch-input" v-model="end_epoch" :min=0
+                               @change="changeEndEpoch"></el-input-number>
+            </el-form-item>
+          </div>
+          <div>
+            <el-button type="primary" style="width: 100%" v-on:click="getIdListOfBeingsByEpoch">查找</el-button>
+          </div>
+        </el-form>
       </div>
     </div>
     <div v-show="is_detail" class="detail">
@@ -279,7 +280,7 @@ export default {
 }
 
 .search-epoch {
-  margin-bottom: 10px;
+  margin: 10px 0;
 }
 
 .epoch-input {

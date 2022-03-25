@@ -319,11 +319,15 @@ class SUB(threading.Thread):
                                                  message=[serial_application_form,
                                                           list_of_serial_reply_application_form])
                             # 将新节点加入数据库
-                            self.mainNode.mainNodeList.addMainNode(node_info=new_node)
-                            logger.info("新节点已加入，节点信息为：")
-                            logger.info(new_node.getInfo())
-                            # 重新计算订阅列表，重新创建32个订阅链接
-                            self.reSubscribe()
+                            # 检测主节点列表中是否已经有该节点
+                            if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
+                                self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                                logger.info("新节点已加入，节点信息为：")
+                                logger.info(new_node.getInfo())
+                                # 重新计算订阅列表，重新创建32个订阅链接
+                                self.reSubscribe()
+                            else:
+                                logger.info("节点已经存在，节点ID为：" + node_info.nodeId)
                 except Exception as err:
                     logger.exception(err)
 

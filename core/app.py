@@ -343,11 +343,17 @@ class APP:
                                      node_ip=application_form.newNodeInfo["node_ip"],
                                      create_time=application_form.newNodeInfo["create_time"])
                 node_info.setNodeSignature(application_form.newNodeSignature)
-                self.mainNode.mainNodeList.addMainNode(node_info=node_info)
-                # 将该申请书设置为已经完成申请
-                self.storageOfTemp.finishApplicationFormByNodeId(node_id)
-                # 重新计算订阅列表，重新创建32个订阅链接
-                self.reSubscribe()
+                # 检测主节点列表中是否已经有该节点
+                if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
+                    self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                    logger.info("新节点已加入，节点信息为：")
+                    logger.info(node_info.getInfo())
+                    # 将该申请书设置为已经完成申请
+                    self.storageOfTemp.finishApplicationFormByNodeId(node_id)
+                    # 重新计算订阅列表，重新创建32个订阅链接
+                    self.reSubscribe()
+                else:
+                    logger.warning("节点已经存在，节点ID为：" + node_info.nodeId)
 
     # 众生区块生成周期
     # 0-30S

@@ -57,6 +57,7 @@ class SerializationApplicationForm:
         main_node_user_pk = application_form_dict["main_node"]["user_pk"]
         node_info = NodeInfo(node_id=new_node_info["node_id"], node_ip=new_node_info["node_ip"],
                              user_pk=new_node_info["user_pk"], create_time=new_node_info["create_time"])
+        node_info.setNodeSignature(application_form_dict["new_node_signature"])
         application_form = ApplicationForm(node_info=node_info, start_time=start_time, content=content,
                                            application_signature_by_new_node=application_signature_by_new_node)
         application_form.setMainNodeSignature(application_signature_by_main_node)
