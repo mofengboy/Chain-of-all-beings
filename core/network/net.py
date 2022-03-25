@@ -320,14 +320,14 @@ class SUB(threading.Thread):
                                                           list_of_serial_reply_application_form])
                             # 将新节点加入数据库
                             # 检测主节点列表中是否已经有该节点
-                            if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
-                                self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                            if not self.mainNode.mainNodeList.userPKisExit(user_pk=new_node.userPk):
+                                self.mainNode.mainNodeList.addMainNode(node_info=new_node)
                                 logger.info("新节点已加入，节点信息为：")
                                 logger.info(new_node.getInfo())
                                 # 重新计算订阅列表，重新创建32个订阅链接
                                 self.reSubscribe()
                             else:
-                                logger.info("节点已经存在，节点ID为：" + node_info.nodeId)
+                                logger.info("节点已经存在，节点ID为：" + new_node.nodeId)
                 except Exception as err:
                     logger.exception(err)
 
@@ -357,9 +357,6 @@ class SUB(threading.Thread):
                         # 检测申请节点是否有申请权限
                         if not self.mainNode.currentMainNode.userPKisExit(user_pk=apply_user_pk):
                             continue
-                        # 检测申请被删除的节点当前是否应该生成区块
-                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=del_node_user_pk):
-                            continue
                         # 验证申请节点签名
                         if not CipherSuites.verify(pk=apply_user_pk, signature=apply_signature,
                                                    message=(str(node_del_application_form.getInfo()).encode("utf-8"))):
@@ -371,6 +368,9 @@ class SUB(threading.Thread):
                                 empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
                             # 删除节点
                             self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
+                            continue
+                        # 检测申请被删除的节点当前是否应该生成区块
+                        if not self.mainNode.currentMainNode.userPKisExit(user_pk=del_node_user_pk):
                             continue
                         # 检测自己是否收到该区块
                         if self.mainNode.currentBlockList.userPkIsExit(user_pk=del_node_user_pk):

@@ -142,7 +142,7 @@ class NodeManager:
 
         total_vote = 1
         for vote in votes:
-            if CipherSuites.verify(pk=vote["user_pk"], signature="signature", message=str(info).encode("utf-8")):
+            if CipherSuites.verify(pk=vote["user_pk"], signature=vote["signature"], message=str(info).encode("utf-8")):
                 total_vote += 1
         if total_vote >= self.mainNode.mainNodeList.getNodeCount() / 2:
             return True

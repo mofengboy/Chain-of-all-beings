@@ -33,7 +33,8 @@
     <div v-show="is_detail" class="detail">
       <el-page-header content="区块详细信息" @back="this.is_detail=false"/>
       <div class="detail-main">
-        <el-tag class="info-tag">Epoch:{{ epoch }}</el-tag>
+        <el-tag class="info-tag" color="#dedfe0">区块ID:{{ block_id }}</el-tag>
+        <el-tag class="info-tag">上链期次:{{ epoch }}</el-tag>
         <el-tag class="info-tag" type="success">创建时间:{{ create_time }}</el-tag>
         <div class="content">
           <markdown :source="body"></markdown>
@@ -89,6 +90,7 @@ export default {
       body: "",
       create_time: "",
       epoch: "",
+      block_id: "",
       preBlockHash: "",
       preBlockHeaderHash: "",
       general_user_public_key: "",
@@ -127,6 +129,7 @@ export default {
           this.general_user_signature = this.tableData[i]["user_signature"]
           this.main_node_public_key = this.tableData[i]["main_node_user_pk"]
           this.main_node_signature = this.tableData[i]["main_node_signature"]
+          this.block_id = this.tableData[i]["block_id"]
           break
         }
       }
@@ -232,6 +235,7 @@ export default {
           }
           const block_dict = {
             "id": block["id"],
+            "block_id": block["block_id"],
             "epoch": block["epoch"],
             "prev_block": block["prev_block"],
             "prev_block_header": block["prev_block_header"],
@@ -244,7 +248,7 @@ export default {
             "timestamp": block["timestamp"]
           }
           if (!is_exist) {
-            _this.tableData.unshift(block_dict)
+            _this.tableData.push(block_dict)
           }
         } else {
           ElNotification({
@@ -269,7 +273,7 @@ export default {
 }
 
 .info-tag {
-  margin: 0 10px;
+  margin: 0 15px 5px 0;
 }
 
 .content {

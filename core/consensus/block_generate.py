@@ -43,7 +43,7 @@ class CurrentMainNode:
         return main_node_list
 
 
-# 生产众生区块
+# 生成众生区块
 class NewBlockOfBeings:
     def __init__(self, user_pk: [], body_signature: [], body: bytes, epoch, pre_block, prev_block_header):
         for i in range(len(user_pk)):
@@ -58,7 +58,7 @@ class NewBlockOfBeings:
         return self.newBlock
 
 
-# 生产众生区块
+# 生成众生区块
 class NewBlockOfBeingsByExist:
     def __init__(self, header, body: bytes):
         for i in range(len(header["userPK"])):
