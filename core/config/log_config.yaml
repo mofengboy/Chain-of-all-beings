@@ -11,17 +11,19 @@ handlers:
     level: DEBUG
     stream: ext://sys.stdout
   debugFile:
-    class: logging.FileHandler
+    class: logging.handlers.RotatingFileHandler
     formatter: simple
     level: DEBUG
     filename: ./log/debug.log
+    maxBytes: 3000000
+    backupCount: 20
     encoding: utf8
   infoFile:
     class: logging.handlers.RotatingFileHandler
     level: INFO
     formatter: simple
     filename: ./log/info.log
-    maxBytes: 10485760
+    maxBytes: 3000000
     backupCount: 20
     encoding: utf8
   errorFile:
@@ -29,7 +31,7 @@ handlers:
     level: ERROR
     formatter: simple
     filename: ./log/error.log
-    maxBytes: 10485760
+    maxBytes: 3000000
     backupCount: 20
     encoding: utf8
   warningFile:
@@ -37,7 +39,7 @@ handlers:
     level: WARN
     formatter: simple
     filename: ./log/warn.log
-    maxBytes: 10485760
+    maxBytes: 3000000
     backupCount: 20
     encoding: utf8
 loggers:

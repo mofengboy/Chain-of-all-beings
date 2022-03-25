@@ -6,6 +6,7 @@ from core.consensus.data import ApplicationForm, ReplyApplicationForm
 
 # 众生区块对象序列化与反序列化
 from core.data.network_message import NetworkMessage
+from core.data.node_info import NodeInfo
 
 
 class SerializationBeings:
@@ -54,7 +55,9 @@ class SerializationApplicationForm:
         application_signature_by_new_node = application_form_dict["application_signature_by_new_node"]
         application_signature_by_main_node = application_form_dict["main_node"]["application_signature"]
         main_node_user_pk = application_form_dict["main_node"]["user_pk"]
-        application_form = ApplicationForm(node_info=new_node_info, start_time=start_time, content=content,
+        node_info = NodeInfo(node_id=new_node_info["node_id"], node_ip=new_node_info["node_ip"],
+                             user_pk=new_node_info["user_pk"], create_time=new_node_info["create_time"])
+        application_form = ApplicationForm(node_info=node_info, start_time=start_time, content=content,
                                            application_signature_by_new_node=application_signature_by_new_node)
         application_form.setMainNodeSignature(application_signature_by_main_node)
         application_form.setMainNodeUserPk(main_node_user_pk)

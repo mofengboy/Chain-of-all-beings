@@ -238,7 +238,7 @@ class SUB(threading.Thread):
                         self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=block_of_galaxy)
                         continue
                 except Exception as err:
-                    logger.warning(err)
+                    logger.exception(err)
                 # 新节点申请加入 消息
                 # 保存到暂存区（以便审核后回复）广播
                 try:
@@ -247,7 +247,8 @@ class SUB(threading.Thread):
                         serial_application_form = literal_eval(
                             bytes(message[len(SubscribeTopics.getNodeTopicOfApplyJoin()):]).decode(
                                 "utf-8"))
-                        application_form = SerializationApplicationForm.deserialization(serial_application_form)
+                        application_form = SerializationApplicationForm.deserialization(
+                            str(serial_application_form).encode("utf-8"))
                         # 检测是当前主节点申请的
                         if self.user.getUserPKString() == application_form.mainNode["user_pk"]:
                             logger.info("该申请书为当前节点主动申请，新节点用户公钥：" + application_form.newNodeInfo["user_pk"])
@@ -284,15 +285,15 @@ class SUB(threading.Thread):
                         logger.info("已保存申请书信息,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
                         continue
                 except Exception as err:
-                    logger.warning(err)
-
+                    logger.exception(err)
                 # 新节点确认加入主节点消息
                 try:
                     if message[0:len(SubscribeTopics.getNodeTopicOfJoin())] == SubscribeTopics.getNodeTopicOfJoin():
                         serial_application_form, list_of_serial_reply_application_form = \
                             literal_eval(bytes(message[len(SubscribeTopics.getNodeTopicOfJoin()):]).decode("utf-8"))
                         list_of_reply_application_form = []
-                        application_form = SerializationApplicationForm.deserialization(serial_application_form)
+                        application_form = SerializationApplicationForm.deserialization(
+                            str(serial_application_form).encode("utf-8"))
                         node_info = application_form.newNodeInfo
                         # 检测该节点是否已经是主节点
                         if self.mainNode.mainNodeList.userPKisExit(node_info["user_pk"]):
@@ -324,7 +325,7 @@ class SUB(threading.Thread):
                             # 重新计算订阅列表，重新创建32个订阅链接
                             self.reSubscribe()
                 except Exception as err:
-                    logger.warning(err)
+                    logger.exception(err)
 
                 # 申请删除主节点消息
                 # 被选中，但是没有产生区块

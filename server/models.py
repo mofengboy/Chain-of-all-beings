@@ -159,19 +159,16 @@ class MainNodeManager:
                                       application_signature, remarks)
         return True
 
+    # 获取从其他主节点接受到的等待审核的申请表列表id
+    def getApplicationOfOtherMainNode(self, offset, count):
+        id_list = self.DBOfTemp.getListOfWaitingApplicationForm(offset, count)
+        return id_list
 
-# 获取从其他主节点接受到的等待审核的申请表列表id
-def getApplicationOfOtherMainNode(self, offset, count):
-    id_list = self.DBOfTemp.getListOfWaitingApplicationForm(offset, count)
-    return id_list
+    # 获取从其他主节点接受到的等待审核的申请表
+    def getOtherNodeApplicationFormByDBId(self, db_id):
+        application_form = self.DBOfTemp.getWaitingApplicationForm(db_id)
+        return application_form
 
-
-# 获取从其他主节点接受到的等待审核的申请表
-def getOtherNodeApplicationFormByDBId(self, db_id):
-    application_form = self.DBOfTemp.getWaitingApplicationForm(db_id)
-    return application_form
-
-
-# 审核从其他主节点接受到的等待审核的申请表
-def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
-    self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)
+    # 审核从其他主节点接受到的等待审核的申请表
+    def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
+        self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)
