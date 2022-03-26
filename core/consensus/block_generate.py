@@ -11,9 +11,10 @@ logger = logging.getLogger("main")
 
 # 计算本次生成区块的节点
 class CurrentMainNode:
-    def __init__(self, main_node_list: MainNodeList, last_block: BlockOfBeings):
+    def __init__(self, main_node_list: MainNodeList, last_block: BlockOfBeings, getEpoch):
         self.mainNodeList = main_node_list
         self.lastBlock = last_block
+        self.getEpoch = getEpoch
         self.__generateCount = self.getGenerateCount()
 
     # 一个epoch内产生的区块数量
@@ -25,7 +26,7 @@ class CurrentMainNode:
             return 2
 
     def getNodeList(self) -> MainNodeList:
-        seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.lastBlock.getEpoch())
+        seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.getEpoch())
         random.seed(seed)
         node_list = random.choices(population=self.mainNodeList.getNodeList(),
                                    weights=self.mainNodeList.getNodeWeights(), k=self.getGenerateCount())
@@ -36,7 +37,6 @@ class CurrentMainNode:
                 node_info = NodeInfo(node_id=node["node_info"]["node_id"], user_pk=node["node_info"]["user_pk"],
                                      node_ip=node["node_info"]["node_ip"], create_time=node["node_info"]["create_time"])
                 main_node_list.addMainNode(node_info=node_info)
-
         logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
         logger.debug("去重后的主节点分别为:")
         logger.debug(main_node_list.getNodeList())

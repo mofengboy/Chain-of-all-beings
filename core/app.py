@@ -95,7 +95,8 @@ class APP:
 
     # 删除订阅
     def delSub(self, ip: str):
-        for i in range(len(self.subList)):
+        count = len(self.subList)
+        for i in range(count):
             if ip == self.subList[i].name:
                 self.subList[i].stop()
                 del self.subList[i]
@@ -107,7 +108,6 @@ class APP:
         for sub_i in lastSub:
             ip = sub_i.name
             self.delSub(ip)
-            sub_i.stop()
         logger.info("已删除之前订阅，当前订阅数量为" + str(self.mainNode.mainNodeList.getNodeCount()))
 
     # 重新订阅32个链接
@@ -359,7 +359,8 @@ class APP:
         logger.info("众生区块生成周期开始，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         # 获取本次产生区块的节点列表
         self.mainNode.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
-                                                        self.storageOfBeings.getLastBlockByCache()).getNodeList()
+                                                        self.storageOfBeings.getLastBlockByCache(),
+                                                        self.getEpoch).getNodeList()
         #
         # 若本次主节点被选中产生区块，则检查暂存区数据数量，若大于0,则直接产生区块，若等于0，则调用后端sdk获取数据。只有在没获得数据的情况，
         # 才广播不产生区块的消息。
@@ -505,6 +506,7 @@ class APP:
                 except Exception as err:
                     logger.info("获取区块失败，节点ID为：" + node_id)
                     logger.exception(err)
+                    time.sleep(2)
         else:
             # 检测有无已经审核通过的，提交在本节点的申请书
             logger.info("检测有无已经审核通过的，提交在本节点的申请书")
@@ -537,12 +539,14 @@ class APP:
     # 开始数据恢复阶段
     def startDataRecovery(self):
         logger.info("进入数据恢复阶段")
-        ip_list = []
-        for node in self.mainNode.mainNodeList.getNodeList():
-            ip_list.append(node["node_info"]["node_ip"])
         i = 0
         while True:
             try:
+                ip_list = []
+                for node in self.mainNode.mainNodeList.getNodeList():
+                    ip_list.append(node["node_info"]["node_ip"])
+                if not ip_list:
+                    break
                 ip = random.choice(ip_list)
                 net_mess = NetworkMessage(NetworkMessageType.Data_Recovery_Req, message=self.getEpoch())
                 # 增加签名
