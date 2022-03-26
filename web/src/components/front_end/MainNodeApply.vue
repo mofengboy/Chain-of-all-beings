@@ -261,11 +261,6 @@ export default {
                     message: '提交成功',
                     type: 'success',
                   })
-                  _this.application = "# 使用Markdown格式渲染"
-                  _this.nodeID = ""
-                  _this.nodeIP = ""
-                  _this.nodeSignature = ""
-                  _this.applicationSignature = ""
                 } else {
                   ElNotification({
                     title: '提交失败',

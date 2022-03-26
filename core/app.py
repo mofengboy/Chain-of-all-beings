@@ -171,9 +171,6 @@ class APP:
         storage_epoch = self.storageOfBeings.getMaxEpoch()
         logger.info("目前已经存储的区块的epoch为：" + str(storage_epoch))
         verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
-        if verify_epoch == 0:
-            # 存储创世区块
-            self.storageGenesisBlock()
         logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
         self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
         start = verify_epoch

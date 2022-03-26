@@ -34,6 +34,7 @@ def run(sk_string, pk_string):
     # # DEBUG模式 将自己添加到主节点列表
     # # 仅限DEBUG模式，线上模式需要申请加入主节点
     # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+    # app.storageGenesisBlock()
     # #
 
     # 获取主节点列表（读取配置文件）

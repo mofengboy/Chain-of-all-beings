@@ -368,6 +368,7 @@ class SUB(threading.Thread):
                                 empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
                             # 删除节点
                             self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
+                            self.reSubscribe()
                             continue
                         # 检测申请被删除的节点当前是否应该生成区块
                         if not self.mainNode.currentMainNode.userPKisExit(user_pk=del_node_user_pk):
@@ -426,7 +427,7 @@ class SUB(threading.Thread):
                                                      message=node_del_application_form.getMessage())
                                 self.nodeDelApplicationFormList.append(node_del_application_form)
                 except Exception as err:
-                    logger.warning(err)
+                    logger.exception(err)
                 # 投票确认消息
                 try:
                     if message[0:len(SubscribeTopics.getVoteConfirmation())] == SubscribeTopics.getVoteConfirmation():
