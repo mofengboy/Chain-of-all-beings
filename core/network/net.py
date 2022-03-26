@@ -666,18 +666,24 @@ class Server(threading.Thread):
                         self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
 
                 # 数据恢复
-                if mess_type == NetworkMessageType.Data_Recovery_Req:
-                    # 检测是否收集完成数据
-                    epoch = network_message.message
-                    if self.getEpoch() <= epoch:
-                        network_message = NetworkMessage(NetworkMessageType.No_Data_Recovery, message=None)
-                        reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
-                    else:
-                        block_list_of_beings = self.storageOfBeings.getBlocksByEpoch(start=epoch, end=self.getEpoch())
-                        network_message = NetworkMessage(NetworkMessageType.Data_Recovery, message=block_list_of_beings)
-                        reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
+                try:
+                    if mess_type == NetworkMessageType.Data_Recovery_Req:
+                        # 检测是否收集完成数据
+                        epoch = network_message.message
+                        if self.getEpoch() <= epoch:
+                            network_message = NetworkMessage(NetworkMessageType.No_Data_Recovery, message=None)
+                            reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
+                            self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
+                        else:
+                            block_list_of_beings = self.storageOfBeings.getBlocksByEpoch(start=epoch,
+                                                                                         end=self.getEpoch())
+                            network_message = NetworkMessage(NetworkMessageType.Data_Recovery,
+                                                             message=block_list_of_beings)
+                            reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
+                            self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
+                except Exception as err:
+                    logger.warning("数据恢复出现错误")
+                    logger.exception(err)
 
                 # 新区块消息
                 if mess_type == NetworkMessageType.NEW_BLOCK:

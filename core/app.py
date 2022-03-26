@@ -1,5 +1,6 @@
 import random
 import logging.config
+import time
 from ast import literal_eval
 
 from core.consensus.node_management import NodeManager
@@ -31,7 +32,7 @@ logger = logging.getLogger("main")
 
 class APP:
     def __init__(self, sk_string, pk_string):
-        self.currentEpoch = 1  # 当前epoch
+        self.currentEpoch = 0  # 当前epoch
         self.electionPeriod = 0  # 选举期次
 
         self.storageOfBeings = StorageOfBeings()  # 众生区块存储类
@@ -481,24 +482,29 @@ class APP:
                 user_pk = node["node_info"]["user_pk"]
                 node_id = node["node_info"]["node_id"]
                 # 检查是否存在应该收到，但是未收到的区块
-                if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                    logger.info("存在应该产生区块，但是未收到信息的节点")
-                    logger.info("节点ID为：" + node_id)
-                    # 直接发送请求，获取生成的区块
-                    network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
-                                                     message=self.getEpoch())
-                    network_message.setClientInfo(user_pk=self.user.getUserPKString())
-                    signature = self.user.sign(message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
-                    network_message.setSignature(signature)
-                    serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                    res = self.client.sendMessageByNodeID(node_id=node_id,
-                                                          data=str(serial_network_message).encode("utf-8"))
-                    if res != b'0':
-                        res = literal_eval(bytes(res).decode("utf-8"))
-                        if res["message_type"] == NetworkMessageType.NEW_BLOCK:
-                            self.mainNode.currentBlockList.addBlock(block=res["message"])
-                        if res["message_type"] == NetworkMessageType.NO_BLOCK:
-                            self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
+                try:
+                    if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
+                        logger.info("存在应该产生区块，但是未收到信息的节点")
+                        logger.info("节点ID为：" + node_id)
+                        # 直接发送请求，获取生成的区块
+                        network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
+                                                         message=self.getEpoch())
+                        network_message.setClientInfo(user_pk=self.user.getUserPKString())
+                        signature = self.user.sign(
+                            message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
+                        network_message.setSignature(signature)
+                        serial_network_message = SerializationNetworkMessage.serialization(network_message)
+                        res = self.client.sendMessageByNodeID(node_id=node_id,
+                                                              data=str(serial_network_message).encode("utf-8"))
+                        if res != b'0':
+                            res = literal_eval(bytes(res).decode("utf-8"))
+                            if res["message_type"] == NetworkMessageType.NEW_BLOCK:
+                                self.mainNode.currentBlockList.addBlock(block=res["message"])
+                            if res["message_type"] == NetworkMessageType.NO_BLOCK:
+                                self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
+                except Exception as err:
+                    logger.info("获取区块失败，节点ID为：" + node_id)
+                    logger.exception(err)
         else:
             # 检测有无已经审核通过的，提交在本节点的申请书
             logger.info("检测有无已经审核通过的，提交在本节点的申请书")
@@ -547,6 +553,7 @@ class APP:
                 serial_res_message = self.client.sendMessageByIP(ip, data=str(serial_net_mess).encode("utf-8"))
                 res_message = SerializationNetworkMessage.deserialization(serial_res_message)
                 if res_message.messType == NetworkMessageType.No_Data_Recovery:
+                    logging.info("该节点无数据，节点IP为：" + str(ip))
                     logging.info("正在重新进行数据恢复")
                     continue
                 if res_message.messType == NetworkMessageType.Data_Recovery:
@@ -561,7 +568,8 @@ class APP:
             except Exception as err:
                 i += 1
                 logger.warning("数据恢复出现错误，正在第" + str(i) + "次尝试！")
-                logger.warning(err)
+                logger.exception(err)
+                time.sleep(1)
 
     # 生成时代区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:
