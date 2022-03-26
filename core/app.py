@@ -3,7 +3,6 @@ import logging.config
 import time
 from ast import literal_eval
 
-from core.consensus.node_management import NodeManager
 from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
 from core.data.block_of_galaxy import BodyOfGalaxyBlock, BlockOfGalaxy
 from core.data.node_info import NodeInfo
@@ -12,6 +11,7 @@ from core.data.genesis_block import GenesisBlock
 from core.user.user import User
 from core.node.main_node import MainNode
 from core.network.net import PUB, SUB, Server, Client
+from core.consensus.node_management import NodeManager
 from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfGalaxy
 from core.consensus.vote import VoteCount
 from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock
@@ -303,7 +303,6 @@ class APP:
             main_node_signature = self.user.sign(str(application_form.application).encode("utf-8"))
             application_form.setMainNodeSignature(main_node_signature)
             application_form.setMainNodeUserPk(self.user.getUserPKString())
-            print(application_form)
             #  添加数据库数据，准备接受其他主节点的意见
             self.storageOfTemp.insertApplicationForm(node_id=node_id, user_pk=user_pk, node_ip=node_ip,
                                                      node_create_time=node_create_time, node_signature=node_signature,
@@ -360,7 +359,7 @@ class APP:
         # 获取本次产生区块的节点列表
         self.mainNode.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
                                                         self.storageOfBeings.getLastBlockByCache(),
-                                                        self.getEpoch).getNodeList()
+                                                        self.getEpoch).getNodeListOfGenerateBlock()
         #
         # 若本次主节点被选中产生区块，则检查暂存区数据数量，若大于0,则直接产生区块，若等于0，则调用后端sdk获取数据。只有在没获得数据的情况，
         # 才广播不产生区块的消息。
@@ -451,8 +450,14 @@ class APP:
     # 新周期开始30秒后，检查并执行
     def startCheckAndApplyDeleteNode(self):
         logger.info("众生区块生成周期开始30秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
-        if self.mainNode.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-            # 该节点为本次发布节点的其中之一
+        node_of_check_node = CurrentMainNode(self.mainNode.mainNodeList, self.storageOfBeings.getLastBlockByCache(),
+                                             self.getEpoch).getNodeListOfCheckNode()
+        # 检测当前节点是否为本次发布节点的其中之一
+        # 检测当前节点是否为有权限发送广播
+        # 满足上述一项即可
+        if self.mainNode.currentMainNode.userPKisExit(
+                user_pk=self.user.getUserPKString()) or \
+                node_of_check_node.userPKisExit(user_pk=self.user.getUserPKString()):
             for node in self.mainNode.currentMainNode.getNodeList():
                 user_pk = node["node_info"]["user_pk"]
                 node_id = node["node_info"]["node_id"]

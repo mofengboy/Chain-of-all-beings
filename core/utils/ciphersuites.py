@@ -51,7 +51,7 @@ class CipherSuites:
 
     @staticmethod
     def getSeed(block_abstract, epoch):
-        seed = hashlib.sha256((block_abstract + str(epoch)).encode("utf-8"))
+        seed = hashlib.sha256((block_abstract + str(epoch)).encode("utf-8")).hexdigest()
         return seed
 
     # 验证公钥和私钥是否匹配

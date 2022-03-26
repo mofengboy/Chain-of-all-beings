@@ -58,7 +58,6 @@ class MainNodeList:
             current_time = STime.getTimestamp()
             weight = str(current_time - main_node["update_time"])[0:6]
             weight_list.append(int(weight))
-
         return weight_list
 
     def getTotal(self):

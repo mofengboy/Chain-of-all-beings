@@ -25,7 +25,8 @@ class CurrentMainNode:
         else:
             return 2
 
-    def getNodeList(self) -> MainNodeList:
+    # 获取当前期次生成区块的主节点列表
+    def getNodeListOfGenerateBlock(self) -> MainNodeList:
         seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.getEpoch())
         random.seed(seed)
         node_list = random.choices(population=self.mainNodeList.getNodeList(),
@@ -39,6 +40,24 @@ class CurrentMainNode:
                 main_node_list.addMainNode(node_info=node_info)
         logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
         logger.debug("去重后的主节点分别为:")
+        logger.debug(main_node_list.getNodeList())
+        return main_node_list
+
+    # 获取当前期次有权限发送广播检测其他主节点是否发布区块的主节点列表
+    def getNodeListOfCheckNode(self) -> MainNodeList:
+        seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.getEpoch() - 1)
+        random.seed(seed)
+        node_list = random.choices(population=self.mainNodeList.getNodeList(),
+                                   weights=self.mainNodeList.getNodeWeights(), k=self.getGenerateCount() * 2)
+        logger.info("本次被选中检查其他主节点的主节点数量为:" + str(len(node_list)))
+        main_node_list = MainNodeList()
+        for node in node_list:
+            if not main_node_list.userPKisExit(user_pk=node["node_info"]["user_pk"]):
+                node_info = NodeInfo(node_id=node["node_info"]["node_id"], user_pk=node["node_info"]["user_pk"],
+                                     node_ip=node["node_info"]["node_ip"], create_time=node["node_info"]["create_time"])
+                main_node_list.addMainNode(node_info=node_info)
+        logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
+        logger.debug("去重后的被选中检查其他主节点的主节点分别为:")
         logger.debug(main_node_list.getNodeList())
         return main_node_list
 
