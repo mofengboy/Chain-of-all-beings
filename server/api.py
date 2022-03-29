@@ -188,7 +188,7 @@ def getBeingsOfChain():
 def getBeingsListOfChain():
     """获取众生链区块ID列表
    {
-     ?start=0&?end=8
+     ?start=0&end=8
    }
    返回 json
    {
@@ -203,6 +203,33 @@ def getBeingsListOfChain():
             return http_message.getJson()
         id_list = chainOfBlock.getIDListOfBlockByEpoch(start=start, end=end)
         http_message = HttpMessage(is_success=True, data=id_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/beings/epoch_list", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getEpochListOfBeingsChain():
+    """获取众生链区块Epoch列表
+   {
+     ?offset=0&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [id...]
+   """
+    try:
+        offset = int(request.args.get("start"))
+        count = int(request.args.get("end"))
+        if count > 1024:
+            http_message = HttpMessage(is_success=False, data="每次最多查询1024个Epoch列表")
+            return http_message.getJson()
+        epoch_list = chainOfBlock.getEpochLIst(offset, count)
+        http_message = HttpMessage(is_success=True, data=epoch_list)
         return http_message.getJson()
     except Exception as err:
         print(err)

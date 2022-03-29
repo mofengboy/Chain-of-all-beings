@@ -67,6 +67,18 @@ class DBOfBlock:
         res = cursor.fetchone()
         return res[0]
 
+    def getEpochList(self, offset, count):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select epoch from beings
+        where epoch >= ? and epoch < ?
+        """, (offset, offset + count))
+        res = cursor.fetchall()
+        epoch_list = []
+        for data in res:
+            epoch_list.append([data[0]])
+        return epoch_list
+
     # 获取众生区块id列表
     def getIDListOfBeingsByEpoch(self, start, end):
         cursor = self.blockConn.cursor()

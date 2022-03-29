@@ -179,40 +179,41 @@ class APP:
         verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
         logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
         self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
-        current_epoch = verify_epoch
         if self.getEpoch() > 0:
+            start_epoch = 0
             while True:
                 server_url = random.choice(server_url_list)
                 try:
-                    logger.info("众生区块同步中,epoch:" + str(current_epoch))
-                    block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=current_epoch)
-                    if block_list_of_beings == "404":
-                        if current_epoch < self.getEpoch():
-                            current_epoch += 1
-                        else:
-                            current_epoch = self.getEpoch()
+                    if start_epoch + 1024 < self.getEpoch():
+                        end_epoch = self.getEpoch()
+                    else:
+                        end_epoch = start_epoch + 1024
+                    epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(server_url, start_epoch, end_epoch)
+                    if epoch_list == "500":
+                        logger.warning("获取epoch列表失败，server_url:" + server_url)
                         continue
+                    for epoch_i in epoch_list:
+                        logger.info("众生区块同步中,epoch:" + str(epoch_i))
+                        server_url = random.choice(server_url_list)
+                        block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch_i)
+                        i = 0
+                        while block_list_of_beings == "500":
+                            i += 1
+                            logger.warning("第" + str(i) + "次尝试,epoch:" + str(epoch_i) + "server_url:" + server_url)
+                            server_url = random.choice(server_url_list)
+                            block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch_i)
+                            self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
+                            self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+
+                    logger.info("区块Epoch已经同步至：" + str(end_epoch))
+                    verify_epoch = self.blockVerify.verifyBlockOfBeings(end_epoch)
+                    logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
+                    start_epoch = verify_epoch
+                    if start_epoch == self.getEpoch():
+                        logger.info("众生区块同步完成")
+                        break
                 except Exception as err:
                     logger.warning("区块同步获取失败，远程主节点url:" + server_url)
-                    logger.warning(err)
-                    continue
-                try:
-                    self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
-                    self.storageOfBeings.saveBatchBlock(block_list_of_beings)
-                    if current_epoch == self.getEpoch():
-                        logger.info("区块Epoch已经同步至：" + str(current_epoch))
-                        verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
-                        logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
-                        current_epoch = verify_epoch
-                        if current_epoch == self.getEpoch():
-                            logger.info("众生区块同步完成")
-                            break
-                    if current_epoch < self.getEpoch():
-                        current_epoch += 1
-                    else:
-                        current_epoch = self.getEpoch()
-                except Exception as err:
-                    logger.warning("区块保存失败")
                     logger.warning(err)
                     time.sleep(1)
 
@@ -225,7 +226,7 @@ class APP:
         # 需要检测没有产生区块的节点是否已经被删除
         server_url = random.choice(server_url_list)
         block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch)
-        if block_list_of_beings != "404":
+        if block_list_of_beings != "500":
             self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
             self.storageOfBeings.saveBatchBlock(block_list_of_beings)
 
