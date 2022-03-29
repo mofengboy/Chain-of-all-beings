@@ -97,3 +97,10 @@ class BlockListOfBeings:
             if user_pk == empty_block.userPk:
                 return True
         return False
+
+    # ID正序排序
+    def sortByBlockId(self):
+        def get_block_id(block_of_beings: BlockOfBeings):
+            return block_of_beings.getBlockID()
+
+        self.list.sort(key=get_block_id)

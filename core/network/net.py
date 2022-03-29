@@ -300,7 +300,8 @@ class SUB(threading.Thread):
                             logger.info("当前节点已经存在，节点用户公钥为：" + node_info["user_pk"])
                             continue
                         new_node = NodeInfo(node_id=node_info["node_id"], user_pk=node_info["user_pk"],
-                                            node_ip=node_info["node_ip"], create_time=node_info["create_time"])
+                                            node_ip=node_info["node_ip"], create_time=node_info["create_time"],
+                                            server_url=node_info["server_url"])
                         new_node.setNodeSignature(application_form.newNodeSignature)
                         for serial_reply_application_form in list_of_serial_reply_application_form:
                             reply_application_form = SerializationReplyApplicationForm.deserialization(
@@ -502,7 +503,6 @@ class Server(threading.Thread):
             try:
                 network_message = SerializationNetworkMessage.deserialization(serial_network_message)
                 mess_type = network_message.messType
-
                 # #获取主节点列表的请求、当前Epoch请求、数据同步的请求不验证签名
 
                 # 获取主节点列表请求
@@ -513,12 +513,6 @@ class Server(threading.Thread):
                 # 当前Epoch请求
                 if mess_type == NetworkMessageType.Get_Current_Epoch:
                     self.socket.send(str(self.getEpoch()).encode("utf-8"))
-                    continue
-                # 数据同步请求
-                if mess_type == NetworkMessageType.Get_Beings_Data:
-                    start, end = network_message.message
-                    block_list = self.storageOfBeings.getBlocksByEpoch(start=start, end=end)
-                    self.socket.send(data=str(block_list).encode("utf-8"))
                     continue
 
                 # 检查发送方签名，核对对方是否为主节点
@@ -542,12 +536,15 @@ class Server(threading.Thread):
                     logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
                     self.socket.send(b'0')
                     continue
-                # 新节点加入申请的回复消息
+
+                # 新节点申请加入消息
                 if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
                     reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
                     # 处理回复消息
                     self.nodeManager.replyApplyJoin(reply_application_form)
                     self.socket.send(b'1')
+                    continue
+
                 # 投票信息
                 if mess_type == NetworkMessageType.Vote_Info:
                     vote_info = network_message.message
@@ -640,112 +637,6 @@ class Server(threading.Thread):
                         # 存入数据库
                         self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=block_of_galaxy)
                         self.socket.send(b'1')
-
-                # 申请获得区块的消息
-                if mess_type == NetworkMessageType.APPLY_GET_BLOCK:
-                    current_epoch = network_message.message
-                    # 检查当前周期内，自己是否生成众生区块
-                    if not self.currentMainNode.getNodeList().userPKisExit(user_pk=self.user.getUserPKString()):
-                        self.socket.send(b'0')
-                        continue
-                    # 检查epoch是否匹配
-                    if current_epoch != self.getEpoch():
-                        self.socket.send(b'0')
-                        continue
-                    # 发送区块，或不生成区块的消息
-                    user_pk = self.user.getUserPKString()
-                    if self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                        block = self.mainNode.currentBlockList.getBlockByUserPk(user_pk=user_pk)
-                        net_block = SerializationBeings.serialization(block_of_beings=block)
-                        network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=net_block)
-                        reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
-                    else:
-                        network_message = NetworkMessage(NetworkMessageType.NEW_BLOCK, message=None)
-                        reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
-
-                # 数据恢复
-                try:
-                    if mess_type == NetworkMessageType.Data_Recovery_Req:
-                        # 检测是否收集完成数据
-                        epoch = network_message.message
-                        if self.getEpoch() <= epoch:
-                            network_message = NetworkMessage(NetworkMessageType.No_Data_Recovery, message=None)
-                            reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                            self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
-                        else:
-                            block_list_of_beings = self.storageOfBeings.getBlocksByEpoch(start=epoch,
-                                                                                         end=self.getEpoch())
-                            network_message = NetworkMessage(NetworkMessageType.Data_Recovery,
-                                                             message=block_list_of_beings)
-                            reply_serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                            self.socket.send(data=str(reply_serial_network_message).encode("utf-8"))
-                except Exception as err:
-                    logger.warning("数据恢复出现错误")
-                    logger.exception(err)
-
-                # 新区块消息
-                if mess_type == NetworkMessageType.NEW_BLOCK:
-                    new_block = network_message.message
-                    # 反序列化
-                    block = SerializationBeings.deserialization(data_of_beings=new_block)
-                    # 检测自己是否收到了该区块
-                    if self.mainNode.currentBlockList.userPkIsExit(user_pk=block.getUserPk()[1]):
-                        self.socket.send(b'0')
-                        continue
-                    # 检测自己是否是负责本次生成的节点
-                    if not self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-                        self.socket.send(b'0')
-                        continue
-                    # 检测该区块是否应该为本次生成，通过生成节点的用户公钥检验
-                    if not self.currentMainNode.userPKisExit(user_pk=block.getUserPk()[1]):
-                        self.socket.send(b'0')
-                        continue
-                    # 验证签名
-                    header = block.getBlockHeader()
-                    result = True
-                    for i in range(len(header["userPK"])):
-                        result = result and CipherSuites.verify(pk=header["userPK"][i],
-                                                                signature=header["bodySignature"][i],
-                                                                message=block.body)
-                    self.socket.send(b'1')
-                    if result:
-                        # 广播消息
-                        self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(),
-                                             message=serial_network_message)
-                        # 保存
-                        self.mainNode.currentBlockList.addBlock(block=block)
-
-                # 不产生新区块消息
-                if mess_type == NetworkMessageType.NO_BLOCK:
-                    empty_block_dict = network_message.message
-                    empty_block = EmptyBlock(user_pk=empty_block_dict["user_pk"], epoch=empty_block_dict["epoch"])
-                    empty_block.setSignature(empty_block_dict["signature"])
-                    # 检测自己是否收到了该区块
-                    if self.mainNode.currentBlockList.userPkIsExit(user_pk=empty_block.userPk):
-                        self.socket.send(b'0')
-                        continue
-                    # 检测自己是否是负责本次生成的节点
-                    if not self.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-                        self.socket.send(b'0')
-                        continue
-                    # 检测该区块是否应该为本次生成，通过生成节点的用户公钥检验
-                    if not self.currentMainNode.userPKisExit(user_pk=empty_block.userPk):
-                        self.socket.send(b'0')
-                        continue
-                    # 验证签名
-                    if not CipherSuites.verify(pk=empty_block.userPk, signature=empty_block.signature,
-                                               message=str(empty_block.getInfo()).encode("utf-8")):
-                        self.socket.send(b'0')
-                        continue
-                    self.socket.send(b'1')
-                    # 广播
-                    self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(),
-                                         message=empty_block.getMessage())
-                    # 保存
-                    self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
-
             # 其他消息类型
             except Exception as err:
                 # 非规定数据结构

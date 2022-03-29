@@ -36,7 +36,8 @@ class CurrentMainNode:
         for node in node_list:
             if not main_node_list.userPKisExit(user_pk=node["node_info"]["user_pk"]):
                 node_info = NodeInfo(node_id=node["node_info"]["node_id"], user_pk=node["node_info"]["user_pk"],
-                                     node_ip=node["node_info"]["node_ip"], create_time=node["node_info"]["create_time"])
+                                     node_ip=node["node_info"]["node_ip"], server_url=node["node_info"]["server_url"],
+                                     create_time=node["node_info"]["create_time"])
                 main_node_list.addMainNode(node_info=node_info)
         logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
         logger.debug("去重后的主节点分别为:")
@@ -54,7 +55,8 @@ class CurrentMainNode:
         for node in node_list:
             if not main_node_list.userPKisExit(user_pk=node["node_info"]["user_pk"]):
                 node_info = NodeInfo(node_id=node["node_info"]["node_id"], user_pk=node["node_info"]["user_pk"],
-                                     node_ip=node["node_info"]["node_ip"], create_time=node["node_info"]["create_time"])
+                                     node_ip=node["node_info"]["node_ip"], create_time=node["node_info"]["create_time"],
+                                     server_url=node["node_info"]["server_url"])
                 main_node_list.addMainNode(node_info=node_info)
         logger.info("去重后的数量为:" + str(main_node_list.getTotal()))
         logger.debug("去重后的被选中检查其他主节点的主节点分别为:")

@@ -10,12 +10,12 @@ logger = logging.getLogger("main")
 
 
 class Node(ABC):
-    def __init__(self, user: User):
+    def __init__(self, user: User, server_url):
         self.user = user
         user_pk = user.getUserPKString()
         self.__node_id = user_pk[0:16]
         self.node_ip = NetworkInfo.get_network_ip()
-        self.nodeInfo = NodeInfo(self.__node_id, user_pk, self.node_ip)
+        self.nodeInfo = NodeInfo(self.__node_id, user_pk, self.node_ip, server_url)
         self.nodeInfo.nodeSignature = self.generateNodeSignature()
         logger.info("节点初始化完成")
         logger.info("节点ID:" + self.__node_id)
@@ -30,10 +30,6 @@ class Node(ABC):
     def sign(self, message):
         signature = self.user.sign(message)
         return signature
-
-    # # 验证节点签名
-    # def verifyNodeSignature(self, node_info: NodeInfo):
-    #     return self.verifySignature(node_info.nodeSignature, node_info.getInfo())
 
     def getNodeId(self):
         return self.__node_id

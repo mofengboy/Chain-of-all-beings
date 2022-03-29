@@ -124,17 +124,20 @@ class StorageOfBeings(Sqlite):
         self.blockConn.commit()
 
     def saveBatchBlock(self, block_list: [BlockOfBeings]):
-        data_list = []
-        for block in block_list:
-            data_list.append(
-                [block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
-                 str(block.getBlockHeader()).encode("utf-8"), block.body])
-        cursor = self.blockConn.cursor()
-        cursor.executemany("""
-        insert into beings(epoch,block_id,user_pk,header,body) 
-        values(?,?,?,?,?) 
-        """, data_list)
-        self.blockConn.commit()
+        try:
+            data_list = []
+            for block in block_list:
+                data_list.append(
+                    [block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
+                     str(block.getBlockHeader()).encode("utf-8"), block.body])
+            cursor = self.blockConn.cursor()
+            cursor.executemany("""
+            insert into beings(epoch,block_id,user_pk,header,body) 
+            values(?,?,?,?,?) 
+            """, data_list)
+            self.blockConn.commit()
+        except Exception as err:
+            logger.warning(err)
 
     # 获取当前用户在此范围内的数量
     def getUserCountByEpoch(self, user_pk, start, end):

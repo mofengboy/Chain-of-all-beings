@@ -21,17 +21,18 @@ from core.storage.storage_of_beings import StorageOfBeings
 from core.storage.storage_of_temp import StorageOfTemp
 from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
-from core.utils.server_sdk import SDK
+from core.utils.server_sdk import SDK, ChainAsset
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
     SerializationReplyApplicationForm, SerializationNetworkMessage
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
+from core.utils.download import RemoteChainAsset
 
 logger = logging.getLogger("main")
 
 
 class APP:
-    def __init__(self, sk_string, pk_string):
+    def __init__(self, sk_string, pk_string, server_url):
         self.currentEpoch = 0  # 当前epoch
         self.electionPeriod = 0  # 选举期次
 
@@ -41,7 +42,7 @@ class APP:
 
         self.user = User()  # 用户
         self.user.login(sk_string, pk_string)
-        self.mainNode = MainNode(self.user)  # 主节点
+        self.mainNode = MainNode(self.user, server_url)  # 主节点
         self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
                                        storage_of_temp=self.storageOfTemp)  # 节点管理
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
@@ -63,6 +64,10 @@ class APP:
         self.server.start()
         # 后端sdk
         self.webServerSDK = SDK()
+        # server部分的区块资源
+        self.chainAsset = ChainAsset()
+        # 其他主节点的区块资源
+        self.remoteChainAsset = RemoteChainAsset()
 
     def addEpoch(self):
         self.currentEpoch += 1
@@ -164,9 +169,9 @@ class APP:
 
     # 同步区块
     def synchronizedBlockOfBeings(self):
-        node_ip_list = []
+        server_url_list = []
         for main_node in self.mainNode.mainNodeList.getNodeList():
-            node_ip_list.append(main_node["node_info"]["node_ip"])
+            server_url_list.append(main_node["node_info"]["server_url"])
         logger.info("众生区块开始同步")
         # 检测已经存储的区块
         storage_epoch = self.storageOfBeings.getMaxEpoch()
@@ -174,36 +179,55 @@ class APP:
         verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
         logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
         self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
-        start = verify_epoch
+        current_epoch = verify_epoch
         if self.getEpoch() > 0:
             while True:
-                if start + 10 <= self.getEpoch():
-                    end = start + 10
-                else:
-                    end = self.getEpoch()
-                serial_data = SerializationNetworkMessage.serialization(
-                    NetworkMessage(NetworkMessageType.Get_Beings_Data, message=[start, end]))
-                ip = random.choice(node_ip_list)
-                block_list_of_beings = []
+                server_url = random.choice(server_url_list)
                 try:
-                    logger.info("众生区块同步中,epoch:" + str(start) + "-" + str(end))
-                    res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-                    block_list = literal_eval(bytes(res).decode("utf-8"))
-                    for block_i in block_list:
-                        block = SerializationBeings.deserialization(str(block_i).encode("utf-8"))
-                        block_list_of_beings.append(block)
-                    start += 10
+                    logger.info("众生区块同步中,epoch:" + str(current_epoch))
+                    block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=current_epoch)
+                    if block_list_of_beings == "404":
+                        if current_epoch < self.getEpoch():
+                            current_epoch += 1
+                        else:
+                            current_epoch = self.getEpoch()
+                        continue
                 except Exception as err:
+                    logger.warning("区块同步获取失败，远程主节点url:" + server_url)
                     logger.warning(err)
                     continue
-
                 try:
+                    self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
                     self.storageOfBeings.saveBatchBlock(block_list_of_beings)
-                    if end == self.getEpoch():
-                        logger.info("众生区块同步完成")
-                        break
+                    if current_epoch == self.getEpoch():
+                        logger.info("区块Epoch已经同步至：" + str(current_epoch))
+                        verify_epoch = self.blockVerify.verifyBlockOfBeings(storage_epoch)
+                        logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
+                        current_epoch = verify_epoch
+                        if current_epoch == self.getEpoch():
+                            logger.info("众生区块同步完成")
+                            break
+                    if current_epoch < self.getEpoch():
+                        current_epoch += 1
+                    else:
+                        current_epoch = self.getEpoch()
                 except Exception as err:
+                    logger.warning("区块保存失败")
                     logger.warning(err)
+                    time.sleep(1)
+
+    # 数据恢复
+    def blockRecoveryOfBeings(self, epoch):
+        logger.info("开始恢复众生区块")
+        server_url_list = []
+        for main_node in self.mainNode.mainNodeList.getNodeList():
+            server_url_list.append(main_node["node_info"]["server_url"])
+        # 需要检测没有产生区块的节点是否已经被删除
+        server_url = random.choice(server_url_list)
+        block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch)
+        if block_list_of_beings != "404":
+            self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
+            self.storageOfBeings.saveBatchBlock(block_list_of_beings)
 
     # 存储创世区块
     def storageGenesisBlock(self):
@@ -211,6 +235,7 @@ class APP:
         block_list_of_beings = BlockListOfBeings()
         block_list_of_beings.addBlock(block=genesis_block)
         self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=block_list_of_beings)
+        self.chainAsset.saveBlockOfBeings(block_list_of_beings=block_list_of_beings)
         logger.info("创世区块存储完成")
 
     # 创建推荐区块数据结构，准备接受其他节点的投票信息
@@ -278,12 +303,14 @@ class APP:
             node_id = application_form_dict["node_id"]
             user_pk = application_form_dict["user_pk"]
             node_ip = application_form_dict["node_ip"]
+            server_url = application_form_dict["server_url"]
             node_create_time = int(application_form_dict["node_create_time"])
             node_signature = application_form_dict["node_signature"]
             application = application_form_dict["application"]
             application_time = STime.getTimestamp()
             application_signature = application_form_dict["application_signature"]
-            node_info = NodeInfo(node_id=node_id, user_pk=user_pk, node_ip=node_ip, create_time=node_create_time)
+            node_info = NodeInfo(node_id=node_id, user_pk=user_pk, node_ip=node_ip, create_time=node_create_time,
+                                 server_url=server_url)
             node_info.nodeSignature = node_signature
             application_form = ApplicationForm(node_info=node_info, start_time=application_time, content=application,
                                                application_signature_by_new_node=application_signature)
@@ -305,6 +332,7 @@ class APP:
             application_form.setMainNodeUserPk(self.user.getUserPKString())
             #  添加数据库数据，准备接受其他主节点的意见
             self.storageOfTemp.insertApplicationForm(node_id=node_id, user_pk=user_pk, node_ip=node_ip,
+                                                     server_url=server_url,
                                                      node_create_time=node_create_time, node_signature=node_signature,
                                                      application=application, application_time=application_time,
                                                      application_signature=application_signature,
@@ -338,7 +366,8 @@ class APP:
                 node_info = NodeInfo(node_id=application_form.newNodeInfo["node_id"],
                                      user_pk=application_form.newNodeInfo["user_pk"],
                                      node_ip=application_form.newNodeInfo["node_ip"],
-                                     create_time=application_form.newNodeInfo["create_time"])
+                                     create_time=application_form.newNodeInfo["create_time"],
+                                     server_url=application_form.newNodeInfo["server_url"])
                 node_info.setNodeSignature(application_form.newNodeSignature)
                 # 检测主节点列表中是否已经有该节点
                 if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
@@ -479,54 +508,10 @@ class APP:
                     # 在遇到其他节点申请时直接同意或收到区块后取消
                     self.mainNode.nodeDelApplicationFormList.append(node_del_application_form)
 
-    # 新周期开始40秒后执行
-    def startCheckAndGetBlock(self):
-        logger.info("众生区块生成周期开始40秒，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
-        if not self.mainNode.currentMainNode.userPKisExit(user_pk=self.user.getUserPKString()):
-            # 该节点不负责本次区块生成
-            for node in self.mainNode.currentMainNode.getNodeList():
-                user_pk = node["node_info"]["user_pk"]
-                node_id = node["node_info"]["node_id"]
-                # 检查是否存在应该收到，但是未收到的区块
-                try:
-                    if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                        logger.info("存在应该产生区块，但是未收到信息的节点")
-                        logger.info("节点ID为：" + node_id)
-                        # 直接发送请求，获取生成的区块
-                        network_message = NetworkMessage(NetworkMessageType.APPLY_GET_BLOCK,
-                                                         message=self.getEpoch())
-                        network_message.setClientInfo(user_pk=self.user.getUserPKString())
-                        signature = self.user.sign(
-                            message=str(network_message.getClientAndMessageDigest()).encode("utf-8"))
-                        network_message.setSignature(signature)
-                        serial_network_message = SerializationNetworkMessage.serialization(network_message)
-                        res = self.client.sendMessageByNodeID(node_id=node_id,
-                                                              data=str(serial_network_message).encode("utf-8"))
-                        if res != b'0':
-                            res = literal_eval(bytes(res).decode("utf-8"))
-                            if res["message_type"] == NetworkMessageType.NEW_BLOCK:
-                                self.mainNode.currentBlockList.addBlock(block=res["message"])
-                            if res["message_type"] == NetworkMessageType.NO_BLOCK:
-                                self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=res["message"])
-                except Exception as err:
-                    logger.info("获取区块失败，节点ID为：" + node_id)
-                    logger.exception(err)
-                    time.sleep(2)
-        else:
-            # 检测有无已经审核通过的，提交在本节点的申请书
-            logger.info("检测有无已经审核通过的，提交在本节点的申请书")
-            self.applyNewNodeJoin()
-            # 检测有无已经审核通过的，从其他主节点接受到的申请书
-            logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
-            self.replyNewNodeJoin()
-            # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
-            logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
-            self.checkNewNodeJoin()
-
     # 检查是否收集完成所有区块，收集完成后保存到数据库
-    # 后10秒，每秒检查一次
+    # 每秒检查一次
     def startCheckAndSave(self) -> bool:
-        logger.info("众生区块生成周期开始50秒后，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
+        logger.info("众生区块生成周期开始40秒后，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         is_finish = True
         for node in self.mainNode.currentMainNode.getNodeList():
             user_pk = node["node_info"]["user_pk"]
@@ -537,48 +522,12 @@ class APP:
                 logger.info("存在未收到的区块,应产生该区块的节点ID为：" + str(node_id))
         if is_finish:
             self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=self.mainNode.currentBlockList)
+            self.chainAsset.saveBlockOfBeings(block_list_of_beings=self.mainNode.currentBlockList)
             # 存储完成，重置当前区块列表，准备下一个epoch收集
             self.mainNode.currentBlockList.reset()
+        if self.chainAsset.beingsIsExitByEpoch(self.getEpoch()):
+            return True
         return is_finish
-
-    # 开始数据恢复阶段
-    def startDataRecovery(self):
-        logger.info("进入数据恢复阶段")
-        i = 0
-        while True:
-            try:
-                ip_list = []
-                for node in self.mainNode.mainNodeList.getNodeList():
-                    ip_list.append(node["node_info"]["node_ip"])
-                if not ip_list:
-                    break
-                ip = random.choice(ip_list)
-                net_mess = NetworkMessage(NetworkMessageType.Data_Recovery_Req, message=self.getEpoch())
-                # 增加签名
-                net_mess.setClientInfo(user_pk=self.user.getUserPKString())
-                signature = self.user.sign(message=str(net_mess.getClientAndMessageDigest()).encode("utf-8"))
-                net_mess.setSignature(signature)
-                serial_net_mess = SerializationNetworkMessage.serialization(net_mess)
-                serial_res_message = self.client.sendMessageByIP(ip, data=str(serial_net_mess).encode("utf-8"))
-                res_message = SerializationNetworkMessage.deserialization(serial_res_message)
-                if res_message.messType == NetworkMessageType.No_Data_Recovery:
-                    logging.info("该节点无数据，节点IP为：" + str(ip))
-                    logging.info("正在重新进行数据恢复")
-                    continue
-                if res_message.messType == NetworkMessageType.Data_Recovery:
-                    serial_block_list = res_message.message
-                    beings_list = BlockListOfBeings()
-                    for serial_block in serial_block_list:
-                        beings_block = SerializationBeings.deserialization(serial_block)
-                        beings_list.addBlock(beings_block)
-                    self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=beings_list)
-                    logging.info("数据恢复成功")
-                    break
-            except Exception as err:
-                i += 1
-                logger.warning("数据恢复出现错误，正在第" + str(i) + "次尝试！")
-                logger.exception(err)
-                time.sleep(1)
 
     # 生成时代区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:

@@ -13,7 +13,7 @@ from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
 
-api = Flask(__name__)
+api = Flask(__name__, static_url_path=None, static_folder='static')
 db = DB()
 auth = Auth(db=db)
 blockOfBeings = BlockOfBeings(db)
@@ -24,7 +24,7 @@ chainOfBlock = ChainOfBeings()
 @api.route('/')
 @cross_origin()
 def hello_world():
-    http_message = HttpMessage(is_success=True, data="众生之链")
+    http_message = HttpMessage(is_success=True, data=["众生之链", "Web服务网址：https://beings.icu"])
     return http_message.getJson()
 
 
@@ -108,6 +108,7 @@ def saveNewApply():
       "node_id":str,
       "user_pk": str,
       "node_ip": str,
+      "server_url": str,
       "node_create_time": str,
       "node_signature": str,
       "application": str,
@@ -129,12 +130,13 @@ def saveNewApply():
         node_id = info["node_id"]
         user_pk = info["user_pk"]
         node_ip = info["node_ip"]
+        server_url = info["server_url"]
         node_create_time = info["node_create_time"]
         node_signature = info["node_signature"]
         application = info["application"]
         application_signature = info["application_signature"]
         remarks = info["remarks"]
-        if mainNodeManager.addApplicationForm(node_id, user_pk, node_ip, node_create_time, node_signature,
+        if mainNodeManager.addApplicationForm(node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
                                               application, application_signature, remarks):
             http_message = HttpMessage(is_success=True, data="保存成功")
             return http_message.getJson()
@@ -638,6 +640,13 @@ def reviewOtherApply():
         print(err)
         http_message = HttpMessage(is_success=False, data="参数错误")
         return http_message.getJson()
+
+
+# 404页面
+@api.errorhandler(404)
+def notFound(e):
+    http_message = HttpMessage(is_success=False, data="404")
+    return http_message.getJson()
 
 
 class WebServer(threading.Thread):

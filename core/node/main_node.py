@@ -5,8 +5,8 @@ from core.data.block_of_beings import BlockListOfBeings
 
 
 class MainNode(Node):
-    def __init__(self, user: User):
-        super().__init__(user)
+    def __init__(self, user: User, server_url):
+        super().__init__(user, server_url)
         self.mainNodeList = MainNodeList()  # 主节点列表
         self.currentMainNode = None  # 本轮有生成区块权限的节点列表
         self.currentBlockList = BlockListOfBeings()  # 本轮已经收集的区块列表

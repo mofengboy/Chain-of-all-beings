@@ -67,6 +67,7 @@ class StorageOfTemp(Sqlite):
         node_id = application_form.newNodeId
         user_pk = application_form.newNodeInfo["user_pk"]
         node_ip = application_form.newNodeInfo["node_ip"]
+        server_url = application_form.newNodeInfo["server_url"]
         node_create_time = application_form.newNodeInfo["create_time"]
         node_signature = application_form.newNodeSignature
         application = application_form.application["content"]
@@ -77,11 +78,11 @@ class StorageOfTemp(Sqlite):
 
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        insert into node_join_other(node_id, user_pk, node_ip, node_create_time, node_signature, 
+        insert into node_join_other(node_id, user_pk, node_ip,server_url, node_create_time, node_signature, 
         application, application_time, application_signature, main_node_user_pk, 
         main_node_signature, is_audit, create_time)
-        values (?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (node_id, user_pk, node_ip, node_create_time, node_signature,
+        values (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
               application, application_time, application_signature, main_node_user_pk, main_node_signature,
               0, STime.getTimestamp()))
         self.tempConn.commit()
@@ -135,16 +136,16 @@ class StorageOfTemp(Sqlite):
 
     # 将新节点申请表加入数据库,准备接受其他主节点的意见
     # is_audit = 0表示正在申请阶段，=1表示申请通过，=2表示申请失败或者已经过期
-    def insertApplicationForm(self, node_id, user_pk, node_ip, node_create_time, node_signature,
+    def insertApplicationForm(self, node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
                               application, application_time, application_signature, agree_count, main_node_signature,
                               main_node_user_pk):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        insert into node_join(node_id, user_pk, node_ip, node_create_time, node_signature, 
+        insert into node_join(node_id, user_pk, node_ip, server_url,node_create_time, node_signature, 
         application, application_time, application_signature, agree_count, 
         is_audit ,main_node_signature,main_node_user_pk,create_time)
-        values (?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (node_id, user_pk, node_ip, node_create_time, node_signature,
+        values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
               application, application_time, application_signature, agree_count, 0, main_node_signature,
               main_node_user_pk, STime.getTimestamp()))
         self.tempConn.commit()
@@ -190,19 +191,18 @@ class StorageOfTemp(Sqlite):
     def getApplicationFormByNodeId(self, new_node_id) -> ApplicationForm:
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select node_id, user_pk, node_ip, node_create_time, node_signature, application, 
-        application_time, application_signature,
-        main_node_signature,main_node_user_pk, create_time 
+        select node_id, user_pk, node_ip, server_url, node_create_time, node_signature, application, 
+        application_time, application_signature,main_node_signature,main_node_user_pk, create_time 
         from node_join
         where node_id = ?
         """, (new_node_id,))
         res = cursor.fetchone()
-        node_info = NodeInfo(node_id=res[0], user_pk=res[1], node_ip=res[2], create_time=res[3])
-        node_info.setNodeSignature(res[4])
-        application_form = ApplicationForm(node_info=node_info, start_time=int(res[6]), content=res[5],
-                                           application_signature_by_new_node=res[7])
-        application_form.setMainNodeUserPk(res[8])
-        application_form.setMainNodeSignature(res[7])
+        node_info = NodeInfo(node_id=res[0], user_pk=res[1], node_ip=res[2], server_url=res[3], create_time=res[4])
+        node_info.setNodeSignature(res[5])
+        application_form = ApplicationForm(node_info=node_info, start_time=int(res[7]), content=res[6],
+                                           application_signature_by_new_node=res[8])
+        application_form.setMainNodeUserPk(res[10])
+        application_form.setMainNodeSignature(res[9])
         return application_form
 
     # 删除申请书，将is_audit置为2

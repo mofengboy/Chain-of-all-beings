@@ -6,10 +6,11 @@ logger = logging.getLogger("main")
 
 # 节点信息数据结构
 class NodeInfo:
-    def __init__(self, node_id, user_pk, node_ip, create_time=None):
+    def __init__(self, node_id, user_pk, node_ip, server_url, create_time=None):
         self.nodeId = node_id
         self.userPk = user_pk
         self.nodeIp = node_ip
+        self.serverUrl = server_url
         if create_time is None:
             self.createTime = STime.getTimestamp()
         else:
@@ -24,6 +25,7 @@ class NodeInfo:
             "node_id": self.nodeId,
             "user_pk": self.userPk,
             "node_ip": self.nodeIp,
+            "server_url": self.serverUrl,
             "create_time": self.createTime
         }
         return info
@@ -33,6 +35,7 @@ class NodeInfo:
             "node_id": self.nodeId,
             "user_pk": self.userPk,
             "node_ip": self.nodeIp,
+            "server_url": self.serverUrl,
             "create_time": self.createTime,
             "signature": self.nodeSignature
         }

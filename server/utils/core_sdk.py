@@ -36,7 +36,7 @@ class DBOfTemp:
     def getWaitingApplicationForm(self, db_id):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select id, node_id, user_pk, node_ip, node_create_time, 
+        select id, node_id, user_pk, node_ip, server_url, node_create_time, 
         node_signature, application, application_signature, 
         main_node_user_pk, main_node_signature, is_audit, create_time 
         from node_join_other

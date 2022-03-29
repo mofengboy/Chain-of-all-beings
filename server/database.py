@@ -36,6 +36,7 @@ class DB:
             node_id TEXT NOT NULL,
             user_pk TEXT NOT NULL,
             node_ip  TEXT NOT NULL,
+            server_url TEXT NOT NULL,
             node_create_time TEXT NOT NULL,
             node_signature TEXT NOT NULL,
             application TEXT NOT NULL,
@@ -174,21 +175,21 @@ class DB:
         """, (is_review, db_id))
         self.__DB.commit()
 
-    def insertApplicationForm(self, node_id, user_pk, node_ip, node_create_time, node_signature, application,
-                              application_signature, remarks):
+    def insertApplicationForm(self, node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
+                              application, application_signature, remarks):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        insert into application_form(node_id, user_pk, node_ip, node_create_time, node_signature, application, 
+        insert into application_form(node_id, user_pk, node_ip,server_url, node_create_time, node_signature, application, 
         application_signature, is_review, remarks,create_time) 
-        VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, (node_id, user_pk, node_ip, node_create_time, node_signature, application,
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (node_id, user_pk, node_ip, server_url, node_create_time, node_signature, application,
               application_signature, 0, remarks, time.time()))
         self.__DB.commit()
 
     def getApplicationFormByOffset(self, offset, count):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,create_time from application_form where is_review = 0 and id> ? limit ?
+        select id,create_time from application_form where is_review = 0 and id > ? limit ?
         """, (offset, count))
         data_list = cursor.fetchall()
         id_list = []
@@ -202,7 +203,7 @@ class DB:
     def getApplicationFormByDBId(self, db_id):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id, node_id, user_pk, node_ip, node_create_time, node_signature, application, 
+        select id, node_id, user_pk, node_ip, server_url,node_create_time, node_signature, application, 
         application_signature, is_review,remarks, create_time 
         from application_form where id = ?
         """, (db_id,))
@@ -212,13 +213,14 @@ class DB:
             "node_id": res[1],
             "user_pk": res[2],
             "node_ip": res[3],
-            "node_create_time": res[4],
-            "node_signature": res[5],
-            "application": res[6],
-            "application_signature": res[7],
-            "is_review": res[8],
-            "remarks": res[9],
-            "create_time": res[10]
+            "server_url": res[4],
+            "node_create_time": res[5],
+            "node_signature": res[6],
+            "application": res[7],
+            "application_signature": res[8],
+            "is_review": res[9],
+            "remarks": res[10],
+            "create_time": res[11]
         }
         return application_form_dict
 

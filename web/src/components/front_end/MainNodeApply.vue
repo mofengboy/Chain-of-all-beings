@@ -14,6 +14,10 @@
           <el-input v-model="nodeIP" :autosize="{minRows: 1}" type="textarea">
           </el-input>
         </el-form-item>
+        <el-form-item label="平台服务地址">
+          <el-input v-model="serverUrl" :autosize="{minRows: 1}" type="textarea">
+          </el-input>
+        </el-form-item>
         <el-form-item label="节点创建时间">
           <el-input v-model="nodeCreateTime" :autosize="{minRows: 1}" type="textarea">
           </el-input>
@@ -127,6 +131,7 @@ export default {
       privateKeyDialog: false,
       nodeID: "",
       nodeIP: "",
+      serverUrl: "",
       nodeCreateTime: "",
       //后端通过这个格式的签名进行验证
       nodeSignatureRaw: "",
@@ -212,7 +217,7 @@ export default {
           })
     },
     getNodeInfo: function () {
-      const node_info = "{'node_id': '" + this.nodeID + "', 'user_pk': '" + this.publicKey + "', 'node_ip': '" + this.nodeIP + "', 'create_time': " + parseInt(this.nodeCreateTime) + "}"
+      const node_info = "{'node_id': '" + this.nodeID + "', 'user_pk': '" + this.publicKey + "', 'node_ip': '" + this.nodeIP + "', 'server_url': '" + this.serverUrl + "', 'create_time': " + parseInt(this.nodeCreateTime) + "}"
       return node_info
     },
     getBase64Application: function () {
@@ -247,6 +252,7 @@ export default {
                   "node_id": _this.nodeID,
                   "user_pk": _this.publicKey,
                   "node_ip": _this.nodeIP,
+                  "server_url": _this.server_url,
                   "node_create_time": _this.nodeCreateTime,
                   "node_signature": _this.nodeSignatureRaw,
                   "application": _this.getBase64Application(),

@@ -64,11 +64,4 @@ class CipherSuites:
 
 
 if __name__ == "__main__":
-    node_info = NodeInfo(node_id="495c3283c77f7ef2",
-                         user_pk="495c3283c77f7ef207a35895452eb0ded704b44ab67bfd6aafb0959d6ffc2887b838305da9fcf06caa0c4f61e741364d5d15bd84a68604653119a908c76322c2b67926ef4b52ea51543499c6259542774605082fc12d4ac3b0f29cd7a70db54f",
-                         node_ip="111.14.210.81", create_time=1648045205157)
-    a = CipherSuites.verify(
-        pk="495c3283c77f7ef207a35895452eb0ded704b44ab67bfd6aafb0959d6ffc2887b838305da9fcf06caa0c4f61e741364d5d15bd84a68604653119a908c76322c2b67926ef4b52ea51543499c6259542774605082fc12d4ac3b0f29cd7a70db54f",
-        signature="c87469e23caef553b82d8aa90e2de9e3d40b5b8c00ff4804f9f31fee2234b4564ebedde5385ab0683698ac563037e36642ecb35be775b3e67749928366e794eefbcba7225b5a50917e2e24fc8090ecc61350652380341421b8596ef378aaf59c",
-        message=str(node_info.getInfo()).encode("utf-8"))
-    print(a)
+    pass

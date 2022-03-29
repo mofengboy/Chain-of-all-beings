@@ -16,14 +16,14 @@
               <el-form-item label="节点IP">
                 <el-input v-model="props.row.nodeIP" autosize readonly type="textarea"/>
               </el-form-item>
+              <el-form-item label="服务网址">
+                <el-input v-model="props.row.serverUrl" autosize readonly type="textarea"/>
+              </el-form-item>
               <el-form-item label="节点创建时间">
                 <el-input v-model="props.row.nodeCreateTime" autosize readonly type="textarea"/>
               </el-form-item>
               <el-form-item label="节点签名">
                 <el-input v-model="props.row.nodeSignature" autosize readonly type="textarea"/>
-              </el-form-item>
-              <el-form-item label="节点IP">
-                <el-input v-model="props.row.nodeIP" autosize readonly type="textarea"/>
               </el-form-item>
               <el-form-item label="申请书预览">
                 <Markdown class="markdown" :source="props.row.application"></Markdown>
@@ -102,6 +102,7 @@ export default {
                     nodeID: detail["node_id"],
                     userPK: detail["user_pk"],
                     nodeIP: detail["node_ip"],
+                    serverUrl: detail["server_url"],
                     nodeCreateTime: _this.$dayjs.unix(parseInt((detail["node_create_time"]).toString().substring(0, 10))).format(),
                     nodeSignature: detail["node_signature"],
                     application: Buffer.from(detail["application"], "base64").toString("utf-8"),

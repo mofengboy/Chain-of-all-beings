@@ -1,7 +1,14 @@
+import logging
+import os
 import sqlite3
 
-
 # web server数据库
+from core.data.block_of_beings import BlockListOfBeings
+from core.utils.serialization import SerializationAssetOfBeings
+
+logger = logging.getLogger("main")
+
+
 class DB:
     def __init__(self):
         self.__DB = sqlite3.connect('../server/db/database.db', check_same_thread=False)
@@ -33,6 +40,7 @@ class DB:
             node_id TEXT NOT NULL,
             user_pk TEXT NOT NULL,
             node_ip  TEXT NOT NULL,
+            server_url TEXT NOT NULL,
             node_create_time TEXT NOT NULL,
             node_signature TEXT NOT NULL,
             application TEXT NOT NULL,
@@ -81,7 +89,7 @@ class DB:
     def getWaitingApplicationFormToSDK(self):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id, node_id, user_pk, node_ip, node_create_time, node_signature, 
+        select id, node_id, user_pk, node_ip, server_url, node_create_time, node_signature, 
         application, application_signature, is_review, create_time
         from application_form where is_review = 1 limit 2
         """)
@@ -93,12 +101,13 @@ class DB:
                 "node_id": data[1],
                 "user_pk": data[2],
                 "node_ip": data[3],
-                "node_create_time": data[4],
-                "node_signature": data[5],
-                "application": data[6],
-                "application_signature": data[7],
-                "is_review": data[8],
-                "create_time": data[9]
+                "server_url": data[4],
+                "node_create_time": data[5],
+                "node_signature": data[6],
+                "application": data[7],
+                "application_signature": data[8],
+                "is_review": data[9],
+                "create_time": data[10]
             })
             cursor.execute("""
             update application_form set is_review = 3
@@ -144,6 +153,7 @@ class SDK:
                 "node_id": data["node_id"],
                 "user_pk": data["user_pk"],
                 "node_ip": data["node_ip"],
+                "server_url": data["server_url"],
                 "node_create_time": int(data["node_create_time"]),
                 "node_signature": data["node_signature"],
                 "application": data["application"],
@@ -153,3 +163,45 @@ class SDK:
 
     def getApplicationFormCount(self):
         return self.db.getWaitingApplicationFormCountToSDK()
+
+
+# server部分的区块资源
+# 提供下载
+class ChainAsset:
+    def __init__(self):
+        self.file_path = "../server/static/"
+        os.makedirs(self.file_path, mode=666, exist_ok=True)
+
+    # 通过Epoch检测众生区块是否存在
+    def beingsIsExitByEpoch(self, epoch) -> bool:
+        file = self.file_path + "beings_" + str(epoch) + ".chain"
+        return os.path.exists(file)
+
+    # 保存区块
+    def saveBlockOfBeings(self, block_list_of_beings: BlockListOfBeings) -> bool:
+        if len(block_list_of_beings.list) == 0:
+            return True
+        epoch = block_list_of_beings.list[0].getEpoch()
+        block_list_of_beings.sortByBlockId()
+        file_name = "beings_" + str(epoch) + ".chain"
+        if not self.beingsIsExitByEpoch(epoch):
+            with open(self.file_path + file_name, "wb+") as fp:
+                content = SerializationAssetOfBeings.serialization(block_list_of_beings)
+                fp.write(content)
+        else:
+            return False
+
+    # 批量期次保存区块
+    def saveBatchBlockOfBeings(self, block_list_of_beings: BlockListOfBeings) -> bool:
+        epoch_block_list_of_beings = {}
+        for block in block_list_of_beings.list:
+            epoch = block.getEpoch()
+            if str(epoch) not in epoch_block_list_of_beings:
+                epoch_block_list_of_beings[str(epoch)] = BlockListOfBeings()
+                epoch_block_list_of_beings[str(epoch)].addBlock(block)
+            else:
+                epoch_block_list_of_beings[str(epoch)].addBlock(block)
+        is_success = True
+        for block_list in epoch_block_list_of_beings.values():
+            is_success = self.saveBlockOfBeings(block_list) and is_success
+        return is_success

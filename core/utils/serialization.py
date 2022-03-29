@@ -1,14 +1,18 @@
+import logging
 from ast import literal_eval
+import base64
 
-from core.data.block_of_beings import BlockOfBeings
+from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
 from core.consensus.block_generate import NewBlockOfBeingsByExist
 from core.consensus.data import ApplicationForm, ReplyApplicationForm
 
-# 众生区块对象序列化与反序列化
 from core.data.network_message import NetworkMessage
 from core.data.node_info import NodeInfo
 
+logger = logging.getLogger("main")
 
+
+# 众生区块对象序列化与反序列化
 class SerializationBeings:
     # 序列化
     @staticmethod
@@ -56,7 +60,8 @@ class SerializationApplicationForm:
         application_signature_by_main_node = application_form_dict["main_node"]["application_signature"]
         main_node_user_pk = application_form_dict["main_node"]["user_pk"]
         node_info = NodeInfo(node_id=new_node_info["node_id"], node_ip=new_node_info["node_ip"],
-                             user_pk=new_node_info["user_pk"], create_time=new_node_info["create_time"])
+                             user_pk=new_node_info["user_pk"], create_time=new_node_info["create_time"],
+                             server_url=new_node_info["server_url"])
         node_info.setNodeSignature(application_form_dict["new_node_signature"])
         application_form = ApplicationForm(node_info=node_info, start_time=start_time, content=content,
                                            application_signature_by_new_node=application_signature_by_new_node)
@@ -118,3 +123,38 @@ class SerializationNetworkMessage:
         network_message.setClientInfo(user_pk=client_info["user_pk"], send_time=client_info["send_time"])
         network_message.setSignature(network_message_dict["client_signature"])
         return network_message
+
+
+# 序列化区块
+class SerializationAssetOfBeings:
+    @staticmethod
+    def serialization(blockListOfBeings: BlockListOfBeings):
+        if len(blockListOfBeings.list) == 0:
+            return b"{}"
+        epoch = blockListOfBeings.list[0].getEpoch()
+        block_list = []
+        for block_of_beings in blockListOfBeings.list:
+            header = block_of_beings.getBlockHeader()
+            body = block_of_beings.body
+            block_id = block_of_beings.getBlockID()
+            block_list.append({
+                "block_id": block_id,
+                "header": header,
+                "body": body
+            })
+        data = str({
+            "epoch": epoch,
+            "block_list": block_list
+        }).encode("utf-8")
+        return base64.b64encode(data)
+
+    @staticmethod
+    def deserialization(block_list_bytes: bytes) -> BlockListOfBeings:
+        block_list_dict = literal_eval(bytes(base64.b64decode(block_list_bytes)).decode("utf-8"))
+        block_list = block_list_dict["block_list"]
+        block_list_of_beings = BlockListOfBeings()
+        for block_dict in block_list:
+            header = block_dict["header"]
+            body = block_dict["body"]
+            block_list_of_beings.addBlock(NewBlockOfBeingsByExist(header, body).getBlock())
+        return block_list_of_beings
