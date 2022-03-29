@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # 平台服务网址
     url = ""
     try:
-        opts, args = getopt.getopt(argv, "s:p:")  # 短选项模式
+        opts, args = getopt.getopt(argv, "s:p:u:")  # 短选项模式
     except Exception as err:
         print(err)
         exit()
@@ -151,10 +151,13 @@ if __name__ == "__main__":
             private_key_string = arg
         if opt == "-p":
             public_key_string = arg
-        if opt == "u":
+        if opt == "-u":
             url = arg
 
     if not CipherSuites.verifyPublicAndPrivateKeys(private_key_string, public_key_string):
         print("公钥与私钥不匹配")
+        exit()
+    if url == "":
+        print("server_url不能为空")
         exit()
     run(private_key_string, public_key_string, url)
