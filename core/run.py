@@ -102,13 +102,14 @@ def run(sk_string, pk_string, server_url):
                 phase3 = False
             time.sleep(0.1)
         else:
-            logger.info("当前节点不是主节点,请在其他主节点处进行申请")
-            logger.info("节点信息如下：")
-            logger.info(app.mainNode.getNodeInfo())
-            logger.info("节点签名如下：")
-            logger.info(app.mainNode.getNodeSignature())
             try:
                 if 0 <= STime.getSecond() < 30 and phase1 is False:
+                    logger.info("当前节点不是主节点,请在其他主节点处进行申请")
+                    logger.info("节点信息如下：")
+                    logger.info(app.mainNode.getNodeInfo())
+                    logger.info("节点签名如下：")
+                    logger.info(app.mainNode.getNodeSignature())
+
                     app.startNewEpoch()
                     phase1 = True
                     logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
@@ -116,7 +117,6 @@ def run(sk_string, pk_string, server_url):
                     if not app.startCheckAndSave():
                         logger.warning("当前周期未能成功收集所有区块")
                         app.blockRecoveryOfBeings(app.getEpoch())
-                    phase1 = False
                     app.addEpoch()
                     if app.getEpoch() % 20160 == 0:
                         # 进入下一个选举周期
@@ -128,7 +128,7 @@ def run(sk_string, pk_string, server_url):
                             logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
                     phase1 = False
             except Exception as error:
-                logger.warning(error)
+                logger.exception(error)
             time.sleep(1)
 
 

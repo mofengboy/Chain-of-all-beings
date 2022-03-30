@@ -123,10 +123,10 @@ class StorageOfBeings(Sqlite):
         """, (start, end))
         self.blockConn.commit()
 
-    def saveBatchBlock(self, block_list: [BlockOfBeings]):
+    def saveBatchBlock(self, block_list: BlockListOfBeings):
         try:
             data_list = []
-            for block in block_list:
+            for block in block_list.list:
                 data_list.append(
                     [block.getEpoch(), block.getBlockID(), str(block.getUserPk()).encode("utf-8"),
                      str(block.getBlockHeader()).encode("utf-8"), block.body])

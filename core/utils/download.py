@@ -9,8 +9,12 @@ class RemoteChainAsset:
     def getEpochListOfBeingsChain(url, offset, count):
         try:
             r = requests.get(url + "/chain/beings/epoch_list?offset=" + str(offset) + "&count=" + str(count))
-            epoch_list = r.json()["data"]
-            return epoch_list
+            if r.json()["is_success"]:
+                epoch_list = r.json()["data"]
+                return epoch_list
+            else:
+                logging.warning(r.json()["data"])
+                return "500"
         except Exception as err:
             logging.warning(err)
             return "500"

@@ -113,6 +113,10 @@ class ChainOfBeings:
         id_list = self.dbOfBeings.getIDListOfBeingsByEpoch(start, end)
         return id_list
 
+    def getIDListOfBlockByOffset(self, offset, count):
+        id_list = self.dbOfBeings.getIDListOfBeingsByOffset(offset, count)
+        return id_list
+
     def getEpochLIst(self, offset, count):
         return self.dbOfBeings.getEpochList(offset, count)
 

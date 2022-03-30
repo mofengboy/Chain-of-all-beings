@@ -12,7 +12,8 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getMore">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getIdListOfBeingsByOffset">获取更多
+        </el-button>
       </div>
       <div class="search-epoch">
         <el-form label-position="top">
@@ -86,6 +87,7 @@ export default {
       tableData: [],
       start: 0,
       end: 8,
+      more_offset: 0,
       is_detail: false,
       body: "",
       create_time: "",
@@ -107,13 +109,7 @@ export default {
     Markdown
   },
   created() {
-    const _this = this
-    this.getMaxEpoch()
-        .then((max_epoch) => {
-          _this.start = max_epoch - 8
-          _this.end = max_epoch
-          this.getIdListOfBeings()
-        })
+    this.getIdListOfBeingsByOffset()
   },
   methods: {
     openDetail: function (event) {
@@ -179,6 +175,35 @@ export default {
         })
       }
     },
+    //倒序获取区块列表
+    getIdListOfBeingsByOffset: function () {
+      const _this = this
+      this.axios({
+        method: 'get',
+        url: "/chain/beings_list/offset_get?offset=" + _this.more_offset + "&count=8"
+      }).then((res) => {
+        if (res.data["is_success"]) {
+          const id_list = res.data["data"]
+          if (id_list.length === 0) {
+            ElNotification({
+              title: 'Info',
+              message: "没有更多区块了，去发布一个吧",
+              type: 'info',
+            })
+          }
+          for (let i = 0; i < id_list.length; i++) {
+            _this.getBlockOfBeings(id_list[i])
+          }
+          _this.more_offset += id_list.length
+        } else {
+          ElNotification({
+            title: '获取区块列表ID失败',
+            message: res.data["data"],
+            type: 'error',
+          })
+        }
+      })
+    },
     getIdListOfBeings: function () {
       const _this = this
       this.axios({
@@ -207,6 +232,13 @@ export default {
       }).then((res) => {
         if (res.data["is_success"]) {
           const id_list = res.data["data"]
+          if (id_list.length === 0) {
+            ElNotification({
+              title: 'Info',
+              message: 'Epoch:' + _this.start_epoch + "-" + _this.end_epoch + "中没有区块生成",
+              type: 'info',
+            })
+          }
           for (let i = 0; i < id_list.length; i++) {
             _this.getBlockOfBeings(id_list[i])
           }

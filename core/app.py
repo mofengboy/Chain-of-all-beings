@@ -185,12 +185,14 @@ class APP:
                 server_url = random.choice(server_url_list)
                 try:
                     if start_epoch + 1024 < self.getEpoch():
-                        end_epoch = self.getEpoch()
-                    else:
                         end_epoch = start_epoch + 1024
-                    epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(server_url, start_epoch, end_epoch)
+                    else:
+                        end_epoch = self.getEpoch()
+                    epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(server_url, start_epoch,
+                                                                                 end_epoch - start_epoch)
                     if epoch_list == "500":
                         logger.warning("获取epoch列表失败，server_url:" + server_url)
+                        time.sleep(1)
                         continue
                     for epoch_i in epoch_list:
                         logger.info("众生区块同步中,epoch:" + str(epoch_i))
@@ -202,14 +204,12 @@ class APP:
                             logger.warning("第" + str(i) + "次尝试,epoch:" + str(epoch_i) + "server_url:" + server_url)
                             server_url = random.choice(server_url_list)
                             block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch_i)
-                            self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
-                            self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+
+                        self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
+                        self.storageOfBeings.saveBatchBlock(block_list_of_beings)
 
                     logger.info("区块Epoch已经同步至：" + str(end_epoch))
-                    verify_epoch = self.blockVerify.verifyBlockOfBeings(end_epoch)
-                    logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
-                    start_epoch = verify_epoch
-                    if start_epoch == self.getEpoch():
+                    if end_epoch == self.getEpoch():
                         logger.info("众生区块同步完成")
                         break
                 except Exception as err:

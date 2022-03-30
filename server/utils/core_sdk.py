@@ -76,7 +76,7 @@ class DBOfBlock:
         res = cursor.fetchall()
         epoch_list = []
         for data in res:
-            epoch_list.append([data[0]])
+            epoch_list.append(data[0])
         return epoch_list
 
     # 获取众生区块id列表
@@ -86,6 +86,19 @@ class DBOfBlock:
         select id from beings 
         where epoch >= ? and epoch < ?
         """, (start, end))
+        res = cursor.fetchall()
+        id_list = []
+        for id_i in res:
+            id_list.append(id_i[0])
+        return id_list
+
+    # 获取众生区块id列表
+    def getIDListOfBeingsByOffset(self, offset, count):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select id from beings 
+        order by id desc limit ?,?
+        """, (offset, count))
         res = cursor.fetchall()
         id_list = []
         for id_i in res:

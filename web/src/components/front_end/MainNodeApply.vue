@@ -252,7 +252,7 @@ export default {
                   "node_id": _this.nodeID,
                   "user_pk": _this.publicKey,
                   "node_ip": _this.nodeIP,
-                  "server_url": _this.server_url,
+                  "server_url": _this.serverUrl,
                   "node_create_time": _this.nodeCreateTime,
                   "node_signature": _this.nodeSignatureRaw,
                   "application": _this.getBase64Application(),

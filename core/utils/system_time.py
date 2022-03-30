@@ -38,7 +38,7 @@ class STime:
     # 获取NTP时间
     @staticmethod
     def getNTPTime():
-        ntp_list = ["cn.pool.ntp.org", "time1.cloud.tencent.com", "time2.cloud.tencent.com", "ntp.aliyun.com",
+        ntp_list = ["time1.cloud.tencent.com", "cn.pool.ntp.org", "time2.cloud.tencent.com", "ntp.aliyun.com",
                     "ntp1.aliyun.com", "time.google.com", "time.apple.com", 'pool.ntp.org']
         c = ntplib.NTPClient()
         for i in range(8):
