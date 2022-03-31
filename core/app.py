@@ -225,13 +225,21 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             info_list.append([main_node["node_info"]["server_url"], main_node["node_info"]["node_ip"]])
         info = random.choice(info_list)
+        logger.info("获取最新期次数量")
+        i = 0
         is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
         while is_sync <= 0:
+            i += 1
+            logger.warning("获取最新期次数量失败，第" + str(i) + "次尝试")
             info = random.choice(info_list)
             is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
 
         epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(url=info[0], offset=self.getEpoch(), count=is_sync)
+        logger.info("获取未同步的期次列表")
+        i = 0
         while epoch_list == "500":
+            i += 1
+            logger.warning("获取未同步的期次列表失败，第" + str(i) + "次尝试")
             epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(url=info[0], offset=self.getEpoch(),
                                                                          count=is_sync)
         for epoch_i in epoch_list:
@@ -246,6 +254,7 @@ class APP:
             self.mainNode.currentBlockList.setEmptyFinish()
             self.storageOfBeings.saveBatchBlock(block_list_of_beings)
             logger.info("epoch:" + str(epoch_i) + ",众生区块恢复完成")
+        logger.info("众生区块全部恢复完成")
 
     # 存储创世区块
     def storageGenesisBlock(self):
@@ -483,15 +492,15 @@ class APP:
                 logger.info("检测server是否有待发布的区块")
                 webserver_beings_list = self.webServerSDK.getBeings()
                 self.storageOfTemp.saveBatchData(webserver_beings_list)
-            # 检测有无已经审核通过的，提交在本节点的申请书
-            logger.info("检测有无已经审核通过的，提交在本节点的申请书")
-            self.applyNewNodeJoin()
-            # 检测有无已经审核通过的，从其他主节点接受到的申请书
-            logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
-            self.replyNewNodeJoin()
-            # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
-            logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
-            self.checkNewNodeJoin()
+        # 检测有无已经审核通过的，提交在本节点的申请书
+        logger.info("检测有无已经审核通过的，提交在本节点的申请书")
+        self.applyNewNodeJoin()
+        # 检测有无已经审核通过的，从其他主节点接受到的申请书
+        logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
+        self.replyNewNodeJoin()
+        # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+        logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
+        self.checkNewNodeJoin()
 
     # 新周期开始30秒后，检查并执行
     def startCheckAndApplyDeleteNode(self):
