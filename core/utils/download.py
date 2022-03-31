@@ -1,10 +1,20 @@
 import logging
 import requests
 
-from core.utils.serialization import SerializationAssetOfBeings
+from core.data.network_message import NetworkMessage, NetworkMessageType
+from core.network.net import Client
+from core.utils.serialization import SerializationAssetOfBeings, SerializationNetworkMessage
 
 
 class RemoteChainAsset:
+    @staticmethod
+    def getCurrentEpoch(getEpoch, client: Client, ip) -> int:
+        serial_data = SerializationNetworkMessage.serialization(
+            NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
+        res = client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
+        epoch = int(res)
+        return epoch - getEpoch()
+
     @staticmethod
     def getEpochListOfBeingsChain(url, offset, count):
         try:

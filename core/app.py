@@ -212,23 +212,40 @@ class APP:
                     if end_epoch == self.getEpoch():
                         logger.info("众生区块同步完成")
                         break
+                    start_epoch = end_epoch
                 except Exception as err:
                     logger.warning("区块同步获取失败，远程主节点url:" + server_url)
                     logger.warning(err)
                     time.sleep(1)
 
     # 数据恢复
-    def blockRecoveryOfBeings(self, epoch):
+    def blockRecoveryOfBeings(self):
         logger.info("开始恢复众生区块")
-        server_url_list = []
+        info_list = []
         for main_node in self.mainNode.mainNodeList.getNodeList():
-            server_url_list.append(main_node["node_info"]["server_url"])
-        # 需要检测没有产生区块的节点是否已经被删除
-        server_url = random.choice(server_url_list)
-        block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=server_url, epoch=epoch)
-        if block_list_of_beings != "500":
-            self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
+            info_list.append([main_node["node_info"]["server_url"], main_node["node_info"]["node_ip"]])
+        info = random.choice(info_list)
+        is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
+        while is_sync <= 0:
+            info = random.choice(info_list)
+            is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
+
+        epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(url=info[0], offset=self.getEpoch(), count=is_sync)
+        while epoch_list == "500":
+            epoch_list = self.remoteChainAsset.getEpochListOfBeingsChain(url=info[0], offset=self.getEpoch(),
+                                                                         count=is_sync)
+        for epoch_i in epoch_list:
+            info = random.choice(info_list)
+            block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=info[0], epoch=epoch_i)
+
+            while block_list_of_beings == "500":
+                info = random.choice(info_list)
+                block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=info[0], epoch=epoch_i)
+
+            # 此时该期次的区块已经同步完
+            self.mainNode.currentBlockList.setEmptyFinish()
             self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+            logger.info("epoch:" + str(epoch_i) + ",众生区块恢复完成")
 
     # 存储创世区块
     def storageGenesisBlock(self):
@@ -425,8 +442,7 @@ class APP:
                     epoch = self.getEpoch()
                     try:
                         new_block = NewBlockOfBeings(user_pk=user_pk, body_signature=body_signature, body=body,
-                                                     epoch=epoch,
-                                                     pre_block=pre_block,
+                                                     epoch=epoch, pre_block=pre_block,
                                                      prev_block_header=prev_block_header).getBlock()
                         serialization_block = SerializationBeings.serialization(block_of_beings=new_block)
                         # 广播消息

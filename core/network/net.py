@@ -510,6 +510,7 @@ class Server(threading.Thread):
                     node_list = self.mainNode.mainNodeList.getNodeList()
                     self.socket.send((str(node_list).encode("utf-8")))
                     continue
+
                 # 当前Epoch请求
                 if mess_type == NetworkMessageType.Get_Current_Epoch:
                     self.socket.send(str(self.getEpoch()).encode("utf-8"))
