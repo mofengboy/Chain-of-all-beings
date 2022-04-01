@@ -364,9 +364,11 @@ class SUB(threading.Thread):
                             continue
                         # 检测申请书的投票数量是否达到标准
                         if self.nodeManager.confirmDelNodes(node_del_application_form=node_del_application_form):
+                            logger.info("确认删除节点，节点用户公钥为:" + del_node_user_pk)
                             # 添加该删除节点的不产生区块的消息
                             self.mainNode.currentBlockList.addMessageOfNoBlock(
                                 empty_block=EmptyBlock(user_pk=del_node_user_pk, epoch=current_epoch))
+                            logger.info("已添加不产生区块的消息")
                             # 删除节点
                             self.mainNode.mainNodeList.delMainNodeById(node_id=del_node_id)
                             self.reSubscribe()

@@ -63,7 +63,12 @@ class BlockListOfBeings:
 
     # 添加不产生区块的消息
     def addMessageOfNoBlock(self, empty_block: EmptyBlock):
-        if empty_block not in self.listOfNoBlock:
+        is_exist = False
+        for empty_block_i in self.listOfNoBlock:
+            if empty_block.userPk == empty_block_i.userPk:
+                is_exist = True
+                break
+        if not is_exist:
             self.listOfNoBlock.append(empty_block)
 
     def getMessageOfNoBlock(self, user_pk) -> EmptyBlock:
@@ -89,10 +94,9 @@ class BlockListOfBeings:
                 return True
         if self.emptyBlockIsFinish:
             return True
-        else:
-            for empty_block in self.listOfNoBlock:
-                if user_pk == empty_block.userPk:
-                    return True
+        for empty_block in self.listOfNoBlock:
+            if user_pk == empty_block.userPk:
+                return True
         return False
 
     def userPkIsBlock(self, user_pk):
