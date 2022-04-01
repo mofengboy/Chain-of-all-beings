@@ -5,7 +5,7 @@
     </div>
     <div class="top-menu">
       <el-menu mode="horizontal" @select="handleSelect">
-        <el-menu-item index="1">首页</el-menu-item>
+        <el-menu-item index="1">介绍</el-menu-item>
         <el-sub-menu index="2">
           <template #title>众生之链查询</template>
           <el-menu-item index="2-1">众生链</el-menu-item>
@@ -18,10 +18,7 @@
       </el-menu>
     </div>
     <div class="main">
-      <FrontHome v-if="menu==='1'"></FrontHome>
-      <BlockOfBeings v-if="menu==='2-1'"></BlockOfBeings>
-      <ReleaseBlock v-if="menu==='3'"></ReleaseBlock>
-      <MainNodeApply v-if="menu==='4'"></MainNodeApply>
+      <router-view></router-view>
     </div>
     <div class="footer">
       <GlobalFooter></GlobalFooter>
@@ -34,32 +31,38 @@
 import {ElMenu, ElMenuItem, ElSubMenu} from "element-plus";
 import GlobalHeader from "@/components/front_end/GlobalHeader";
 import GlobalFooter from "@/components/front_end/GlobalFooter";
-import BlockOfBeings from "@/components/front_end/BlockOfBeings";
-import ReleaseBlock from "@/components/front_end/ReleaseBlock";
-import FrontHome from "@/components/front_end/FrontHome";
-import MainNodeApply from "@/components/front_end/MainNodeApply";
 
 export default {
   name: "FrontEnd",
   data() {
-    return {
-      menu: "1"
-    }
+    return {}
   },
   components: {
-    FrontHome,
-    ReleaseBlock,
     GlobalHeader,
     GlobalFooter,
-    BlockOfBeings,
     ElMenu,
     ElSubMenu,
     ElMenuItem,
-    MainNodeApply,
   },
   methods: {
     handleSelect: function (key) {
-      this.menu = key
+      switch (key) {
+        case '1':
+          this.$router.push("/introduction")
+          break
+        case '2-1':
+          this.$router.push("/chain/beings")
+          break
+        case '3':
+          this.$router.push("/release/beings")
+          break
+        case '4':
+          this.$router.push("/main_node_apply")
+          break
+        case '5':
+          window.location.href = "https://github.com/mofengboy/Chain-of-all-beings"
+          break
+      }
     },
   }
 }

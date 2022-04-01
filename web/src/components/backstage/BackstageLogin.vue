@@ -1,9 +1,6 @@
 <template>
   <div>
-    <div v-if="isLogin">
-      <BackstageMain :token="token"></BackstageMain>
-    </div>
-    <div v-if="!isLogin" class="login">
+    <div class="login">
       <h1 style="text-align: center">管理员登录</h1>
       <el-form label-width="80px">
         <el-form-item label="用户名">
@@ -33,17 +30,13 @@
 
 <script>
 import {ElNotification} from "element-plus";
-import BackstageMain from "@/components/backstage/BackstageMain";
 
 export default {
   name: "BackstageLogin",
-  components: {
-    BackstageMain
-  },
+  components: {},
   data() {
     return {
-      isLogin: false,
-      token: "",
+      token: this.getToken(),
       username: "",
       password: "",
       captchaSrc: "",
@@ -55,6 +48,9 @@ export default {
     this.getCAPTCHA()
   },
   methods: {
+    getToken: function () {
+      return localStorage.getItem('token');
+    },
     getCAPTCHA: function () {
       this.axios.post("/captcha/get")
           .then((res) => {
@@ -72,7 +68,9 @@ export default {
         }),
         headers: {"content-type": "application/json"}
       }).then((res) => {
-        _this.isLogin = res.data["is_success"];
+        if (res.data["is_success"]) {
+          this.$router.push("/backstage")
+        }
       })
     },
     login: function () {
@@ -90,15 +88,16 @@ export default {
         }),
         headers: {"content-type": "	application/json"}
       }).then((res) => {
-        _this.isLogin = res.data["is_success"];
-        _this.token = res.data["data"]
-        if (!_this.isLogin) {
+        localStorage.setItem("token", res.data["data"])
+        if (!res.data["is_success"]) {
           ElNotification({
             title: 'Error',
             message: res.data["data"],
             type: 'error',
           })
           _this.getCAPTCHA()
+        } else {
+          this.$router.push("/backstage")
         }
       })
     },

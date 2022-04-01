@@ -120,8 +120,8 @@ class ChainOfBeings:
     def getEpochLIst(self, offset, count):
         return self.dbOfBeings.getEpochList(offset, count)
 
-    def getBlockByID(self, db_id):
-        block_dict = self.dbOfBeings.getBlockOfBeings(db_id)
+    def getBlockByBlockId(self, block_id):
+        block_dict = self.dbOfBeings.getBlockOfBeingsByBlockId(block_id)
         return block_dict
 
     def getMaxEpoch(self):

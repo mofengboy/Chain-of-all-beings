@@ -1,23 +1,23 @@
 <template>
   <div>
-    <BackstageLogin></BackstageLogin>
+    <BackstageMain></BackstageMain>
   </div>
 </template>
 
 <script>
-import BackstageLogin from "@/components/backstage/BackstageLogin";
+import BackstageMain from "@/components/backstage/BackstageMain";
 
 export default {
   name: "BackStage",
   components: {
-    BackstageLogin
+    BackstageMain
   },
-  created() {},
+  created() {
+  },
   methods: {}
 }
 </script>
 
 <style scoped>
-
 
 </style>

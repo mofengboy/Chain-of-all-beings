@@ -1,12 +1,17 @@
 <template>
-  <div class="icp">
-    <el-link href="https://beian.miit.gov.cn">ICP证：鲁ICP备15022835号-5</el-link>
+  <div class="icp" v-if="recordNumber!==''">
+    <el-link href="https://beian.miit.gov.cn">ICP证：{{ recordNumber }}</el-link>
   </div>
 </template>
 
 <script>
 export default {
-  name: "GlobalFooter"
+  name: "GlobalFooter",
+  data() {
+    return {
+      recordNumber: this.$userConfig.record_number
+    }
+  }
 }
 </script>
 

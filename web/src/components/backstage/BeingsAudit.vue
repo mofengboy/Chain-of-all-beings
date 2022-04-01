@@ -37,7 +37,6 @@ import Markdown from "vue3-markdown-it";
 
 export default {
   name: "BeingsAudit",
-  props: ['token'],
   components: {
     Markdown
   },
@@ -48,9 +47,13 @@ export default {
     return {
       tableData: [],
       maxID: 0,
+      token: this.getToken()
     }
   },
   methods: {
+    getToken: function () {
+      return localStorage.getItem('token');
+    },
     getListOfBeings: function () {
       const loading = this.$loading({lock: true, text: '正在获取数据...', background: 'rgba(0, 0, 0, 0.7)'})
       const _this = this

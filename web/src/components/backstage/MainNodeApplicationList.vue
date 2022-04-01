@@ -63,7 +63,6 @@ import {ElNotification} from "element-plus";
 
 export default {
   name: "MainNodeApplicationList",
-  props: ['token'],
   components: {
     Markdown
   },
@@ -74,9 +73,13 @@ export default {
     return {
       tableData: [],
       maxID: 0,
-      isMainNode: true
+      isMainNode: true,
+      token: this.getToken()
     }
   }, methods: {
+    getToken: function () {
+      return localStorage.getItem('token');
+    },
     getListOfMainNodeApplication: function () {
       const loading = this.$loading({lock: true, text: '正在获取数据...', background: 'rgba(0, 0, 0, 0.7)'})
       const _this = this

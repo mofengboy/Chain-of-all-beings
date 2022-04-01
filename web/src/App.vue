@@ -4,6 +4,7 @@
 
 <script>
 // import WaitingForLoading from "@/components/WaitingForLoading";
+
 export default {
   name: 'App',
   created() {

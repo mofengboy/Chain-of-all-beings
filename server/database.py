@@ -43,7 +43,7 @@ class DB:
             application_signature TEXT NOT NULL,
             is_review INTEGER NOT NULL,
             remarks TEXT NOT NULL,
-            create_time TEXT NOT NULL
+            create_time INTEGER NOT NULL
             )
             """)
             self.__DB.commit()
@@ -58,7 +58,21 @@ class DB:
             username TEXT NOT NULL,
             password TEXT NOT NULL,
             is_delete INTEGER NOT NULL,
-            create_time TEXT NOT NULL
+            create_time INTEGER NOT NULL
+            )
+            """)
+            self.__backstageDB.commit()
+
+        cursor = self.__backstageDB.cursor()
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'backstage_info'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table backstage_info(
+            id INTEGER PRIMARY KEY,
+            info_name TEXT NOT NULL,
+            content TEXT NOT NULL,
+            modify_time INTEGER NOT NULL,
+            create_time INTEGER NOT NULL
             )
             """)
             self.__backstageDB.commit()

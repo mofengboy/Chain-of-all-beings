@@ -50,7 +50,8 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfOtherNodeApplication">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfOtherNodeApplication">获取更多
+        </el-button>
       </div>
     </div>
   </div>
@@ -62,7 +63,6 @@ import {ElNotification} from "element-plus";
 
 export default {
   name: "OtherNodeApplicationList",
-  props: ['token'],
   components: {
     Markdown
   },
@@ -73,9 +73,14 @@ export default {
     return {
       tableData: [],
       maxID: 0,
-      isMainNode: true
+      isMainNode: true,
+      token: this.getToken()
     }
-  }, methods: {
+  },
+  methods: {
+    getToken: function () {
+      return localStorage.getItem('token');
+    },
     getListOfOtherNodeApplication: function () {
       const loading = this.$loading({lock: true, text: '正在获取数据...', background: 'rgba(0, 0, 0, 0.7)'})
       const _this = this

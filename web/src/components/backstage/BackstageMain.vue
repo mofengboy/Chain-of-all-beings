@@ -37,15 +37,36 @@ import OtherNodeApplicationList from "@/components/backstage/OtherNodeApplicatio
 export default {
   name: "BackstageMain",
   components: {OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease},
-  props: ['token'],
+  created() {
+    this.verifyToken()
+  },
   data() {
     return {
       menu: 1,
+      token: this.getToken()
     }
   },
   methods: {
     handleSelect: function (key) {
       this.menu = key
+    },
+    getToken: function () {
+      return localStorage.getItem('token');
+    },
+    verifyToken: function () {
+      const _this = this
+      this.axios({
+        method: "post",
+        url: "/backstage/token/verify",
+        data: JSON.stringify({
+          "token": _this.token
+        }),
+        headers: {"content-type": "application/json"}
+      }).then((res) => {
+        if (!res.data["is_success"]) {
+          this.$router.push("/backstage/login")
+        }
+      })
     },
   }
 }

@@ -3,6 +3,8 @@ import App from './App.vue'
 import config from "./config"
 
 const app = createApp(App)
+//用户自定义配置
+app.config.globalProperties.$userConfig = config
 
 //密码库
 import rs from "jsrsasign";
@@ -29,8 +31,11 @@ import VueAxios from 'vue-axios'
 axios.defaults.baseURL = config.server_url
 //axios 拦截token失效
 axios.interceptors.response.use(res => {
-    if (res.data["data"] === "Token无效") {
-        // location.reload();
+    if (localStorage.getItem("token") != null) {
+        if (res.data["data"] === "Token无效") {
+            localStorage.removeItem("token")
+            window.location.href = "/backstage/login"
+        }
     }
     return res
 })

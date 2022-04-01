@@ -83,34 +83,44 @@ class DBOfBlock:
     def getIDListOfBeingsByEpoch(self, start, end):
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select id from beings 
+        select id,block_id,epoch,body from beings 
         where epoch >= ? and epoch < ?
         """, (start, end))
         res = cursor.fetchall()
         id_list = []
-        for id_i in res:
-            id_list.append(id_i[0])
+        for data in res:
+            id_list.append({
+                "id": data[0],
+                "block_id": data[1],
+                "epoch": data[2],
+                "body_digest": bytes(data[3]).decode("utf-8")[0:172]
+            })
         return id_list
 
     # 获取众生区块id列表
     def getIDListOfBeingsByOffset(self, offset, count):
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select id from beings 
+        select id,block_id,epoch,body from beings 
         order by id desc limit ?,?
         """, (offset, count))
         res = cursor.fetchall()
         id_list = []
-        for id_i in res:
-            id_list.append(id_i[0])
+        for data in res:
+            id_list.append({
+                "id": data[0],
+                "block_id": data[1],
+                "epoch": data[2],
+                "body_digest": bytes(data[3]).decode("utf-8")[0:172]
+            })
         return id_list
 
-    def getBlockOfBeings(self, db_id):
+    def getBlockOfBeingsByBlockId(self, block_id):
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select id,header,body from beings
-        where id = ?
-        """, (db_id,))
+        where block_id = ?
+        """, (block_id,))
         res = cursor.fetchone()
         header = literal_eval(bytes(res[1]).decode("utf-8"))
         beings_dict = {

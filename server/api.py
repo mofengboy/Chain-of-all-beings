@@ -24,7 +24,7 @@ chainOfBlock = ChainOfBeings()
 @api.route('/')
 @cross_origin()
 def hello_world():
-    http_message = HttpMessage(is_success=True, data=["众生之链", "Web服务网址：https://beings.icu"])
+    http_message = HttpMessage(is_success=True, data=["众生之链", "Web服务网址：" + Allow_Url_List[0]])
     return http_message.getJson()
 
 
@@ -155,7 +155,7 @@ def getBeingsOfChain():
     """获取众生链区块
    Content-Type: application/json
    {
-     ?db_id=1
+     ?block_id=sfsdfdfnsdjfnsdjfnsdjgsdjg
    }
    返回 json
    {
@@ -173,8 +173,8 @@ def getBeingsOfChain():
         }
    """
     try:
-        db_id = request.args.get("db_id")
-        block_dict = chainOfBlock.getBlockByID(db_id)
+        block_id = request.args.get("block_id")
+        block_dict = chainOfBlock.getBlockByBlockId(block_id)
         http_message = HttpMessage(is_success=True, data=block_dict)
         return http_message.getJson()
     except Exception as err:
