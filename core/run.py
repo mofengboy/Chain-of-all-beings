@@ -84,7 +84,7 @@ def run(sk_string, pk_string, server_url):
                     if STime.getSecond() >= 50:
                         logger.warning("当前周期未能成功收集所有区块")
                         app.blockRecoveryOfBeings()
-                        break
+
                 logger.info("第三阶段完成：此时时间：" + str(STime.getSecond()))
 
                 app.addEpoch()
@@ -114,9 +114,15 @@ def run(sk_string, pk_string, server_url):
                     phase1 = True
                     logger.info("第一阶段完成：此时时间：" + str(STime.getSecond()))
                 if STime.getSecond() >= 40 and phase1 is True:
-                    if not app.startCheckAndSave():
-                        logger.warning("当前周期未能成功收集所有区块")
-                        app.blockRecoveryOfBeings()
+                    i = 0
+                    while not app.startCheckAndSave():
+                        i += 1
+                        logger.info("第" + str(i) + "次尝试")
+                        time.sleep(0.1)
+                        if STime.getSecond() >= 50:
+                            logger.warning("当前周期未能成功收集所有区块")
+                            app.blockRecoveryOfBeings()
+
                     app.addEpoch()
                     if app.getEpoch() % 20160 == 0:
                         # 进入下一个选举周期
