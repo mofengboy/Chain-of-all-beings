@@ -17,13 +17,15 @@
           <el-menu-item index="3-1">申请书列表(本节点)</el-menu-item>
           <el-menu-item index="3-2">申请书列表(其他节点)</el-menu-item>
         </el-sub-menu>
+        <el-menu-item index="4">网站配置</el-menu-item>
       </el-menu>
     </div>
     <div class="main">
-      <BeingsAudit v-if="menu==='2-1'" :token="token"></BeingsAudit>
-      <BeingsWaitingRelease v-if="menu==='2-2'" :token="token"></BeingsWaitingRelease>
-      <MainNodeApplicationList v-if="menu==='3-1'" :token="token"></MainNodeApplicationList>
-      <OtherNodeApplicationList v-if="menu==='3-2'" :token="token"></OtherNodeApplicationList>
+      <BeingsAudit v-if="menu==='2-1'"></BeingsAudit>
+      <BeingsWaitingRelease v-if="menu==='2-2'"></BeingsWaitingRelease>
+      <MainNodeApplicationList v-if="menu==='3-1'"></MainNodeApplicationList>
+      <OtherNodeApplicationList v-if="menu==='3-2'"></OtherNodeApplicationList>
+      <WebConfig v-if="menu==='4'"></WebConfig>
     </div>
   </div>
 </template>
@@ -33,10 +35,11 @@ import BeingsAudit from "@/components/backstage/BeingsAudit";
 import BeingsWaitingRelease from "@/components/backstage/BeingsWaitingRelease";
 import MainNodeApplicationList from "@/components/backstage/MainNodeApplicationList";
 import OtherNodeApplicationList from "@/components/backstage/OtherNodeApplicationList";
+import WebConfig from "@/components/backstage/WebConfig";
 
 export default {
   name: "BackstageMain",
-  components: {OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease},
+  components: {WebConfig, OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease},
   created() {
     this.verifyToken()
   },

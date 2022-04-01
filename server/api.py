@@ -8,7 +8,7 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from server.database import DB
-from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings
+from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -16,6 +16,7 @@ from server.config import Allow_Url_List
 api = Flask(__name__, static_url_path=None, static_folder='static')
 db = DB()
 auth = Auth(db=db)
+backstageInfo = BackStageInfo(db)
 blockOfBeings = BlockOfBeings(db)
 mainNodeManager = MainNodeManager(db)
 chainOfBlock = ChainOfBeings()
@@ -283,6 +284,25 @@ def getMaxEpoch():
         return http_message.getJson()
 
 
+@api.route("/index_notice/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getIndexNotice():
+    """获取首页公告
+   返回 json
+   {
+   "is_success":bool,
+   "data": str base64 markdown
+   """
+    try:
+        res = backstageInfo.getIndexNotice()
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 # 以下为后台接口，需要权限认证
 # 登录
 @api.route("/backstage/login", methods=['POST'])
@@ -349,6 +369,36 @@ def verifyToken():
         else:
             http_message = HttpMessage(is_success=True, data="Token有效")
             return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/index_notice/modify", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def modifyIndexNotice():
+    """修改首页公告
+    Content-Type: application/json
+        {
+          "token": "",
+          "content":""
+        }
+   返回 json
+   {
+   "is_success":bool,
+   "data": str base64 markdown
+   """
+    try:
+        info = request.get_json()
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        content = info["content"]
+        res = backstageInfo.modifyIndexNotice(content)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
     except Exception as err:
         print(err)
         http_message = HttpMessage(is_success=False, data="参数错误")

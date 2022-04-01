@@ -22,7 +22,6 @@ const routes = [
                 name: "Introduction",
                 component: FrontHome
             },
-
             //众生区块查询
             {
                 path: "/chain/beings",

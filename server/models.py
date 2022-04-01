@@ -66,6 +66,17 @@ class Auth:
         return self.captcha.verify(uuid=uuid, word=word)
 
 
+class BackStageInfo:
+    def __init__(self, db: DB):
+        self.backstageDB = db
+
+    def getIndexNotice(self):
+        return self.backstageDB.getIndexNotice()
+
+    def modifyIndexNotice(self, content):
+        return self.backstageDB.modifyIndexNotice(content)
+
+
 # 众生区块（待发布）
 class BlockOfBeings:
     def __init__(self, db: DB):

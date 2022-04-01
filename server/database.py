@@ -246,6 +246,43 @@ class DB:
         """, (is_review, db_id))
         self.__DB.commit()
 
+    def getIndexNotice(self):
+        cursor = self.__backstageDB.cursor()
+        cursor.execute("""
+        select id, info_name, content, modify_time, create_time from backstage_info
+        where info_name = ?
+        """, ("index_notice",))
+        res = cursor.fetchone()
+        if res is None:
+            cursor.execute("""
+            insert into backstage_info(info_name, content, modify_time, create_time) 
+            values (?,?,?,?)
+            """, ("index_notice", "", time.time(), time.time()))
+            self.__backstageDB.commit()
+            cursor.execute("""
+            select id, info_name, content, modify_time, create_time from backstage_info
+            where info_name = ?
+            """, ("index_notice",))
+            res = cursor.fetchone()
+            return res
+        else:
+            return res
+
+    def modifyIndexNotice(self, content):
+        cursor = self.__backstageDB.cursor()
+        cursor.execute("""
+        update backstage_info 
+        set content = ?, modify_time = ?
+        where info_name = ?
+        """, (content, time.time(), "index_notice"))
+        self.__backstageDB.commit()
+        cursor.execute("""
+        select id, info_name, content, modify_time, create_time from backstage_info
+        where info_name = ?
+        """, ("index_notice",))
+        res = cursor.fetchone()
+        return res
+
 
 if __name__ == "__main__":
     DB()

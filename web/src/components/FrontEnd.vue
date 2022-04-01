@@ -4,7 +4,7 @@
       <GlobalHeader></GlobalHeader>
     </div>
     <div class="top-menu">
-      <el-menu mode="horizontal" @select="handleSelect">
+      <el-menu mode="horizontal" @select="handleSelect" default-active="1">
         <el-menu-item index="1">介绍</el-menu-item>
         <el-sub-menu index="2">
           <template #title>众生之链查询</template>
@@ -35,7 +35,9 @@ import GlobalFooter from "@/components/front_end/GlobalFooter";
 export default {
   name: "FrontEnd",
   data() {
-    return {}
+    return {
+      menu: ""
+    }
   },
   components: {
     GlobalHeader,
@@ -43,6 +45,12 @@ export default {
     ElMenu,
     ElSubMenu,
     ElMenuItem,
+  },
+  mounted() {
+    let pathname = window.location.pathname;
+    if (pathname === "/") {
+      this.$router.push("/introduction")
+    }
   },
   methods: {
     handleSelect: function (key) {
