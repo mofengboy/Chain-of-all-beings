@@ -65,7 +65,7 @@ class Client:
         socket.connect(ip)
         socket.send(data)
         message = socket.recv()
-        socket.disconnect(ip)
+        socket.close()
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 
@@ -81,22 +81,27 @@ class Client:
         socket.connect(ip)
         socket.send(data)
         message = socket.recv()
-        socket.disconnect(ip)
+        socket.close()
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 
     @staticmethod
     def sendMessageByIP(ip, data: bytes):
-        context = zmq.Context()
+        context = zmq.Context.instance()
         socket = context.socket(zmq.REQ)
         socket.setsockopt(zmq.RCVTIMEO, 5000)
         ip = "tcp://" + ip + ":23334"
-        socket.connect(ip)
-        socket.send(data)
-        message = socket.recv()
-        socket.disconnect(ip)
-        logger.info("消息发送完成，对方ip为" + ip)
-        return message
+        try:
+            socket.connect(ip)
+            socket.send(data)
+            message = socket.recv()
+            socket.close()
+            logger.info("消息发送完成，对方ip为" + ip)
+            return message
+        except Exception as err:
+            socket.close()
+            logger.warning(err)
+            raise ValueError(err)
 
 
 # 订阅消息
