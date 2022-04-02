@@ -51,45 +51,50 @@ class PUB(threading.Thread):
 class Client:
     def __init__(self, main_node_list: MainNodeList):
         self.mainNodeList = main_node_list
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
         logger.info("客户端初始化完成")
 
     def sendMessageByNodeID(self, node_id, data: bytes):
-        self.socket.setsockopt(zmq.RCVTIMEO, 5000)
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.RCVTIMEO, 5000)
         ip = ""
         for main_node in self.mainNodeList.getNodeList():
             if main_node["node_info"]["node_id"] == node_id:
                 ip = main_node["node_info"]["node_ip"]
         ip = "tcp://" + ip + ":23334"
-        self.socket.connect(ip)
-        self.socket.send(data)
-        message = self.socket.recv()
-        self.socket.disconnect(ip)
+        socket.connect(ip)
+        socket.send(data)
+        message = socket.recv()
+        socket.disconnect(ip)
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 
     def sendMessageByMainNodeUserPk(self, user_pk, data: bytes):
-        self.socket.setsockopt(zmq.RCVTIMEO, 5000)
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.RCVTIMEO, 5000)
         ip = ""
         for main_node in self.mainNodeList.getNodeList():
             if main_node["node_info"]["user_pk"] == user_pk:
                 ip = main_node["node_info"]["node_ip"]
         ip = "tcp://" + ip + ":23334"
-        self.socket.connect(ip)
-        self.socket.send(data)
-        message = self.socket.recv()
-        self.socket.disconnect(ip)
+        socket.connect(ip)
+        socket.send(data)
+        message = socket.recv()
+        socket.disconnect(ip)
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 
-    def sendMessageByIP(self, ip, data: bytes):
-        self.socket.setsockopt(zmq.RCVTIMEO, 5000)
+    @staticmethod
+    def sendMessageByIP(ip, data: bytes):
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.RCVTIMEO, 5000)
         ip = "tcp://" + ip + ":23334"
-        self.socket.connect(ip)
-        self.socket.send(data)
-        message = self.socket.recv()
-        self.socket.disconnect(ip)
+        socket.connect(ip)
+        socket.send(data)
+        message = socket.recv()
+        socket.disconnect(ip)
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 

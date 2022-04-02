@@ -135,7 +135,7 @@ class APP:
 
     # 读入主节点列表，通过配置文件提供的种子IP
     def loadMainNodeListBySeed(self):
-        ip_list = MainNodeIp().getTpList()
+        ip_list = MainNodeIp().getIpList()
         data = NetworkMessage(mess_type=NetworkMessageType.Get_Main_Node_List, message=None)
         serial_data = SerializationNetworkMessage.serialization(data)
         is_get = False
@@ -144,7 +144,7 @@ class APP:
             try:
                 res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
                 self.mainNode.mainNodeList.setNodeList(literal_eval(bytes(res).decode("utf-8")))
-                logger.info("连接主节点IP:" + str(ip))
+                logger.info("已经连接主节点,IP:" + str(ip))
                 is_get = True
                 break
             except Exception as err:
