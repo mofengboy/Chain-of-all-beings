@@ -87,7 +87,7 @@ class StorageOfBeings(Sqlite):
         from beings order by epoch,block_id desc limit 0,1;
         """)
         res = cursor.fetchone()
-        if res[0] is None:
+        if res is None:
             return None
         else:
             block_header = literal_eval(bytes.decode(res[3]))

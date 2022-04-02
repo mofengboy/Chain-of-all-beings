@@ -161,12 +161,17 @@ class APP:
         random.shuffle(node_ip_list)
         serial_data = SerializationNetworkMessage.serialization(
             NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
-        for ip in node_ip_list:
+        while True:
+            ip = random.choice(node_ip_list)
             try:
                 res = self.client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-                self.setEpoch(int(res))
-                break
+                if self.getEpoch() == int(res):
+                    return True
+                else:
+                    self.setEpoch(int(res))
+                    return False
             except Exception as err:
+                time.sleep(1)
                 logger.warning(err)
 
     # 同步区块
@@ -182,7 +187,7 @@ class APP:
         logger.info("经过验证的存储区块的epoch为：" + str(verify_epoch))
         self.storageOfBeings.delBlocksByEpoch(verify_epoch, storage_epoch)
         if self.getEpoch() > 0:
-            start_epoch = 0
+            start_epoch = verify_epoch
             while True:
                 server_url = random.choice(server_url_list)
                 try:
@@ -252,10 +257,11 @@ class APP:
                 info = random.choice(info_list)
                 block_list_of_beings = self.remoteChainAsset.getChainOfBeings(url=info[0], epoch=epoch_i)
 
-            # 此时该期次的区块已经同步完
-            self.mainNode.currentBlockList.setEmptyFinish()
+            # 此时该期次的区块已经同步完成
             self.storageOfBeings.saveBatchBlock(block_list_of_beings)
+            self.chainAsset.saveBatchBlockOfBeings(block_list_of_beings)
             logger.info("epoch:" + str(epoch_i) + ",众生区块恢复完成")
+        self.mainNode.currentBlockList.setFinish()
         logger.info("众生区块全部恢复完成")
 
     # 存储创世区块
@@ -541,20 +547,29 @@ class APP:
     def startCheckAndSave(self) -> bool:
         logger.info("众生区块生成周期开始40秒后，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
         is_finish = True
-        for node in self.mainNode.currentMainNode.getNodeList():
-            user_pk = node["node_info"]["user_pk"]
-            node_id = node["node_info"]["node_id"]
-            # 检查是否存在应该收到，但是未收到的区块
-            if not self.mainNode.currentBlockList.userPkIsExit(user_pk=user_pk):
-                is_finish = False
-                logger.info("存在未收到的区块,应产生该区块的节点ID为：" + str(node_id))
+        if not self.mainNode.currentBlockList.isFinish:
+            logger.debug("收集到的空区块消息")
+            for emptyBlock in self.mainNode.currentBlockList.listOfNoBlock:
+                logger.debug(emptyBlock.getMessage())
+            logger.debug("收集到的区块消息")
+            for block in self.mainNode.currentBlockList.list:
+                logger.debug(block.getBlockHeader())
+            for node in self.mainNode.currentMainNode.getNodeList():
+                user_pk = node["node_info"]["user_pk"]
+                node_id = node["node_info"]["node_id"]
+                # 检查是否存在应该收到，但是未收到的区块
+                # 区块消息
+                if not self.chainAsset.beingsIsExitByEpoch(self.getEpoch()):
+                    if (not self.mainNode.currentBlockList.userPkIsBlock(
+                            user_pk) and (not self.mainNode.currentBlockList.userPkIsEmptyBlock(user_pk))):
+                        is_finish = False
+                        logger.info("存在未收到的区块,应产生该区块的节点ID为：" + str(node_id))
         if is_finish:
-            self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=self.mainNode.currentBlockList)
-            self.chainAsset.saveBlockOfBeings(block_list_of_beings=self.mainNode.currentBlockList)
-            # 存储完成，重置当前区块列表，准备下一个epoch收集
+            if not self.chainAsset.beingsIsExitByEpoch(self.getEpoch()):
+                self.storageOfBeings.saveCurrentBlockOfBeings(blockListOfBeings=self.mainNode.currentBlockList)
+                self.chainAsset.saveBlockOfBeings(block_list_of_beings=self.mainNode.currentBlockList)
+                # 存储完成，重置当前区块列表，准备下一个epoch收集
             self.mainNode.currentBlockList.reset()
-        if self.chainAsset.beingsIsExitByEpoch(self.getEpoch()):
-            return True
         return is_finish
 
     # 生成时代区块

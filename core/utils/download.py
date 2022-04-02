@@ -9,11 +9,15 @@ from core.utils.serialization import SerializationAssetOfBeings, SerializationNe
 class RemoteChainAsset:
     @staticmethod
     def getCurrentEpoch(getEpoch, client: Client, ip) -> int:
-        serial_data = SerializationNetworkMessage.serialization(
-            NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
-        res = client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
-        epoch = int(res)
-        return epoch - getEpoch()
+        try:
+            serial_data = SerializationNetworkMessage.serialization(
+                NetworkMessage(NetworkMessageType.Get_Current_Epoch, message=None))
+            res = client.sendMessageByIP(ip=ip, data=str(serial_data).encode("utf-8"))
+            epoch = int(res)
+            return epoch - getEpoch()
+        except Exception as err:
+            logging.warning(err)
+            return 0
 
     @staticmethod
     def getEpochListOfBeingsChain(url, offset, count):

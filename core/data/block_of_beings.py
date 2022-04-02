@@ -39,15 +39,15 @@ class BlockListOfBeings:
     def __init__(self):
         self.list = []
         self.listOfNoBlock = []
-        self.emptyBlockIsFinish = False
+        self.isFinish = False
 
     def reset(self):
         self.list = []
         self.listOfNoBlock = []
-        self.emptyBlockIsFinish = False
+        self.isFinish = False
 
-    def setEmptyFinish(self):
-        self.emptyBlockIsFinish = True
+    def setFinish(self):
+        self.isFinish = True
 
     # 正序排列获得区块列表
     def getListOfOrthogonalOrder(self):
@@ -92,8 +92,6 @@ class BlockListOfBeings:
         for block in self.list:
             if block.getUserPk()[1] == user_pk:
                 return True
-        if self.emptyBlockIsFinish:
-            return True
         for empty_block in self.listOfNoBlock:
             if user_pk == empty_block.userPk:
                 return True
@@ -106,8 +104,6 @@ class BlockListOfBeings:
         return False
 
     def userPkIsEmptyBlock(self, user_pk):
-        if self.emptyBlockIsFinish:
-            return True
         for empty_block in self.listOfNoBlock:
             if user_pk == empty_block.userPk:
                 return True

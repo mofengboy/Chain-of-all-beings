@@ -45,12 +45,13 @@ def run(sk_string, pk_string, server_url):
         app.server.stop()
         exit()
     logger.info("配置文件读取完成")
-    # 同步数据
-    app.getCurrentEpochByOtherMainNode()
-    app.synchronizedBlockOfBeings()
 
     # 订阅
     app.reSubscribe()
+
+    # 同步数据
+    while not app.getCurrentEpochByOtherMainNode():
+        app.synchronizedBlockOfBeings()
 
     # 检查主节点列表，即此时只有读取权限，没有写入权限
     # 不再主节点列表时，可接受订阅数据
@@ -59,7 +60,7 @@ def run(sk_string, pk_string, server_url):
     phase2 = False
     phase3 = False
 
-    # 保证再前30秒进入
+    # 保证在前30秒进入
     while STime.getSecond() >= 30:
         logger.info("请稍等")
         time.sleep(1)
@@ -104,7 +105,7 @@ def run(sk_string, pk_string, server_url):
             time.sleep(0.1)
         else:
             try:
-                if 0 <= STime.getSecond() < 30 and phase1 is False:
+                if 0 <= STime.getSecond() < 40 and phase1 is False:
                     logger.info("当前节点不是主节点,请在其他主节点处进行申请")
                     logger.info("节点信息如下：")
                     logger.info(app.mainNode.getNodeInfo())
@@ -119,12 +120,13 @@ def run(sk_string, pk_string, server_url):
                     while not app.startCheckAndSave():
                         i += 1
                         logger.info("第" + str(i) + "次尝试")
-                        time.sleep(0.1)
+                        time.sleep(1)
                         if STime.getSecond() >= 50:
                             logger.warning("当前周期未能成功收集所有区块")
                             app.blockRecoveryOfBeings()
 
                     app.addEpoch()
+                    logger.info("Epoch:" + str(app.getEpoch()))
                     if app.getEpoch() % 20160 == 0:
                         # 进入下一个选举周期
                         app.addElectionPeriod()
