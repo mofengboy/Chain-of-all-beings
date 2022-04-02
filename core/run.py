@@ -44,6 +44,7 @@ def run(sk_string, pk_string, server_url):
         app.stopAllSub(app.subList)
         app.server.stop()
         exit()
+    logger.info("配置文件读取完成")
     # 同步数据
     app.getCurrentEpochByOtherMainNode()
     app.synchronizedBlockOfBeings()
