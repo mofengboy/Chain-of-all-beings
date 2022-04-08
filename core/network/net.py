@@ -3,7 +3,7 @@ import threading
 import zmq
 from ast import literal_eval
 
-from core.consensus.vote import VoteCount
+from core.consensus.vote_compute import VoteCount
 from core.consensus.node_management import NodeManager
 from core.consensus.data import ApplicationForm, VoteInformation, WaitGalaxyBlock, ConformationOfGalaxyBlock, \
     NodeDelApplicationForm

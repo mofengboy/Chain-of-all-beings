@@ -2,6 +2,7 @@ import hashlib
 import random
 import os
 import sys
+import string
 
 sys.path.append("../")
 sys.path.append(os.path.abspath("."))
@@ -12,8 +13,13 @@ class BackstageAccount:
     def __init__(self):
         self.db = DB()
 
+    @staticmethod
+    def genPassword(length):
+        chars = string.ascii_letters + string.digits
+        return ''.join([random.choice(chars) for i in range(length)])
+
     def generateUser(self):
-        password = hashlib.sha256(str(random.random()).encode("utf-8")).hexdigest()[0:16]
+        password = self.genPassword(16)
         password_abstract = hashlib.sha256(str(password).encode("utf-8")).hexdigest()
         if self.db.isUserExist("node_admin"):
             print("已经覆盖原密码")

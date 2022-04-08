@@ -26,7 +26,6 @@ class StorageOfBeings(Sqlite):
                      str(block.getBlockHeader()).encode("utf-8"),
                      block.body)
                 )
-
             cursor.executemany("""
                 insert into beings (epoch,block_id,user_pk,header,body)
                 values (?,?,?,?,?);
@@ -143,8 +142,10 @@ class StorageOfBeings(Sqlite):
     def getUserCountByEpoch(self, user_pk, start, end):
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select count(user_pk) from beings where user_pk = ? and epoch >= ? and epoch < ?
-        """, (user_pk, start, end))
+        select count(user_pk) from beings 
+        where user_pk like ? 
+        and epoch >= ? and epoch < ?
+        """, ("%" + user_pk + "%", start, end))
         res = cursor.fetchone()
         if res is None:
             return 0
@@ -154,7 +155,8 @@ class StorageOfBeings(Sqlite):
     def getUserPkByBlockId(self, block_id) -> []:
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select user_pk from beings where block_id = ?
+        select user_pk from beings 
+        where block_id = ?
         """, (block_id,))
         res = cursor.fetchone()
         res = literal_eval(res[0])
@@ -169,29 +171,3 @@ class StorageOfBeings(Sqlite):
         if res[0] is None:
             return 0
         return res[0]
-
-
-if __name__ == "__main__":
-    storageOfBeings = StorageOfBeings()
-    storageOfBeings.getUserPkByBlockId(block_id="aaa")
-
-    # user = User()
-    # user.register()
-    # genesis_user_sk = user.getUserSK()
-    # genesis_user_pk = user.getUserPKString()
-    #
-    # genesis_block_id = 0
-    # genesis_pre_block_header = "0" * 256
-    # genesis_pre_block = "0" * 256
-    #
-    # genesis_body = "江畔何人初见月? 江月何年初照人? 人生代代无穷已, 江月年年只相似. 不知江月待何人, 但见长江送流水."
-    # genesis_body_signature = [user.sign(genesis_body)]
-    #
-    # GenesisBlock = BlockOfBeings(epoch=0,
-    #                              prev_block_header=genesis_pre_block_header,
-    #                              pre_block=genesis_pre_block, user_pk=genesis_user_pk,
-    #                              body_signature=genesis_body_signature, body=genesis_body)
-    #
-    # block_list_of_beings = BlockListOfBeings()
-    # block_list_of_beings.addBlock(GenesisBlock)
-    # storageOfBeings.getLastBlock()

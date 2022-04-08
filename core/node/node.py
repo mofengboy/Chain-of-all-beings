@@ -2,6 +2,7 @@ import logging
 from abc import ABC
 
 from core.network.local_network import NetworkInfo
+from core.storage.storage_of_temp import StorageOfTemp
 from core.utils.ciphersuites import CipherSuites
 from core.user.user import User
 from core.data.node_info import NodeInfo
@@ -10,7 +11,7 @@ logger = logging.getLogger("main")
 
 
 class Node(ABC):
-    def __init__(self, user: User, server_url):
+    def __init__(self, user: User, server_url, storage_of_temp: StorageOfTemp):
         self.user = user
         user_pk = user.getUserPKString()
         self.__node_id = user_pk[0:16]
@@ -20,6 +21,7 @@ class Node(ABC):
         logger.info("节点初始化完成")
         logger.info("节点ID:" + self.__node_id)
         logger.info("节点签名:" + self.nodeInfo.nodeSignature)
+        storage_of_temp.setNodeInfo(self.nodeInfo)
 
     # 生成节点签名
     def generateNodeSignature(self):

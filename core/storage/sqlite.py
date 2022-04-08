@@ -1,6 +1,8 @@
 import sqlite3
 from abc import ABC
 
+from core.utils.system_time import STime
+
 
 class Sqlite(ABC):
     def __init__(self):
@@ -160,18 +162,46 @@ class Sqlite(ABC):
             """)
             self.tempConn.commit()
 
-        # 授权给简单用户节点的票
-        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'simple_user_vote'")
+        # 存储core的一些信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'core_info'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
-            create table simple_user_vote(
+            create table core_info(
             id INTEGER PRIMARY KEY,
-            election_period INTEGER NOT NULL,
-            user_pk TEXT NOT NULL,
-            total_vote FLOAT NOT NULL,
-            used_vote FLOAT NOT NULL,
-            create_time INTEGER NOT NULL 
-            )
+            info_id INTEGER NOT NULL,
+            info_name TEXT NOT NULL,
+            content BLOB NOT NULL,
+            update_time INTEGER NOT NULL, 
+            create_time INTEGER NOT NULL
+            ) 
+            """)
+            self.tempConn.commit()
+
+        # 存储当前Epoch消息
+        cursor.execute("""
+        select count(*) from core_info
+        where info_name = ?
+        """, ("current_epoch",))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            insert into core_info(info_id,info_name,content,update_time,create_time)
+            values (?,?,?,?,?)
+            """, (1, "current_epoch", 0, STime.getTimestamp(), STime.getTimestamp()))
+            self.tempConn.commit()
+
+        # 主节点的票数信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'main_node_vote'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table main_node_vote(
+            id INTEGER PRIMARY KEY,
+            main_node_id TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            total_vote INTEGER NOT NULL,
+            used_vote INTEGER NOT NULL,
+            update_time INTEGER NOT NULL, 
+            create_time INTEGER NOT NULL
+            ) 
             """)
             self.tempConn.commit()
 

@@ -8,7 +8,7 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from server.database import DB
-from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo
+from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo, BlockOfTimes, Vote
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -18,15 +18,80 @@ db = DB()
 auth = Auth(db=db)
 backstageInfo = BackStageInfo(db)
 blockOfBeings = BlockOfBeings(db)
+blockOfTimes = BlockOfTimes(db)
 mainNodeManager = MainNodeManager(db)
 chainOfBlock = ChainOfBeings()
+vote = Vote(db)
 
 
 @api.route('/')
-@cross_origin()
+@cross_origin(origins=Allow_Url_List)
 def hello_world():
     http_message = HttpMessage(is_success=True, data=["众生之链", "Web服务网址：" + Allow_Url_List[0]])
     return http_message.getJson()
+
+
+@api.route("/index_notice/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getIndexNotice():
+    """获取首页公告
+   返回 json
+   {
+   "is_success":bool,
+   "data": str base64 markdown
+   """
+    try:
+        res = backstageInfo.getIndexNotice()
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/record_number/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getRecordNumber():
+    """获取备案号
+   返回 json
+   {
+   "is_success":bool,
+   "data": {}
+   """
+    try:
+        res = backstageInfo.getRecordNumber()
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route('/period/get', methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getPeriod():
+    """
+    获取众生区块生成期次和选举期次
+    :return:
+    {
+    "is_success":bool,
+    "data":
+        {
+        "epoch":int
+        "election_period":int
+        }
+    }
+    """
+    try:
+        data = mainNodeManager.getEpochAndElectionPeriod()
+        http_message = HttpMessage(is_success=True, data=data)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data=err)
+        return http_message.getJson()
 
 
 @api.route('/block/beings/save', methods=['POST'])
@@ -47,6 +112,7 @@ def block_of_beings_save():
         {
         "is_success":bool,
         "data":""
+        }
         """
     if request.method == 'POST':
         info = request.get_json()
@@ -284,19 +350,114 @@ def getMaxEpoch():
         return http_message.getJson()
 
 
-@api.route("/index_notice/get", methods=['GET'])
+@api.route("/times_block_list/get", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
-def getIndexNotice():
-    """获取首页公告
+def getListOfTimesBlockQueue():
+    """获取正在推荐的众生区块列表(倒序偏移获取）
+    {
+     ?election_period=0&offset=0&count=8
+   }
    返回 json
    {
    "is_success":bool,
-   "data": str base64 markdown
+   "data": [{id,election_period,beings_block_id,votes}]
    """
     try:
-        res = backstageInfo.getIndexNotice()
+        election_period = int(request.args.get("election_period"))
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 32:
+            http_message = HttpMessage(is_success=False, data="每次最多获取32个众生区块ID信息")
+            return http_message.getJson()
+        res = blockOfTimes.getListOfTimesBlockQueue(offset, count, election_period)
         http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/times_block/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getTimesBlock():
+    """获取正在推荐的众生区块
+    {
+     ?block_id=
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {"id": ,
+            "election_period":
+            "beings_block_id":
+            "votes":
+            "vote_list":
+            "status":
+            "create_time":
+   """
+    try:
+        beings_block_id = request.args.get("block_id")
+        res = blockOfTimes.getTimesBlockQueue(beings_block_id)
+        if res is None:
+            http_message = HttpMessage(is_success=False, data=res)
+        else:
+            http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/vote_list/main_node/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getVoteListOfMainNode():
+    """获取所有主节点的票数列表
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{node_id,node_user_Pk},。。。]
+   }
+   """
+    try:
+        res = vote.getListOfMainNodeVote()
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/vote/main_node/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getVoteOfMainNode():
+    """获取主节点的票数信息
+    {
+    ?user_pk=
+    }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {"id": ,
+            "main_node_id": ,
+            "main_node_user_pk":,
+            "total_vote": ,
+            "used_vote":,
+            "update_time": ,
+            "create_time": }
+   }
+   """
+    try:
+        user_pk = request.args.get("user_pk")
+        res = vote.getMainNodeVoteByMainNodeUserPk(main_node_user_pk=user_pk)
+        if res is not None:
+            http_message = HttpMessage(is_success=True, data=res)
+            return http_message.getJson()
+        else:
+            http_message = HttpMessage(is_success=False, data=None)
+            return http_message.getJson()
     except Exception as err:
         print(err)
         http_message = HttpMessage(is_success=False, data="参数错误")
@@ -388,6 +549,7 @@ def modifyIndexNotice():
    {
    "is_success":bool,
    "data": str base64 markdown
+   }
    """
     try:
         info = request.get_json()
@@ -397,6 +559,37 @@ def modifyIndexNotice():
             return http_message.getJson()
         content = info["content"]
         res = backstageInfo.modifyIndexNotice(content)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/record_number/set", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def setRecordNumber():
+    """设置备案号
+    Content-Type: application/json
+        {
+          "token": "",
+          "record_number":""
+        }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {}
+   }
+   """
+    try:
+        info = request.get_json()
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        record_number = info["record_number"]
+        res = backstageInfo.setRecordNumber(record_number)
         http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
     except Exception as err:
@@ -543,6 +736,73 @@ def auditBeings():
         is_review = info["is_review"]
         blockOfBeings.reviewBlock(db_id, is_review)
         http_message = HttpMessage(is_success=True, data="修改成功")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/beings/recommend", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def recommendBeings():
+    """推荐众生区块
+        Content-Type: application/json
+        {
+          "token":"",
+          "block_id":""
+        }
+        返回 json
+        {
+        "is_success":bool,
+        "data":
+        """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        beings_block_id = info["block_id"]
+        if blockOfTimes.addTimesBlockQueue(beings_block_id):
+            http_message = HttpMessage(is_success=True, data="推荐成功")
+            return http_message.getJson()
+        else:
+            http_message = HttpMessage(is_success=False, data="该区块已经被推荐")
+            return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/beings/revocation", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def revocationBeings():
+    """撤销推荐众生区块
+        Content-Type: application/json
+        {
+          "token":"",
+          "block_id":""
+        }
+        返回 json
+        {
+        "is_success":bool,
+        "data":
+        """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        beings_block_id = info["block_id"]
+        blockOfTimes.revocationTimesBlockQueueByBlockId(beings_block_id)
+        http_message = HttpMessage(is_success=True, data="撤销推荐成功")
         return http_message.getJson()
     except Exception as err:
         print(err)
@@ -739,6 +999,160 @@ def reviewOtherApply():
         review = info["review"]
         mainNodeManager.reviewOtherNodeApplicationFormByDBId(db_id, review)
         http_message = HttpMessage(is_success=True, data="审核完成")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/simple_user_vote/init", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def initSimpleUserVote():
+    """初始化当前选举周期所有普通用户的票数
+    Content-Type: application/json
+    {
+      "token":"",
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ”“
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        vote.initSimpleUserVote()
+        http_message = HttpMessage(is_success=True, data="初始化完成")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/simple_user_vote_list/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getSimpleUserVoteList():
+    """获取普通用户票数列表
+    Content-Type: application/json
+    {
+      "token":"",
+      "offset":int,
+      "count":int
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ["user_pk"...]
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        offset = info["offset"]
+        count = info["count"]
+        res = vote.getListOfSimpleUserVote(offset, count)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/simple_user_vote/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getSimpleUserVote():
+    """获取普通用户票数
+    Content-Type: application/json
+    {
+      "token":"",
+      "user_pk":""
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {}
+    """
+    try:
+        info = request.get_json()
+        user_pk = info["user_pk"]
+        res = vote.getSimpleUserVoteByUserPk(user_pk)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/simple_user_used_vote/add", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def addUsedVoteOfSimpleUser():
+    """增加已使用的票数
+    Content-Type: application/json
+    {
+      "token":"",
+      "user_pk":"",
+      "used_vote":"",
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        user_pk = info["user_pk"]
+        used_vote = info["used_vote"]
+        res = vote.addUsedVoteOfSimpleUser(user_pk, used_vote)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/simple_user_vote/modify", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def modifyTotalVoteOfSimpleUser():
+    """修改普通用户的总票数
+    Content-Type: application/json
+    {
+      "token":"",
+      "user_pk":"",
+      "total_vote":""
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        user_pk = info["user_pk"]
+        total_vote = info["total_vote"]
+        res = vote.modifyTotalVoteOfSimpleUser(user_pk, total_vote)
+        http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
     except Exception as err:
         print(err)

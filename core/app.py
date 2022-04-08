@@ -1,5 +1,6 @@
 import random
 import logging.config
+import threading
 import time
 from ast import literal_eval
 
@@ -13,7 +14,7 @@ from core.node.main_node import MainNode
 from core.network.net import PUB, SUB, Server, Client
 from core.consensus.node_management import NodeManager
 from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfGalaxy
-from core.consensus.vote import VoteCount
+from core.consensus.vote_compute import VoteCount
 from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock
 from core.consensus.data import NodeDelApplicationForm
 from core.consensus.block_verify import BlockVerify
@@ -42,12 +43,13 @@ class APP:
 
         self.user = User()  # 用户
         self.user.login(sk_string, pk_string)
-        self.mainNode = MainNode(self.user, server_url)  # 主节点
+        self.mainNode = MainNode(self.user, server_url,self.storageOfTemp)  # 主节点
         self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
                                        storage_of_temp=self.storageOfTemp)  # 节点管理
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
-        self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp)  # 票数计算
+        self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp,
+                                   main_node=self.mainNode)  # 票数计算
         self.blockVerify = BlockVerify(storage_of_beings=self.storageOfBeings)
 
         self.pub = PUB()  # 发布者
@@ -71,12 +73,14 @@ class APP:
 
     def addEpoch(self):
         self.currentEpoch += 1
+        self.storageOfTemp.setEpoch(self.currentEpoch)
 
     def getEpoch(self):
         return self.currentEpoch
 
     def setEpoch(self, epoch):
         self.currentEpoch = epoch
+        self.storageOfTemp.setEpoch(epoch)
 
     def addElectionPeriod(self):
         self.electionPeriod += 1
@@ -86,6 +90,38 @@ class APP:
 
     def setElectionPeriod(self, election_period):
         self.electionPeriod = election_period
+
+    # 周期处理的事件，单独线程执行
+    def dealPeriodicEvents(self_out):
+        class PeriodicEvents(threading.Thread):
+            def __init__(self):
+                super().__init__()
+                self.name = "periodic_events"
+                logger.info("周期事件处理器初始化完成")
+
+            def run(self) -> None:
+                logger.info("周期事件处理器启动完成")
+                while True:
+                    time.sleep(60)
+                    logger.info("周期事件开始处理")
+                    # 读取待发布的众生区块
+                    if self_out.storageOfTemp.getDataCount() < 5:
+                        logger.info("检测server是否有待发布的区块")
+                        webserver_beings_list = self_out.webServerSDK.getBeings()
+                        self_out.storageOfTemp.saveBatchData(webserver_beings_list)
+                    # 检测有无已经审核通过的，提交在本节点的申请书
+                    logger.info("检测有无已经审核通过的，提交在本节点的申请书")
+                    self_out.applyNewNodeJoin()
+                    # 检测有无已经审核通过的，从其他主节点接受到的申请书
+                    logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
+                    self_out.replyNewNodeJoin()
+                    # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+                    logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
+                    self_out.checkNewNodeJoin()
+                    logger.info("周期事件处理完成")
+
+        periodic_events = PeriodicEvents()
+        periodic_events.start()
 
     # 增加订阅
     def addSub(self, ip):
@@ -278,35 +314,6 @@ class APP:
         # 检查数据库数据，是否有推荐区块
         self.waitGalaxyBlock.addGalaxyBlock(block_id=block_id)
 
-    # 简单节点用户发起的投票
-    def voteForGalaxy(self, simple_vote_information: VoteInformation):
-        # 首先计算当前主节点拥有的票数，然后计算授权给简单节点用户的票数
-        num_of_main_user_vote = self.voteCount.computeMainUserVote(user_pk=self.user.getUserPKString(),
-                                                                   current_election_cycle=self.getElectionPeriod())
-        if simple_vote_information.numberOfVote > num_of_main_user_vote:
-            # 超出当前主节点拥有的最大投票数量
-            pass
-        num_of_simple_user_vote = self.voteCount.computeSimpleUserVote(simple_user_pk=simple_vote_information.userPK,
-                                                                       current_election_cycle=self.getElectionPeriod())
-        if simple_vote_information.numberOfVote > num_of_simple_user_vote:
-            # 超出当前简单节点被授权的最大投票数量
-            pass
-        # 将用户公钥和签名转为主节点的签名，因为对其他主节点而言，只能看到主节点拥有的票数
-        vote_information = VoteInformation(main_node_id=simple_vote_information.mainNodeId,
-                                           block_id=simple_vote_information.blockId,
-                                           election_period=simple_vote_information.electionPeriod,
-                                           number_of_vote=simple_vote_information.numberOfVote,
-                                           user_pk=self.user.getUserPKString())
-        signature = self.user.sign(message=str(vote_information.getVoteInfo()).encode("utf-8"))
-        vote_information.setSignature(signature)
-        # 发送消息进行投票 不是发送广播
-        network_mess = NetworkMessage(mess_type=NetworkMessageType.Vote_Info,
-                                      message=vote_information.getMessage())
-        res = self.client.sendMessageByNodeID(node_id=vote_information.mainNodeId,
-                                              data=str(network_mess).encode("utf-8"))
-        # 获取投票结果
-        return res
-
     # 通过检测数据库中的node_join_other表，当存在is_audit=1或2时,即有消息要回复
     # 回复新节点加入申请，同意或拒绝
     def replyNewNodeJoin(self):
@@ -429,11 +436,9 @@ class APP:
         # 才广播不产生区块的消息。
         # 若本次主节点没有被选中产生区块，则检查暂存区数据数量，若数量大于5，则不进行任何操作，若小于5，则调用后端SDK获取数据。
         #
-        is_selected = False
         for node in self.mainNode.currentMainNode.getNodeList():
             # 当前节点是否生成区块
             if node["node_info"]["node_id"] == self.mainNode.nodeInfo.nodeId:
-                is_selected = True
                 logger.info("当前节点已被共识机制选中")
                 # 判断临时存储区是否有数据，若有数据，则生成区块，否则发送不生成区块的消息
                 temp_beings_count = self.storageOfTemp.getDataCount()
@@ -493,22 +498,6 @@ class APP:
                     self.mainNode.currentBlockList.addMessageOfNoBlock(empty_block=empty_block)
                     self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=serial_mess)
                 break
-            # 没被选中
-        if not is_selected:
-            # 读取待发布的众生区块
-            if self.storageOfTemp.getDataCount() < 5:
-                logger.info("检测server是否有待发布的区块")
-                webserver_beings_list = self.webServerSDK.getBeings()
-                self.storageOfTemp.saveBatchData(webserver_beings_list)
-        # 检测有无已经审核通过的，提交在本节点的申请书
-        logger.info("检测有无已经审核通过的，提交在本节点的申请书")
-        self.applyNewNodeJoin()
-        # 检测有无已经审核通过的，从其他主节点接受到的申请书
-        logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
-        self.replyNewNodeJoin()
-        # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
-        logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
-        self.checkNewNodeJoin()
 
     # 新周期开始30秒后，检查并执行
     def startCheckAndApplyDeleteNode(self):
@@ -571,6 +560,25 @@ class APP:
                 # 存储完成，重置当前区块列表，准备下一个epoch收集
             self.mainNode.currentBlockList.reset()
         return is_finish
+
+    # 初始化所有主节点的投票信息
+    def initVote(self_out):
+        class InitVoteOfMainNode(threading.Thread):
+            def __init__(self):
+                super().__init__()
+                self.name = "init_vote"
+                logger.info("init_vote初始化完成")
+
+            def run(self) -> None:
+                logger.info("开始计算所有主节点的票数信息")
+                # 清除上一选举周期产生票数数据
+                self_out.storageOfTemp.clearAllMainNodeVote()
+                # 初始化本次的票数数据
+                self_out.voteCount.initVotesOfMainNode(current_election_cycle=self_out.getElectionPeriod())
+                logger.info("计算完成")
+
+        init_vote_of_main_node = InitVoteOfMainNode()
+        init_vote_of_main_node.start()
 
     # 生成时代区块
     def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:

@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath("."))
 from core.app import APP
 from core.utils.ciphersuites import CipherSuites
 from core.utils.system_time import STime
+from core.config.cycle_Info import ElectionPeriodValue
 
 
 def run(sk_string, pk_string, server_url):
@@ -60,6 +61,9 @@ def run(sk_string, pk_string, server_url):
     phase2 = False
     phase3 = False
 
+    # 启动处理周期事件的线程
+    app.dealPeriodicEvents()
+
     # 保证在前30秒进入
     while STime.getSecond() >= 30:
         logger.info("请稍等")
@@ -90,10 +94,14 @@ def run(sk_string, pk_string, server_url):
                 logger.info("第三阶段完成：此时时间：" + str(STime.getSecond()))
 
                 app.addEpoch()
-                if app.getEpoch() % 20160 == 0:
+                if app.getEpoch() % ElectionPeriodValue == 0:
                     # 进入下一个选举周期
                     app.addElectionPeriod()
                     logger.info("进入下一个选举周期")
+                    logger.info("暂停半小时")
+                    app.initVote()
+                    logger.info("睡眠")
+                    time.sleep(60)
 
                 if app.getEpoch() % 1440 == 0:
                     # 校对时间
@@ -127,10 +135,15 @@ def run(sk_string, pk_string, server_url):
 
                     app.addEpoch()
                     logger.info("Epoch:" + str(app.getEpoch()))
-                    if app.getEpoch() % 20160 == 0:
+                    if app.getEpoch() % ElectionPeriodValue == 0:
                         # 进入下一个选举周期
                         app.addElectionPeriod()
                         logger.info("进入下一个选举周期")
+                        logger.info("暂停半小时")
+                        app.initVote()
+                        logger.info("睡眠")
+                        # time.sleep(60)
+                        # 更新主节点的投票数据
                     if app.getEpoch() % 1440 == 0:
                         # 校对时间
                         if not STime.proofreadingTime():

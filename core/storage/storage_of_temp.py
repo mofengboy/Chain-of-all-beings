@@ -323,16 +323,6 @@ class StorageOfTemp(Sqlite):
         """, (election_period, node_id, block_id, user_pk, votes, signature, STime.getTimestamp()))
         self.tempConn.commit()
 
-    # 返回该用户在该阶段已经使用的票数
-    def getVotesByUserPk(self, user_pk, election_period) -> float:
-        cursor = self.tempConn.cursor()
-        cursor.execute("""
-        select sum(votes) from votes
-        where user_pk = ? and election_period = ?
-        """, (user_pk, election_period))
-        res = cursor.fetchone()
-        return res[0]
-
     # 判断该投票是否已经存在
     def voteIsExit(self, vote_information: VoteInformation):
         cursor = self.tempConn.cursor()
@@ -360,7 +350,114 @@ class StorageOfTemp(Sqlite):
         else:
             return res[0] - res[1]
 
+    def setEpoch(self, current_epoch):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update core_info
+        set content = ?, update_time = ?
+        where info_name = ?
+        """, (current_epoch, STime.getTimestamp(), "current_epoch"))
+        self.tempConn.commit()
 
-if __name__ == "__main__":
-    s = StorageOfTemp()
-    s.getSimpleUserVoteByUserPk(user_pk="sdsf", election_period=1)
+    def setNodeInfo(self, node_info: NodeInfo):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select count(id) from core_info
+        where info_name = ?
+        """, ("node_info",))
+        res = cursor.fetchone()
+        if res[0] == 0:
+            create_time = STime.getTimestamp()
+            cursor.execute("""
+            insert into core_info(info_id, info_name, content, update_time, create_time)
+            values (?,?,?,?,?)
+            """, (2, "node_info", str(node_info.getMessage()).encode("utf-8"), create_time, create_time))
+            self.tempConn.commit()
+        else:
+            cursor.execute("""
+            update core_info
+            set content = ?, update_time = ?
+            where info_name = ?
+            """, (str(node_info.getMessage()).encode("utf-8"), STime.getTimestamp(), "node_info"))
+            self.tempConn.commit()
+
+    def getNodeInfo(self) -> NodeInfo:
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select content from core_info
+        where info_name = ?
+        """, ("node_info",))
+        res = cursor.fetchone()
+        node_info_dict = literal_eval(bytes(res[0]).decode("utf-8"))
+        node_info = NodeInfo(node_id=node_info_dict["node_id"], user_pk=node_info_dict["user_pk"],
+                             node_ip=node_info_dict["node_ip"], server_url=node_info_dict["server_url"],
+                             create_time=node_info_dict["create_time"])
+        node_info.setNodeSignature(node_info_dict["signature"])
+        return node_info
+
+    def addMainNodeVote(self, main_node_id, main_node_user_pk, total_vote):
+        create_time = STime.getTimestamp()
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into main_node_vote(main_node_id, main_node_user_pk, total_vote, used_vote, update_time, create_time)
+        values (?,?,?,?,?,?)
+        """, (main_node_id, main_node_user_pk, total_vote, 0, create_time, create_time))
+        self.tempConn.commit()
+
+    def getMainNodeVoteByMainNodeUserPk(self, main_node_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, main_node_id, main_node_user_pk, total_vote, used_vote, update_time, create_time
+        from main_node_vote
+        where main_node_user_pk = ?
+        """, (main_node_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            return {
+                "id": res[0],
+                "main_node_id": res[1],
+                "main_node_user_pk": res[2],
+                "total_vote": res[3],
+                "used_vote": res[4],
+                "update_time": res[5],
+                "create_time": res[6],
+            }
+        else:
+            return None
+
+    def addUsedVoteByNodeUserPk(self, vote: int, main_node_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select used_vote from main_node_vote
+        where main_node_user_pk = ?
+        """, (main_node_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            total_used_vote = res[0] + vote
+            cursor.execute("""
+            update main_node_vote
+            set used_vote = ?,update_time = ?
+            where main_node_user_pk = ?
+            """, (total_used_vote, STime.getTimestamp(), main_node_user_pk))
+            self.tempConn.commit()
+
+    def getListOfMainNodeVote(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select main_node_id, main_node_user_pk from main_node_vote
+        """)
+        res = cursor.fetchall()
+        data_list = []
+        for data in res:
+            data_list.append({
+                "node_id": data[0],
+                "node_user_Pk": data[1]
+            })
+        return data_list
+
+    def clearAllMainNodeVote(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        delete from main_node_vote
+        """)
+        self.tempConn.commit()

@@ -7,25 +7,40 @@
       <el-menu mode="horizontal" @select="handleSelect">
         <el-menu-item index="1">首页</el-menu-item>
         <el-sub-menu index="2">
-          <template #title>区块管理</template>
+          <template #title>众生区块管理</template>
           <el-menu-item index="2-1">众生区块审核</el-menu-item>
           <el-menu-item index="2-2">众生区块待生成队列</el-menu-item>
-          <el-menu-item index="2-3">时代区块推荐</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="3">
-          <template #title>节点管理</template>
-          <el-menu-item index="3-1">申请书列表(本节点)</el-menu-item>
-          <el-menu-item index="3-2">申请书列表(其他节点)</el-menu-item>
+          <template #title>时代区块管理</template>
+          <el-menu-item index="3-1">时代区块推荐</el-menu-item>
+          <el-menu-item index="3-2">时代区块推荐列表</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="4">网站配置</el-menu-item>
+        <el-sub-menu index="4">
+          <template #title>垃圾区块管理</template>
+        </el-sub-menu>
+        <el-sub-menu index="5">
+          <template #title>节点管理</template>
+          <el-menu-item index="5-1">申请书列表(本节点)</el-menu-item>
+          <el-menu-item index="5-2">申请书列表(其他节点)</el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="6">
+          <template #title>投票管理</template>
+          <el-menu-item index="6-1">普通用户票数信息</el-menu-item>
+          <el-menu-item index="6-2">申请书列表(其他节点)</el-menu-item>
+        </el-sub-menu>
+        <el-menu-item index="7">网站配置</el-menu-item>
       </el-menu>
     </div>
     <div class="main">
       <BeingsAudit v-if="menu==='2-1'"></BeingsAudit>
       <BeingsWaitingRelease v-if="menu==='2-2'"></BeingsWaitingRelease>
-      <MainNodeApplicationList v-if="menu==='3-1'"></MainNodeApplicationList>
-      <OtherNodeApplicationList v-if="menu==='3-2'"></OtherNodeApplicationList>
-      <WebConfig v-if="menu==='4'"></WebConfig>
+      <TimeBlockRecommend v-if="menu==='3-1'"></TimeBlockRecommend>
+      <TimesBlockList v-if="menu==='3-2'"></TimesBlockList>
+      <MainNodeApplicationList v-if="menu==='5-1'"></MainNodeApplicationList>
+      <OtherNodeApplicationList v-if="menu==='5-2'"></OtherNodeApplicationList>
+      <SimpleUserVote v-if="menu==='6-1'"></SimpleUserVote>
+      <WebConfig v-if="menu==='7'"></WebConfig>
     </div>
   </div>
 </template>
@@ -36,10 +51,18 @@ import BeingsWaitingRelease from "@/components/backstage/BeingsWaitingRelease";
 import MainNodeApplicationList from "@/components/backstage/MainNodeApplicationList";
 import OtherNodeApplicationList from "@/components/backstage/OtherNodeApplicationList";
 import WebConfig from "@/components/backstage/WebConfig";
+import TimeBlockRecommend from "@/components/backstage/TimeBlockRecommend";
+import TimesBlockList from "@/components/backstage/TimesBlockList";
+import SimpleUserVote from "@/components/backstage/SimpleUserVote";
 
 export default {
   name: "BackstageMain",
-  components: {WebConfig, OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease},
+  components: {
+    SimpleUserVote,
+    TimesBlockList,
+    WebConfig, OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease,
+    TimeBlockRecommend
+  },
   created() {
     this.verifyToken()
   },

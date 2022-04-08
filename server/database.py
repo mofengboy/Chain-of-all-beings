@@ -1,5 +1,6 @@
 import sqlite3
 import time
+from ast import literal_eval
 
 
 class DB:
@@ -43,7 +44,39 @@ class DB:
             application_signature TEXT NOT NULL,
             is_review INTEGER NOT NULL,
             remarks TEXT NOT NULL,
-            create_time INTEGER NOT NULL
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
+        # 推荐中的众生区块信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'times_block_queue'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table times_block_queue(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            beings_block_id INTEGER NOT NULL,
+            votes INTEGER NOT NULL,
+            vote_list BLOB NOT NULL,
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
+        # 存储授权给简单用户节点的票
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'simple_user_vote'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table simple_user_vote(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            user_pk TEXT NOT NULL,
+            total_vote FLOAT NOT NULL,
+            used_vote FLOAT NOT NULL,
+            update_time TEXT NOT NULL,
+            create_time TEXT NOT NULL 
             )
             """)
             self.__DB.commit()
@@ -63,7 +96,6 @@ class DB:
             """)
             self.__backstageDB.commit()
 
-        cursor = self.__backstageDB.cursor()
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'backstage_info'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
@@ -282,6 +314,208 @@ class DB:
         """, ("index_notice",))
         res = cursor.fetchone()
         return res
+
+    def insertTimesBlockQueue(self, election_period, beings_block_id, votes, vote_list):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select count(id) from times_block_queue
+        where beings_block_id = ? and election_period = ?
+        """, (beings_block_id, election_period))
+        res = cursor.fetchone()
+        if res[0] != 0:
+            return False
+        else:
+            cursor.execute("""
+            insert into times_block_queue(election_period, beings_block_id, votes, vote_list, status, create_time) 
+            values (?,?,?,?,?,?)
+            """, (election_period, beings_block_id, votes, str(vote_list).encode("utf-8"), 0, time.time()))
+            self.__DB.commit()
+            return True
+
+    def modifyStatusOfTimesBlockQueue(self, beings_block_id, status):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        update times_block_queue
+        set status = ?
+        where beings_block_id = ?
+        """, (status, beings_block_id))
+        self.__DB.commit()
+
+    def getListOfTimesBlockQueue(self, offset, count, election_period):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes from times_block_queue
+        where status = 0 and election_period = ?
+        order by id desc limit ?,?
+        """, (election_period, offset, count))
+        res = cursor.fetchall()
+        res_list = []
+        for data in res:
+            res_list.append({
+                "id": data[0],
+                "election_period": data[1],
+                "beings_block_id": data[2],
+                "votes": data[3]
+            })
+        return res_list
+
+    def getTimesBlockQueue(self, beings_block_id):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes, vote_list, status, create_time 
+        from times_block_queue
+        where beings_block_id = ?
+        """, (beings_block_id,))
+        res = cursor.fetchone()
+        if res is None:
+            return None
+        else:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "beings_block_id": res[2],
+                "votes": res[3],
+                "vote_list": literal_eval(bytes(res[4]).decode("utf-8")),
+                "status": res[5],
+                "create_time": res[6]
+            }
+            return data
+
+    # 获取备案号
+    def getRecordNumber(self):
+        cursor = self.__backstageDB.cursor()
+        cursor.execute("""
+        select id, info_name, content, modify_time, create_time from backstage_info
+        where info_name = ?
+        """, ("icp",))
+        res = cursor.fetchone()
+        if res is None:
+            current_time = time.time()
+            cursor.execute("""
+            insert into backstage_info(info_name, content, modify_time, create_time)
+            values (?,?,?,?)
+            """, ("icp", "", current_time, current_time))
+            self.__backstageDB.commit()
+            return {
+                "id": 0,
+                "info_name": "icp",
+                "content": "",
+                "modify_time": current_time,
+                "create_time": current_time,
+            }
+        else:
+            return {
+                "id": res[0],
+                "info_name": res[1],
+                "content": res[2],
+                "modify_time": res[3],
+                "create_time": res[4],
+            }
+
+    # 设置备案号
+    def setRecordNumber(self, record_number):
+        cursor = self.__backstageDB.cursor()
+        cursor.execute("""
+        update backstage_info 
+        set content = ?
+        where info_name = ?
+        """, (record_number, "icp"))
+        self.__backstageDB.commit()
+        cursor.execute("""
+        select id, info_name, content, modify_time, create_time from backstage_info
+        where info_name = ?
+        """, ("icp",))
+        res = cursor.fetchone()
+        return {
+            "id": res[0],
+            "info_name": res[1],
+            "content": res[2],
+            "modify_time": res[3],
+            "create_time": res[4],
+        }
+
+    def addSimpleUserVote(self, election_period, user_pk, total_vote):
+        cursor = self.__DB.cursor()
+        create_time = time.time()
+        cursor.execute("""
+        insert into simple_user_vote(election_period, user_pk, total_vote, used_vote, update_time,create_time)
+        values (?,?,?,?,?,?)
+        """, (election_period, user_pk, total_vote, 0, create_time, create_time))
+        self.__DB.commit()
+
+    def clearSimpleUserVote(self):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        delete from simple_user_vote
+        """)
+        self.__DB.commit()
+
+    def getListOfSimpleUserVote(self, offset, count):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select user_pk from simple_user_vote
+        where id >= ? and id < ?
+        """, (offset, count))
+        res = cursor.fetchall()
+        user_pk_list = []
+        for data in res:
+            user_pk_list.append(data[0])
+        return user_pk_list
+
+    def getSimpleUserVoteByUserPk(self, user_pk):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time from simple_user_vote
+        where user_pk = ?
+        """, (user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "user_pk": res[2],
+                "total_vote": res[3],
+                "used_vote": res[4],
+                "update_time": res[5],
+                "create_time": res[6],
+            }
+            return data
+        else:
+            return None
+
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select used_vote from simple_user_vote
+        where user_pk = ?
+        """, (user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            cursor.execute("""
+            update simple_user_vote 
+            set used_vote = ?
+            where user_pk = ?
+            """, (float(used_vote) + float(res[0]), user_pk))
+            self.__DB.commit()
+            return self.getSimpleUserVoteByUserPk(user_pk)
+        else:
+            return None
+
+    def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote) -> bool:
+        data = self.getSimpleUserVoteByUserPk(user_pk)
+        if data is None:
+            return False
+        used_vote = data["used_vote"]
+        if total_vote < used_vote:
+            return False
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        update simple_user_vote
+        set total_vote = ?
+        where user_pk = ?
+        """, (float(total_vote), user_pk))
+        self.__DB.commit()
+        return True
 
 
 if __name__ == "__main__":

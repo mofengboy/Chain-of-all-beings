@@ -11,6 +11,22 @@ export default {
     return {
       recordNumber: this.$userConfig.record_number
     }
+  },
+  created() {
+    this.getRecordNumber()
+  },
+  methods: {
+    getRecordNumber: function () {
+      const _this = this
+      this.axios({
+        method: 'get',
+        url: '/record_number/get',
+      }).then((res) => {
+        if (res.data["is_success"] === true) {
+        _this.recordNumber = res.data["data"]["content"]
+        }
+      })
+    }
   }
 }
 </script>

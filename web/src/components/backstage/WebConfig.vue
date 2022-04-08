@@ -1,21 +1,49 @@
 <template>
   <div>
-    <div class="info-item">首页公告</div>
-    <el-tag style="margin: 0 0 5px 0">上次更新时间：{{ indexNoticeTime }}</el-tag>
-    <el-input
-        v-model="indexNoticeContent"
-        :autosize="{ minRows: 2}"
-        type="textarea"
-        placeholder="Please input"
-    />
-    <el-collapse style="width: 100%" v-model="collapse_item">
-      <el-collapse-item title="预览效果(markdown格式)" name="1">
+    <el-row>
+      <el-col :span="4">
         <div>
-          <Markdown class="markdown" :source="indexNoticeContent"></Markdown>
+          <el-menu @select="handleSelect">
+            <el-menu-item index="1">
+              首页公告
+            </el-menu-item>
+            <el-menu-item index="2">
+              后台管理密码
+            </el-menu-item>
+            <el-menu-item index="3">
+              备案号
+            </el-menu-item>
+          </el-menu>
         </div>
-      </el-collapse-item>
-    </el-collapse>
-    <el-button class="button-submit" v-on:click="modifyIndexNotice" type="primary">提交修改</el-button>
+      </el-col>
+      <el-col :span="1"></el-col>
+      <el-col :span="19">
+        <div v-if="subMenu==='1'">
+          <div class="info-item">首页公告</div>
+          <el-tag style="margin: 0 0 5px 0">上次更新时间：{{ indexNoticeTime }}</el-tag>
+          <el-input
+              v-model="indexNoticeContent"
+              :autosize="{ minRows: 2}"
+              type="textarea"
+              placeholder="Please input"
+          />
+          <el-collapse style="width: 100%" v-model="collapse_item">
+            <el-collapse-item title="预览效果(markdown格式)" name="1">
+              <div>
+                <Markdown class="markdown" :source="indexNoticeContent"></Markdown>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+          <el-button class="button-submit" v-on:click="modifyIndexNotice" type="primary">提交修改</el-button>
+        </div>
+        <div v-if="subMenu==='3'">
+          <div class="info-item">设置备案号</div>
+          <div class="info-item">当前备案号：{{ recordNumber }}</div>
+          <el-input v-model="recordNumberInput"/>
+          <el-button class="button-submit" v-on:click="setRecordNumber" type="primary">提交修改</el-button>
+        </div>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -33,13 +61,22 @@ export default {
       indexNoticeContent: "",
       indexNoticeTime: "",
       collapse_item: "1",
-      token: this.getToken()
+      token: this.getToken(),
+      subMenu: "1",
+      recordNumber: "",
+      recordNumberInput: ""
     }
   },
   created() {
     this.getIndexNotice()
   },
   methods: {
+    handleSelect: function (index) {
+      this.subMenu = index
+      if (index === '3') {
+        this.getRecordNumber()
+      }
+    },
     getToken: function () {
       return localStorage.getItem('token');
     },
@@ -91,6 +128,39 @@ export default {
         }
       })
     },
+    getRecordNumber: function () {
+      const _this = this
+      this.axios({
+        method: 'get',
+        url: '/record_number/get',
+      }).then((res) => {
+        if (res.data["is_success"] === true) {
+          _this.recordNumber = res.data["data"]["content"]
+        }
+      })
+    },
+    setRecordNumber: function () {
+      const _this = this
+      _this.axios({
+        method: 'post',
+        url: '/backstage/record_number/set',
+        data: JSON.stringify({
+          "token": _this.token,
+          "record_number": _this.recordNumberInput
+        }),
+        headers: {"content-type": "	application/json"}
+      }).then((res) => {
+        if (res.data["is_success"] === true) {
+          _this.recordNumber = res.data["data"]["content"]
+        } else {
+          ElNotification({
+            title: '修改失败',
+            message: res.data["data"],
+            type: 'error',
+          })
+        }
+      })
+    }
   }
 }
 </script>

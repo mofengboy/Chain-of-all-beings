@@ -1,10 +1,26 @@
 import sqlite3
 from ast import literal_eval
+from core.config.cycle_Info import ElectionPeriodValue
+from core.data.node_info import NodeInfo
 
 
 class DBOfTemp:
     def __init__(self):
         self.tempConn = sqlite3.connect('../core/db/temp.db', check_same_thread=False)
+
+    def getNodeInfo(self) -> NodeInfo:
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select content from core_info
+        where info_name = ?
+        """, ("node_info",))
+        res = cursor.fetchone()
+        node_info_dict = literal_eval(bytes(res[0]).decode("utf-8"))
+        node_info = NodeInfo(node_id=node_info_dict["node_id"], user_pk=node_info_dict["user_pk"],
+                             node_ip=node_info_dict["node_ip"], server_url=node_info_dict["server_url"],
+                             create_time=node_info_dict["create_time"])
+        node_info.setNodeSignature(node_info_dict["signature"])
+        return node_info
 
     # 查询接受到的待审核的新节点数量
     def getCountOfNodeApply(self):
@@ -53,6 +69,22 @@ class DBOfTemp:
         where id = ?
         """, (is_audit, db_id))
         self.tempConn.commit()
+
+    def getEpoch(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select content from core_info
+        where info_name = ?
+        """, ("current_epoch",))
+        res = cursor.fetchone()
+        if res is None:
+            return 0
+        else:
+            return int(res[0])
+
+    @staticmethod
+    def getElectionPeriodValue():
+        return ElectionPeriodValue
 
 
 class DBOfBlock:
@@ -135,3 +167,63 @@ class DBOfBlock:
             "timestamp": header["timestamp"]
         }
         return beings_dict
+
+    def getListOfSimpleUser(self, main_node_user_pk, start_epoch, end_epoch):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select user_pk from beings
+        where user_pk like ? and epoch >= ? and epoch < ?
+        """, ("%" + main_node_user_pk + "%", start_epoch, end_epoch))
+        res = cursor.fetchall()
+        list_of_simple_user = {}
+        for data_i in res:
+            data = literal_eval(bytes(data_i[0]).decode("utf-8"))
+            if data[0] in list_of_simple_user.keys():
+                list_of_simple_user[data[0]] += 1
+            else:
+                list_of_simple_user[data[0]] = 1
+        return list_of_simple_user
+
+
+class VoteOfMainNode:
+    def __init__(self):
+        self.tempConn = sqlite3.connect('../core/db/temp.db', check_same_thread=False)
+
+    @staticmethod
+    def getElectionPeriodValue():
+        return ElectionPeriodValue
+
+    def getListOfMainNodeVote(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select main_node_id, main_node_user_pk from main_node_vote
+        """)
+        res = cursor.fetchall()
+        data_list = []
+        for data in res:
+            data_list.append({
+                "node_id": data[0],
+                "node_user_pk": data[1]
+            })
+        return data_list
+
+    def getMainNodeVoteByMainNodeUserPk(self, main_node_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, main_node_id, main_node_user_pk, total_vote, used_vote, update_time, create_time
+        from main_node_vote
+        where main_node_user_pk = ?
+        """, (main_node_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            return {
+                "id": res[0],
+                "main_node_id": res[1],
+                "main_node_user_pk": res[2],
+                "total_vote": res[3],
+                "used_vote": res[4],
+                "update_time": res[5],
+                "create_time": res[6],
+            }
+        else:
+            return None

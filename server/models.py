@@ -2,7 +2,7 @@ import time
 
 from server.utils.captcha import Captcha
 from server.utils.ciphersuites import CipherSuites
-from server.utils.core_sdk import DBOfTemp, DBOfBlock
+from server.utils.core_sdk import DBOfTemp, DBOfBlock, VoteOfMainNode
 from server.database import DB
 import hashlib
 
@@ -70,11 +70,21 @@ class BackStageInfo:
     def __init__(self, db: DB):
         self.backstageDB = db
 
+    # 获取首页通知
     def getIndexNotice(self):
         return self.backstageDB.getIndexNotice()
 
+    # 修改首页通知
     def modifyIndexNotice(self, content):
         return self.backstageDB.modifyIndexNotice(content)
+
+    # 获取备案号
+    def getRecordNumber(self):
+        return self.backstageDB.getRecordNumber()
+
+    # 设置备案号
+    def setRecordNumber(self, record_number):
+        return self.backstageDB.setRecordNumber(record_number)
 
 
 # 众生区块（待发布）
@@ -113,6 +123,30 @@ class BlockOfBeings:
 
     def reviewBlock(self, db_id, is_review):
         self.db.reviewBlockOfBeingsDBId(db_id=db_id, is_review=is_review)
+
+
+# 时代区块（待发布）
+class BlockOfTimes:
+    def __init__(self, db: DB):
+        self.db = db
+        self.DBOfTemp = DBOfTemp()
+
+    # 推荐众生区块
+    def addTimesBlockQueue(self, beings_block_id):
+        election_period = self.DBOfTemp.getElectionPeriod()
+        return self.db.insertTimesBlockQueue(election_period, beings_block_id, 0, [])
+
+    # 撤销推荐众生区块
+    def revocationTimesBlockQueueByBlockId(self, beings_block_id):
+        self.db.modifyStatusOfTimesBlockQueue(beings_block_id, 2)
+
+    def getListOfTimesBlockQueue(self, offset, count, election_period):
+        data = self.db.getListOfTimesBlockQueue(offset, count, election_period)
+        return data
+
+    def getTimesBlockQueue(self, beings_block_id):
+        data = self.db.getTimesBlockQueue(beings_block_id)
+        return data
 
 
 # 众生链（已经发布的区块）
@@ -190,3 +224,76 @@ class MainNodeManager:
     # 审核从其他主节点接受到的等待审核的申请表
     def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
         self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)
+
+    def getEpochAndElectionPeriod(self):
+        epoch = self.DBOfTemp.getEpoch()
+        electionPeriodValue = self.DBOfTemp.getElectionPeriodValue()
+        return {
+            "epoch": epoch,
+            "election_period_value": electionPeriodValue
+        }
+
+
+class Vote:
+    def __init__(self, db: DB):
+        self.voteOfMainNode = VoteOfMainNode()
+        self.dbOfBlock = DBOfBlock()
+        self.dbOfTemp = DBOfTemp()
+        self.db = db
+
+    # 获取所有主节点的投票信息列表
+    def getListOfMainNodeVote(self):
+        return self.voteOfMainNode.getListOfMainNodeVote()
+
+    # 获取主节点的投票信息
+    def getMainNodeVoteByMainNodeUserPk(self, main_node_user_pk):
+        return self.voteOfMainNode.getMainNodeVoteByMainNodeUserPk(main_node_user_pk=main_node_user_pk)
+
+    # 初始化普通用户的票数信息
+    def initSimpleUserVote(self):
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        start_election_period = current_election_period - 8
+        main_node_user_pk = self.dbOfTemp.getNodeInfo().userPk
+        list_of_all_simple_user = {}
+        for i in range(start_election_period, current_election_period):
+            list_of_simple_user = self.dbOfBlock.getListOfSimpleUser(main_node_user_pk=main_node_user_pk,
+                                                                     start_epoch=i * election_period_value,
+                                                                     end_epoch=(i + 1) * election_period_value)
+            for simple_user_pk in list_of_simple_user.keys():
+                if simple_user_pk in list_of_all_simple_user.keys():
+                    list_of_all_simple_user[simple_user_pk] += list_of_simple_user[simple_user_pk]
+                else:
+                    list_of_all_simple_user[simple_user_pk] = list_of_simple_user[simple_user_pk]
+        # 清除数据
+        self.db.clearSimpleUserVote()
+        # 增加数据
+        for user_pk in list_of_all_simple_user.keys():
+            self.db.addSimpleUserVote(election_period=current_election_period, user_pk=user_pk,
+                                      total_vote=float(list_of_all_simple_user[user_pk]))
+
+    # 获取普通用户的票数信息列表 公钥列表
+    def getListOfSimpleUserVote(self, offset, count):
+        return self.db.getListOfSimpleUserVote(offset, count)
+
+    # 获取普通用户的票数信息
+    def getSimpleUserVoteByUserPk(self, user_pk):
+        return self.db.getSimpleUserVoteByUserPk(user_pk)
+
+    # 增加已使用的票数
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+        return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
+
+    # 修改普通用户的总票数
+    # 修改后的总票数不能低于已经使用的票数
+    # 修改后的总票数不能高于当前主节点剩余的票数
+    def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote):
+        main_node_user_pk = self.dbOfTemp.getNodeInfo().userPk
+        res_data = self.getMainNodeVoteByMainNodeUserPk(main_node_user_pk)
+        if res_data is None:
+            return False
+        main_node_total_vote = res_data["total_vote"]
+        main_node_used_vote = res_data["used_vote"]
+        if total_vote > (main_node_total_vote - main_node_used_vote):
+            return False
+        return self.db.modifyTotalVoteOfSimpleUser(user_pk, total_vote)

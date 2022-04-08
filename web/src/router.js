@@ -8,6 +8,8 @@ import ReleaseBlock from "@/components/front_end/ReleaseBlock";
 import NotFound from "@/components/NotFound";
 import FrontHome from "@/components/front_end/FrontHome";
 import BlockDetail from "@/components/front_end/BlockDetail";
+import TimesBlockRecommendation from "@/components/front_end/TimesBlockRecommendation";
+import VotingInformation from "@/components/front_end/VotingInformation";
 
 const routes = [
     //首页
@@ -36,11 +38,23 @@ const routes = [
                     },
                 ]
             },
-            //众生区块发布
+            //记录生命
             {
                 path: "/release/beings",
                 name: "ReleaseBlock",
                 component: ReleaseBlock
+            },
+            //投票信息
+            {
+                path: "/vote/info",
+                name: "VotingInformation",
+                component: VotingInformation
+            },
+            //众生区块推荐列表
+            {
+                path: "/beings/recommendation/list",
+                name: "TimesBlockRecommendation",
+                component: TimesBlockRecommendation
             },
             //主节点申请
             {

@@ -4,7 +4,7 @@
       <GlobalHeader></GlobalHeader>
     </div>
     <div class="top-menu">
-      <el-menu mode="horizontal" @select="handleSelect" default-active="1">
+      <el-menu mode="horizontal" @select="handleSelect">
         <el-menu-item index="1">介绍</el-menu-item>
         <el-sub-menu index="2">
           <template #title>众生之链查询</template>
@@ -12,9 +12,15 @@
           <el-menu-item index="2-2">时代链</el-menu-item>
           <el-menu-item index="2-3">垃圾标识链</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="3">众生区块发布</el-menu-item>
-        <el-menu-item index="4">主节点申请</el-menu-item>
-        <el-menu-item index="5">开源仓库</el-menu-item>
+        <el-menu-item index="3">记录生命</el-menu-item>
+        <el-sub-menu index="4">
+          <template #title>投票</template>
+          <el-menu-item index="4-1">投票信息</el-menu-item>
+          <el-menu-item index="4-2">区块推荐</el-menu-item>
+          <el-menu-item index="4-3">区块标记</el-menu-item>
+        </el-sub-menu>
+        <el-menu-item index="5">主节点申请</el-menu-item>
+        <el-menu-item index="6">源代码</el-menu-item>
       </el-menu>
     </div>
     <div class="main">
@@ -64,10 +70,16 @@ export default {
         case '3':
           this.$router.push("/release/beings")
           break
-        case '4':
-          this.$router.push("/main_node_apply")
+        case '4-1':
+          this.$router.push("/vote/info")
+          break
+        case '4-2':
+          this.$router.push("/beings/recommendation/list")
           break
         case '5':
+          this.$router.push("/main_node_apply")
+          break
+        case '6':
           window.location.href = "https://github.com/mofengboy/Chain-of-all-beings"
           break
       }
