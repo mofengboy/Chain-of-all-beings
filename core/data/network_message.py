@@ -1,5 +1,4 @@
 import hashlib
-from enum import Enum, auto
 
 from core.utils.system_time import STime
 
@@ -11,9 +10,9 @@ class SubscribeTopics:
     def getBlockTopicOfBeings():
         return b"block b "
 
-    # 银河区块生成订阅主题
+    # 时代区块生成订阅主题
     @staticmethod
-    def getBlockTopicOfGalaxy():
+    def getBlockTopicOfTimes():
         return b"block g "
 
     # 新节点申请加入订阅主题
@@ -41,10 +40,10 @@ class SubscribeTopics:
     def getNodeTopicOfDelete():
         return b"node delete "
 
-    # 投票确认广播主题
+    # 投票消息广播主题
     @staticmethod
-    def getVoteConfirmation():
-        return b"vote confirmation "
+    def getVoteMessage():
+        return b"vote message "
 
 
 # 消息类型

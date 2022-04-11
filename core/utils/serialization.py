@@ -3,9 +3,9 @@ from ast import literal_eval
 import base64
 
 from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
-from core.consensus.block_generate import NewBlockOfBeingsByExist
-from core.consensus.data import ApplicationForm, ReplyApplicationForm
-
+from core.data.block_of_times import BlockOfTimes
+from core.consensus.block_generate import NewBlockOfBeingsByExist, NewBlockOfTimesByExist
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage
 from core.data.network_message import NetworkMessage
 from core.data.node_info import NodeInfo
 
@@ -33,6 +33,26 @@ class SerializationBeings:
         body = dict_of_beings["body"]
         block_of_beings = NewBlockOfBeingsByExist(header=header, body=body).getBlock()
         return block_of_beings
+
+
+# 时代区块对象序列化与反序列化
+class SerializationTimes:
+    # 序列化
+    @staticmethod
+    def serialization(block_of_times: BlockOfTimes):
+        block_header = block_of_times.getBlockHeader()
+        body = block_of_times.body
+        return {
+            "header": block_header,
+            "body": body
+        }
+
+    # 反序列化
+    @staticmethod
+    def deserialization(block_of_times_bytes: bytes) -> BlockOfTimes:
+        dict_of_times = literal_eval(bytes(block_of_times_bytes).decode("utf-8"))
+        block_of_times = NewBlockOfTimesByExist(header=dict_of_times["header"], body=dict_of_times["body"]).getBlock()
+        return block_of_times
 
 
 # 申请书对象序列化与反序列化
@@ -125,7 +145,7 @@ class SerializationNetworkMessage:
         return network_message
 
 
-# 序列化区块
+# 序列化区块列表
 class SerializationAssetOfBeings:
     @staticmethod
     def serialization(blockListOfBeings: BlockListOfBeings):
@@ -158,3 +178,30 @@ class SerializationAssetOfBeings:
             body = block_dict["body"]
             block_list_of_beings.addBlock(NewBlockOfBeingsByExist(header, body).getBlock())
         return block_list_of_beings
+
+
+# 序列化投票消息
+class SerializationVoteMessage:
+    @staticmethod
+    def serialization(vote_message: VoteMessage):
+        data = {
+            "to_main_node_user_pk": vote_message.toMainNodeUserPk,
+            "block_id": vote_message.blockId,
+            "election_period": vote_message.electionPeriod,
+            "number_of_vote": vote_message.numberOfVote,
+            "main_user_pk": vote_message.mainUserPk,
+            "signature": vote_message.signature
+        }
+        return data
+
+    @staticmethod
+    def deserialization(vote_message_bytes: bytes) -> VoteMessage:
+        vote_message_dict = literal_eval(bytes(vote_message_bytes).decode("utf-8"))
+        vote_message = VoteMessage()
+        vote_message.setVoteInfo(to_main_node_user_pk=vote_message_dict["to_main_node_user_pk"],
+                                 block_id=vote_message_dict["block_id"],
+                                 election_period=vote_message_dict["election_period"],
+                                 number_of_vote=vote_message_dict["number_of_vote"],
+                                 main_user_pk=vote_message_dict["main_user_pk"])
+        vote_message.setSignature(vote_message_dict["signature"])
+        return vote_message

@@ -1,3 +1,4 @@
+import hashlib
 import random
 import logging.config
 import threading
@@ -5,7 +6,7 @@ import time
 from ast import literal_eval
 
 from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
-from core.data.block_of_galaxy import BodyOfGalaxyBlock, BlockOfGalaxy
+from core.data.block_of_times import BodyOfTimesBlock
 from core.data.node_info import NodeInfo
 from core.data.network_message import NetworkMessageType, NetworkMessage, SubscribeTopics
 from core.data.genesis_block import GenesisBlock
@@ -13,9 +14,9 @@ from core.user.user import User
 from core.node.main_node import MainNode
 from core.network.net import PUB, SUB, Server, Client
 from core.consensus.node_management import NodeManager
-from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfGalaxy
+from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfTimes
 from core.consensus.vote_compute import VoteCount
-from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock, VoteMessage
 from core.consensus.data import NodeDelApplicationForm
 from core.consensus.block_verify import BlockVerify
 from core.storage.storage_of_beings import StorageOfBeings
@@ -24,7 +25,7 @@ from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
 from core.utils.server_sdk import SDK, ChainAsset
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
-    SerializationReplyApplicationForm, SerializationNetworkMessage
+    SerializationReplyApplicationForm, SerializationNetworkMessage, SerializationVoteMessage, SerializationTimes
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
 from core.utils.download import RemoteChainAsset
@@ -43,7 +44,7 @@ class APP:
 
         self.user = User()  # 用户
         self.user.login(sk_string, pk_string)
-        self.mainNode = MainNode(self.user, server_url,self.storageOfTemp)  # 主节点
+        self.mainNode = MainNode(self.user, server_url, self.storageOfTemp)  # 主节点
         self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
                                        storage_of_temp=self.storageOfTemp)  # 节点管理
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
@@ -51,18 +52,14 @@ class APP:
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp,
                                    main_node=self.mainNode)  # 票数计算
         self.blockVerify = BlockVerify(storage_of_beings=self.storageOfBeings)
-
         self.pub = PUB()  # 发布者
         self.pub.start()
         self.subList = []  # 订阅列表
         self.client = Client(main_node_list=self.mainNode.mainNodeList)  # 客户端
-        self.server = Server(user=self.user, node_manager=self.nodeManager,
-                             pub=self.pub, main_node=self.mainNode,
-                             storage_of_temp=self.storageOfTemp, wait_galaxy_block=self.waitGalaxyBlock,
-                             vote_count=self.voteCount, getEpoch=self.getEpoch, storage_of_galaxy=self.storageOfGalaxy,
-                             getElectionPeriod=self.getElectionPeriod, newBlockOfGalaxy=self.newBlockOfGalaxy,
-                             current_main_node=self.mainNode.currentMainNode,
-                             storage_of_beings=self.storageOfBeings)  # 服务端
+        self.server = Server(user=self.user, node_manager=self.nodeManager, pub=self.pub, main_node=self.mainNode,
+                             storage_of_temp=self.storageOfTemp, vote_count=self.voteCount, getEpoch=self.getEpoch,
+                             getElectionPeriod=self.getElectionPeriod,
+                             current_main_node=self.mainNode.currentMainNode)  # 服务端
         self.server.start()
         # 后端sdk
         self.webServerSDK = SDK()
@@ -118,6 +115,10 @@ class APP:
                     # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
                     logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
                     self_out.checkNewNodeJoin()
+                    # 检测是否有待广播的投票消息
+                    self_out.broadcastVotingInfo()
+                    # 检测是否有待生成的众生区块
+                    self_out.checkAndGenerateBlockOfTimes()
                     logger.info("周期事件处理完成")
 
         periodic_events = PeriodicEvents()
@@ -126,10 +127,11 @@ class APP:
     # 增加订阅
     def addSub(self, ip):
         sub = SUB(ip=ip, pub=self.pub, blockListOfBeings=self.mainNode.currentBlockList,
+                  web_server_sdk=self.webServerSDK,
                   user=self.user, vote_count=self.voteCount, node_manager=self.nodeManager,
                   main_node=self.mainNode, reSubscribe=self.reSubscribe, storage_of_temp=self.storageOfTemp,
                   getEpoch=self.getEpoch, getElectionPeriod=self.getElectionPeriod,
-                  storage_of_galaxy=self.storageOfGalaxy,
+                  storage_of_galaxy=self.storageOfGalaxy, storage_of_beings=self.storageOfBeings,
                   node_del_application_form_list=self.mainNode.nodeDelApplicationFormList, client=self.client)
         sub.start()
         self.subList.append(sub)
@@ -580,24 +582,84 @@ class APP:
         init_vote_of_main_node = InitVoteOfMainNode()
         init_vote_of_main_node.start()
 
-    # 生成时代区块
-    def newBlockOfGalaxy(self, block_id) -> BlockOfGalaxy:
-        # 获取生成该众生区块的用户公钥列表（简单节点用户公钥和主节点用户公钥）
-        users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=block_id)
-        body = BodyOfGalaxyBlock(users_pk=users_pk, block_id=block_id)
-        signature = self.user.sign(message=str(body.getBody()).encode("utf-8"))
-        current_election_period = self.getElectionPeriod()
-        [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
-            election_period=current_election_period)
-        while pre_block is None:
-            # 此时表明上一选举时期没有银河区块产生，继续向前寻找
-            current_election_period -= 1
+    # 广播投票消息
+    def broadcastVotingInfo(self):
+        logger.info("开始广播投票消息")
+        wait_vote_list = self.storageOfTemp.getVoteMessage(status=0)
+        for wait_vote in wait_vote_list:
+            logger.debug("待广播投票消息")
+            logger.debug(wait_vote.getMessage())
+            # 验证投票信息签名
+            if not CipherSuites.verify(pk=wait_vote.simpleUserPk, signature=wait_vote.getSignature(),
+                                       message=str(wait_vote.getInfo()).encode("utf-8")):
+                logger.warning("签名验证失败,投票信息为:")
+                logger.warning(wait_vote.getInfo())
+                # 将待广播投票信息状态设为2
+                self.storageOfTemp.modifyStatusOfWaitVote(status=2, wait_vote=wait_vote)
+                continue
+            # 封装投票消息,将普通用户公钥转为主节点用户公钥
+            vote_message = VoteMessage()
+            vote_message.setVoteInfo(to_main_node_user_pk=wait_vote.toNodeUserPk, block_id=wait_vote.blockId,
+                                     election_period=wait_vote.electionPeriod, number_of_vote=wait_vote.vote,
+                                     main_user_pk=self.user.getUserPKString())
+            main_node_signature = self.user.sign(str(vote_message.getVoteInfo()).encode("utf-8"))
+            vote_message.setSignature(main_node_signature)
+            # 增加普通用户和主节点用户已使用的票数
+            self.webServerSDK.addUsedVoteOfSimpleUser(user_pk=wait_vote.simpleUserPk, used_vote=wait_vote.vote)
+            self.storageOfTemp.addUsedVoteByNodeUserPk(vote=wait_vote.vote,
+                                                       main_node_user_pk=self.user.getUserPKString())
+            # 暂存投票消息摘要
+            self.storageOfTemp.addVoteDigest(election_period=vote_message.electionPeriod, block_id=vote_message.blockId,
+                                             vote_message_digest=hashlib.md5(
+                                                 str(vote_message.getVoteMessage()).encode("utf-8")).hexdigest())
+            # 修改读取到的投票信息状态
+            self.storageOfTemp.modifyStatusOfWaitVote(status=1, wait_vote=wait_vote)
+            # 广播
+            self.pub.sendMessage(topic=SubscribeTopics.getVoteMessage(),
+                                 message=SerializationVoteMessage.serialization(vote_message=vote_message))
+            logger.debug("广播完成")
+
+    # 检测并且生成时代区块
+    def checkAndGenerateBlockOfTimes(self):
+        # 检测是否有投票数量达到要求的时代区块推荐列表
+        vote_of_times_block = self.voteCount.getVotesOfTimesBlockGenerate()
+        res = self.webServerSDK.getTimesBlockQueueByVotes(votes=vote_of_times_block)
+        # 再次验证投票
+        beings_block_id = res["beings_block_id"]
+        serial_vote_list = res["vote_list"]
+        vote_message_list = []
+        for vote_i in serial_vote_list:
+            vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+        if self.voteCount.checkVotesOfGenerateTimesBlock(beings_block_id=beings_block_id,
+                                                         vote_message_list=vote_message_list):
+            logger.info("生在生成时代区块,原众生区块ID为:" + beings_block_id)
+            # 修改状态
+            self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=2)
+            beings_users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=beings_block_id)
+            body_of_times_block = BodyOfTimesBlock(users_pk=beings_users_pk, block_id=beings_block_id)
+            body_signature = self.user.sign(str(body_of_times_block.getBody()).encode("utf-8"))
+            current_election_period = self.getElectionPeriod() - 1
             [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
                 election_period=current_election_period)
-
-        new_block_of_galaxy = NewBlockOfGalaxy(user_pk=[self.user.getUserPKString()],
-                                               election_period=self.getElectionPeriod(), body_signature=[signature],
-                                               body=body.getBody(), epoch=self.getEpoch(),
-                                               pre_block=pre_block,
-                                               prev_block_header=prev_block_header).getBlock()
-        return new_block_of_galaxy
+            while pre_block is None:
+                # 此时表明上一选举时期没有时代区块产生，继续向前寻找
+                logger.info("current_election_period:" + str(current_election_period) + "没有时代区块产生，继续向前寻找")
+                current_election_period -= 1
+                [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
+                    election_period=current_election_period)
+            new_block_of_times = NewBlockOfTimes(user_pk=[self.user.getUserPKString()],
+                                                 election_period=self.getElectionPeriod(),
+                                                 body_signature=body_signature, body=body_of_times_block,
+                                                 pre_block=pre_block, prev_block_header=prev_block_header).getBlock()
+            # 保存时代区块
+            logger.info("保存时代区块,时代区块ID:" + new_block_of_times.getBlockID())
+            self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=new_block_of_times)
+            # 广播生成时代区块的投票信息和生成的时代区块
+            logger.info("广播生成时代区块的投票信息和生成的时代区块")
+            serial_block_of_times = SerializationTimes.serialization(new_block_of_times)
+            self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfTimes(),
+                                 message=[serial_vote_list, serial_block_of_times])
+        else:
+            # 修改状态
+            self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=4)
+            logger.warning("再次验证投票发现投票数量未达到生成时代区块标准")

@@ -56,8 +56,8 @@ class DB:
             create table times_block_queue(
             id INTEGER PRIMARY KEY,
             election_period INTEGER NOT NULL,
-            beings_block_id INTEGER NOT NULL,
-            votes INTEGER NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            votes FLOAT NOT NULL,
             vote_list BLOB NOT NULL,
             status INTEGER NOT NULL,
             create_time TEXT NOT NULL
@@ -91,7 +91,7 @@ class DB:
             username TEXT NOT NULL,
             password TEXT NOT NULL,
             is_delete INTEGER NOT NULL,
-            create_time INTEGER NOT NULL
+            create_time TEXT NOT NULL
             )
             """)
             self.__backstageDB.commit()
@@ -103,8 +103,8 @@ class DB:
             id INTEGER PRIMARY KEY,
             info_name TEXT NOT NULL,
             content TEXT NOT NULL,
-            modify_time INTEGER NOT NULL,
-            create_time INTEGER NOT NULL
+            modify_time TEXT NOT NULL,
+            create_time TEXT NOT NULL
             )
             """)
             self.__backstageDB.commit()

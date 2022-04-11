@@ -3,7 +3,7 @@ import random
 
 from core.data.node_info import MainNodeList, NodeInfo
 from core.data.block_of_beings import BlockOfBeings
-from core.data.block_of_galaxy import BlockOfGalaxy, BodyOfGalaxyBlock
+from core.data.block_of_times import BlockOfTimes, BodyOfTimesBlock
 from core.utils.ciphersuites import CipherSuites
 
 logger = logging.getLogger("main")
@@ -94,16 +94,29 @@ class NewBlockOfBeingsByExist:
         return self.newBlock
 
 
-# 生产银河区块
-class NewBlockOfGalaxy:
-    def __init__(self, user_pk, election_period, body_signature, body: BodyOfGalaxyBlock, epoch, pre_block,
-                 prev_block_header):
+# 生产时代区块
+class NewBlockOfTimes:
+    def __init__(self, user_pk, election_period, body_signature, body: BodyOfTimesBlock, pre_block, prev_block_header):
         if not CipherSuites.verify(pk=user_pk[0], signature=body_signature[0], message=body.getBody()):
             # 用户公钥、签名、内容不匹配 抛出错误
-            pass
-        self.newBlock = BlockOfGalaxy(election_period=election_period, epoch=epoch, prev_block_header=prev_block_header,
-                                      pre_block=pre_block, user_pk=user_pk, body_signature=body_signature,
-                                      body=body.getBody())
+            raise "签名验证失败"
+        self.newBlock = BlockOfTimes(election_period=election_period, prev_block_header=prev_block_header,
+                                     pre_block=pre_block, user_pk=user_pk, body_signature=body_signature,
+                                     body=str(body.getBody()).encode("utf-8"))
 
-    def getBlock(self) -> BlockOfGalaxy:
+    def getBlock(self) -> BlockOfTimes:
+        return self.newBlock
+
+
+# 生产时代区块
+class NewBlockOfTimesByExist:
+    def __init__(self, header, body: bytes):
+        for i in range(len(header["userPK"])):
+            if not CipherSuites.verify(pk=header["userPK"][i], signature=header["bodySignature"][i], message=body):
+                # 用户公钥、签名、内容不匹配 抛出错误
+                raise "签名验证失败"
+        self.newBlock = BlockOfTimes(body=body)
+        self.newBlock.setHeader(header)
+
+    def getBlock(self) -> BlockOfTimes:
         return self.newBlock

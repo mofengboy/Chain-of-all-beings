@@ -1,37 +1,50 @@
+from core.data.node_info import NodeInfo
+from core.data.block_of_times import BlockOfTimes
+
+
 # 共识模块的数据结构
 # 投票信息
-from core.data.node_info import NodeInfo
-from core.data.block_of_galaxy import BlockOfGalaxy
 
 
 # 投票信息
-class VoteInformation:
-    def __init__(self, main_node_id, block_id, election_period, number_of_vote, user_pk):
-        self.mainNodeId = main_node_id
-        self.blockId = block_id,
-        self.electionPeriod = election_period
-        self.numberOfVote = number_of_vote
-        self.userPK = user_pk
+class VoteMessage:
+    def __init__(self):
+        self.toMainNodeUserPk = ""
+        self.blockId = ""
+        self.electionPeriod = 0
+        self.numberOfVote = 0.0
+        self.mainUserPk = ""
         self.signature = ""
 
     def setSignature(self, signature):
         self.signature = signature
 
+    def getSignature(self):
+        return self.signature
+
+    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, main_user_pk):
+        self.toMainNodeUserPk = to_main_node_user_pk
+        self.blockId = block_id
+        self.electionPeriod = election_period
+        self.numberOfVote = number_of_vote
+        self.mainUserPk = main_user_pk
+
     def getVoteInfo(self):
         return {
-            "main_node_id": self.mainNodeId,  # 推荐和负责维护投票信息的主节点
+            "to_main_node_user_pk": self.toMainNodeUserPk,
             "block_id": self.blockId,
-            "current_election_period": self.electionPeriod,
-            "number_of_vote": self.numberOfVote
+            "election_period": self.electionPeriod,
+            "number_of_vote": self.numberOfVote,
+            "main_user_pk": self.mainUserPk
         }
 
-    def getMessage(self):
+    def getVoteMessage(self):
         return {
-            "main_node_id": self.mainNodeId,  # 推荐和负责维护投票信息的主节点
+            "to_main_node_user_pk": self.toMainNodeUserPk,
             "block_id": self.blockId,
-            "current_election_period": self.electionPeriod,
+            "election_period": self.electionPeriod,
             "number_of_vote": self.numberOfVote,
-            "user_pk": self.userPK,
+            "main_user_pk": self.mainUserPk,
             "signature": self.signature
         }
 
@@ -59,16 +72,16 @@ class WaitGalaxyBlock:
         }
         self.blockList.append(block)
 
-    def addVote(self, vote_info: VoteInformation) -> bool:
+    def addVote(self, vote_message: VoteMessage) -> bool:
         for block in self.blockList:
-            if block["block_id"] == vote_info.blockId:
+            if block["block_id"] == vote_message.blockId:
                 vote = {
-                    "vote_info": vote_info.getVoteInfo(),
-                    "signature": vote_info.signature,
-                    "user_pk": vote_info.userPK
+                    "vote_info": vote_message.getVoteInfo(),
+                    "signature": vote_message.signature,
+                    "user_pk": vote_message.mainUserPk
                 }
                 block["votes"].append(vote)
-                block["total"] += vote_info.numberOfVote
+                block["total"] += vote_message.numberOfVote
                 return True
         return False
 
@@ -85,7 +98,7 @@ class WaitGalaxyBlock:
 
 # 银河区块生成确认消息
 class ConformationOfGalaxyBlock:
-    def __init__(self, block_of_galaxy: BlockOfGalaxy, votes, total):
+    def __init__(self, block_of_galaxy: BlockOfTimes, votes, total):
         self.blockOfGalaxy = block_of_galaxy
         self.votes = votes
         self.total = total

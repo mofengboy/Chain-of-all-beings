@@ -3,8 +3,11 @@ import os
 import sqlite3
 
 # web server数据库
+from ast import literal_eval
+
+from core.consensus.data import VoteMessage
 from core.data.block_of_beings import BlockListOfBeings
-from core.utils.serialization import SerializationAssetOfBeings
+from core.utils.serialization import SerializationAssetOfBeings, SerializationVoteMessage
 
 logger = logging.getLogger("main")
 
@@ -125,6 +128,107 @@ class DB:
         data = cursor.fetchone()
         return data[0]
 
+    def getSimpleUserVoteByUserPk(self, user_pk):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time from simple_user_vote
+        where user_pk = ?
+        """, (user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "user_pk": res[2],
+                "total_vote": res[3],
+                "used_vote": res[4],
+                "update_time": res[5],
+                "create_time": res[6],
+            }
+            return data
+        else:
+            return None
+
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select used_vote from simple_user_vote
+        where user_pk = ?
+        """, (user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            cursor.execute("""
+            update simple_user_vote 
+            set used_vote = ?
+            where user_pk = ?
+            """, (float(used_vote) + float(res[0]), user_pk))
+            self.__DB.commit()
+            return self.getSimpleUserVoteByUserPk(user_pk)
+        else:
+            return None
+
+    def isExitTimesBlockQueueByBlockId(self, beings_block_id):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select count(id) 
+        from times_block_queue
+        where beings_block_id = ?
+        """, (beings_block_id,))
+        res = cursor.fetchone()
+        if res[0] > 0:
+            return True
+        else:
+            return False
+
+    def modifyStatusOfTimesBlockQueue(self, beings_block_id, status):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        update times_block_queue
+        set status = ?
+        where beings_block_id = ?
+        """, (status, beings_block_id))
+        self.__DB.commit()
+
+    def getTimesBlockQueueByVotes(self, votes):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes, vote_list, status, create_time 
+        from times_block_queue
+        where status = 1 and votes >= ? limit 1
+        """, (votes,))
+        res = cursor.fetchone()
+        if res is None:
+            return None
+        else:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "beings_block_id": res[2],
+                "votes": res[3],
+                "vote_list": literal_eval(bytes(res[4]).decode("utf-8")),
+                "status": res[5],
+                "create_time": res[6]
+            }
+            return data
+
+    def addVoteOfTimesBlockQueue(self, beings_block_id, vote_message: VoteMessage):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select votes, vote_list from times_block_queue
+        where beings_block_id = ? and status = ?
+        """, (beings_block_id, 0))
+        res = cursor.fetchone()
+        if res is not None:
+            raw_votes = res[0]
+            vote_list = literal_eval(bytes(res[1]).decode("utf-8"))
+            vote_list.append(SerializationVoteMessage.serialization(vote_message))
+            cursor.execute("""
+            update times_block_queue
+            set votes = ?, vote_list = ?
+            where beings_block_id = ?
+            """, (float(raw_votes) + float(vote_message.numberOfVote), str(vote_list).encode("utf-8"), beings_block_id))
+            self.__DB.commit()
+
 
 # core部分读取server部分的数据库
 class SDK:
@@ -163,6 +267,21 @@ class SDK:
 
     def getApplicationFormCount(self):
         return self.db.getWaitingApplicationFormCountToSDK()
+
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+        self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
+
+    def isExitTimesBlockQueueByBlockId(self, beings_block_id):
+        return self.db.isExitTimesBlockQueueByBlockId(beings_block_id)
+
+    def addVoteOfTimesBlockQueue(self, beings_block_id, vote_message: VoteMessage):
+        self.db.addVoteOfTimesBlockQueue(beings_block_id, vote_message)
+
+    def getTimesBlockQueueByVotes(self, votes):
+        return self.db.getTimesBlockQueueByVotes(votes)
+
+    def modifyStatusOfTimesBlockQueue(self, beings_block_id, status):
+        self.db.modifyStatusOfTimesBlockQueue(beings_block_id, status)
 
 
 # server部分的区块资源

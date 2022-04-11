@@ -1,8 +1,9 @@
 from ast import literal_eval
 
+from core.data.vote_info import WaitVote
 from core.storage.sqlite import Sqlite
 from core.utils.system_time import STime
-from core.consensus.data import VoteInformation, ApplicationForm, ReplyApplicationForm
+from core.consensus.data import ApplicationForm, ReplyApplicationForm
 from core.data.node_info import NodeInfo
 
 
@@ -309,36 +310,6 @@ class StorageOfTemp(Sqlite):
         """, (is_audit, db_id))
         self.tempConn.commit()
 
-    def addVotes(self, vote_information: VoteInformation):
-        user_pk = vote_information.userPK
-        node_id = vote_information.mainNodeId
-        election_period = vote_information.electionPeriod
-        block_id = vote_information.blockId
-        votes = vote_information.numberOfVote
-        signature = vote_information.signature
-        cursor = self.tempConn.cursor()
-        cursor.execute("""
-        insert into votes(election_period,node_id, block_id, user_pk, votes, signature,create_time)
-        values (?,?,?,?,?,?,?)
-        """, (election_period, node_id, block_id, user_pk, votes, signature, STime.getTimestamp()))
-        self.tempConn.commit()
-
-    # 判断该投票是否已经存在
-    def voteIsExit(self, vote_information: VoteInformation):
-        cursor = self.tempConn.cursor()
-        res = cursor.execute("""
-        select sum(id) from votes
-        where node_id=? and election_period=? and block_id=? and user_pk = ? and votes = ?
-        """, (
-            vote_information.mainNodeId, vote_information.electionPeriod, vote_information.blockId,
-            vote_information.userPK,
-            vote_information.numberOfVote))
-        res = next(res)
-        if res[0] > 0:
-            return True
-        else:
-            return False
-
     def getSimpleUserVoteByUserPk(self, user_pk, election_period):
         cursor = self.tempConn.cursor()
         cursor.execute("""
@@ -358,6 +329,27 @@ class StorageOfTemp(Sqlite):
         where info_name = ?
         """, (current_epoch, STime.getTimestamp(), "current_epoch"))
         self.tempConn.commit()
+
+    def setElectionPeriod(self, current_election_period):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update core_info
+        set content = ?, update_time = ?
+        where info_name = ?
+        """, (current_election_period, STime.getTimestamp(), "election_period"))
+        self.tempConn.commit()
+
+    def getElectionPeriod(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select content from core_info
+        where info_name = ?
+        """, ("election_period",))
+        res = cursor.fetchone()
+        if res is None:
+            return 0
+        else:
+            return int(res[0])
 
     def setNodeInfo(self, node_info: NodeInfo):
         cursor = self.tempConn.cursor()
@@ -425,7 +417,7 @@ class StorageOfTemp(Sqlite):
         else:
             return None
 
-    def addUsedVoteByNodeUserPk(self, vote: int, main_node_user_pk):
+    def addUsedVoteByNodeUserPk(self, vote: float, main_node_user_pk):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         select used_vote from main_node_vote
@@ -433,7 +425,7 @@ class StorageOfTemp(Sqlite):
         """, (main_node_user_pk,))
         res = cursor.fetchone()
         if res is not None:
-            total_used_vote = res[0] + vote
+            total_used_vote = float(res[0]) + vote
             cursor.execute("""
             update main_node_vote
             set used_vote = ?,update_time = ?
@@ -459,5 +451,61 @@ class StorageOfTemp(Sqlite):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         delete from main_node_vote
+        """)
+        self.tempConn.commit()
+
+    def getVoteMessage(self, status: int):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, to_node_user_pk, election_period, block_id, user_pk, vote_info, signature,status, create_time from wait_votes
+        where status = ? limit 10
+        """, (status,))
+        res = cursor.fetchall()
+        wait_vote_list = []
+        for data in res:
+            vote_info_dict = literal_eval(bytes(data[5]).decode("utf-8"))
+            wait_vote = WaitVote()
+            wait_vote.setInfo(election_period=vote_info_dict["election_period"],
+                              to_node_user_pk=vote_info_dict["to_node_user_pk"],
+                              block_id=vote_info_dict["block_id"], vote=vote_info_dict["vote"],
+                              simple_user_pk=vote_info_dict["simple_user_pk"])
+            wait_vote.setSignature(data[6])
+            wait_vote_list.append(wait_vote)
+        return wait_vote_list
+
+    def modifyStatusOfWaitVote(self, status, wait_vote: WaitVote):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update wait_votes
+        set status = ?
+        where election_period = ? and block_id = ? and user_pk = ? and to_node_user_pk = ? and signature = ?
+        """, (status, wait_vote.electionPeriod, wait_vote.blockId, wait_vote.simpleUserPk, wait_vote.toNodeUserPk,
+              wait_vote.signature))
+        self.tempConn.commit()
+
+    def addVoteDigest(self, election_period, block_id, vote_message_digest):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into vote_digest(election_period, block_id, vote_message_digest, create_time)
+        values (?,?,?,?)
+        """, (election_period, block_id, vote_message_digest, STime.getTimestamp()))
+        self.tempConn.commit()
+
+    def isExitVoteDigest(self, election_period, block_id, vote_message_digest):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select count(id) from vote_digest
+        where election_period = ? and block_id = ? and vote_message_digest = ?
+        """, (election_period, block_id, vote_message_digest))
+        res = cursor.fetchone()
+        if res[0] > 0:
+            return True
+        else:
+            return False
+
+    def clearVoteDigest(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        delete from vote_digest
         """)
         self.tempConn.commit()

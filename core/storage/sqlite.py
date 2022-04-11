@@ -145,19 +145,34 @@ class Sqlite(ABC):
             """)
             self.tempConn.commit()
 
-        # 存储收集到的投票信息
-        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'votes'")
+        # 存储待广播的投票信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'wait_votes'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
-            create table votes(
+            create table wait_votes(
             id INTEGER PRIMARY KEY,
-            node_id TEXT NOT NULL,
+            to_node_user_pk TEXT NOT NULL,
             election_period INTEGER NOT NULL,
             block_id TEXT NOT NULL,
             user_pk TEXT NOT NULL,
-            votes FLOAT NOT NULL,
+            vote_info BLOB NOT NULL,
             signature TEXT NOT NULL,
-            create_time INTEGER NOT NULL 
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储收集到的投票信息摘要 防止重复广播
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'vote_digest'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table vote_digest(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            block_id TEXT NOT NULL,
+            vote_message_digest TEXT NOT NULL,
+            create_time TEXT NOT NULL 
             )
             """)
             self.tempConn.commit()
@@ -189,6 +204,18 @@ class Sqlite(ABC):
             """, (1, "current_epoch", 0, STime.getTimestamp(), STime.getTimestamp()))
             self.tempConn.commit()
 
+        # 存储当前ElectionPeriod消息
+        cursor.execute("""
+        select count(*) from core_info
+        where info_name = ?
+        """, ("election_period",))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            insert into core_info(info_id,info_name,content,update_time,create_time)
+            values (?,?,?,?,?)
+            """, (1, "election_period", 0, STime.getTimestamp(), STime.getTimestamp()))
+            self.tempConn.commit()
+
         # 主节点的票数信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'main_node_vote'")
         if cursor.fetchone()[0] == 0:
@@ -197,8 +224,8 @@ class Sqlite(ABC):
             id INTEGER PRIMARY KEY,
             main_node_id TEXT NOT NULL,
             main_node_user_pk TEXT NOT NULL,
-            total_vote INTEGER NOT NULL,
-            used_vote INTEGER NOT NULL,
+            total_vote float NOT NULL,
+            used_vote float NOT NULL,
             update_time INTEGER NOT NULL, 
             create_time INTEGER NOT NULL
             ) 
