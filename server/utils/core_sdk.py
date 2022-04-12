@@ -88,18 +88,20 @@ class DBOfTemp:
     def getElectionPeriodValue():
         return ElectionPeriodValue
 
-    def addVoteMessage(self, election_period, to_node_user_pk, block_id, vote, simple_user_pk, signature):
+    def addVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, signature):
         wait_vote = WaitVote()
-        wait_vote.setInfo(election_period=election_period, to_node_user_pk=to_node_user_pk, block_id=block_id,
+        wait_vote.setInfo(election_period=election_period, to_node_id=to_node_id, block_id=block_id,
                           vote=vote, simple_user_pk=simple_user_pk)
         wait_vote.setSignature(signature)
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        insert into wait_votes(to_node_user_pk, election_period, block_id, user_pk, vote_info, signature, status, create_time)
+        insert into wait_votes(to_node_id, election_period, block_id, user_pk, vote_info, signature, status, create_time)
         values (?,?,?,?,?,?,?,?)
-        """, (to_node_user_pk, election_period, block_id, simple_user_pk, str(wait_vote.getInfo()).encode("utf-8"),
+        """, (to_node_id, election_period, block_id, simple_user_pk, str(wait_vote.getInfo()).encode("utf-8"),
               signature, 0, time.time()))
         self.tempConn.commit()
+
+    # def get
 
 
 class DBOfBlock:

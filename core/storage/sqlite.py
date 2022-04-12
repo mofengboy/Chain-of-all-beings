@@ -151,7 +151,7 @@ class Sqlite(ABC):
             cursor.execute("""
             create table wait_votes(
             id INTEGER PRIMARY KEY,
-            to_node_user_pk TEXT NOT NULL,
+            to_node_id TEXT NOT NULL,
             election_period INTEGER NOT NULL,
             block_id TEXT NOT NULL,
             user_pk TEXT NOT NULL,

@@ -457,7 +457,7 @@ class StorageOfTemp(Sqlite):
     def getVoteMessage(self, status: int):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select id, to_node_user_pk, election_period, block_id, user_pk, vote_info, signature,status, create_time from wait_votes
+        select id, to_node_id, election_period, block_id, user_pk, vote_info, signature,status, create_time from wait_votes
         where status = ? limit 10
         """, (status,))
         res = cursor.fetchall()
@@ -466,7 +466,7 @@ class StorageOfTemp(Sqlite):
             vote_info_dict = literal_eval(bytes(data[5]).decode("utf-8"))
             wait_vote = WaitVote()
             wait_vote.setInfo(election_period=vote_info_dict["election_period"],
-                              to_node_user_pk=vote_info_dict["to_node_user_pk"],
+                              to_node_id=vote_info_dict["to_node_id"],
                               block_id=vote_info_dict["block_id"], vote=vote_info_dict["vote"],
                               simple_user_pk=vote_info_dict["simple_user_pk"])
             wait_vote.setSignature(data[6])
@@ -478,8 +478,8 @@ class StorageOfTemp(Sqlite):
         cursor.execute("""
         update wait_votes
         set status = ?
-        where election_period = ? and block_id = ? and user_pk = ? and to_node_user_pk = ? and signature = ?
-        """, (status, wait_vote.electionPeriod, wait_vote.blockId, wait_vote.simpleUserPk, wait_vote.toNodeUserPk,
+        where election_period = ? and block_id = ? and user_pk = ? and to_node_id = ? and signature = ?
+        """, (status, wait_vote.electionPeriod, wait_vote.blockId, wait_vote.simpleUserPk, wait_vote.toNodeId,
               wait_vote.signature))
         self.tempConn.commit()
 

@@ -47,7 +47,7 @@ class CipherSuites:
     # 生成区块值哈希
     @staticmethod
     def generateSHA256(string):
-        return hashlib.sha256(string).hexdigest()
+        return hashlib.sha256(string)
 
     @staticmethod
     def getSeed(block_abstract, epoch):

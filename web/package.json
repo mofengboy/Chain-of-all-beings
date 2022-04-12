@@ -8,6 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@vue/cli": "^5.0.4",
     "axios": "^0.26.0",
     "buffer": "^6.0.3",
     "Buffer": "npm:buffer@^6.0.3",

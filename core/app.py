@@ -584,7 +584,7 @@ class APP:
 
     # 广播投票消息
     def broadcastVotingInfo(self):
-        logger.info("开始广播投票消息")
+        logger.info("广播投票消息")
         wait_vote_list = self.storageOfTemp.getVoteMessage(status=0)
         for wait_vote in wait_vote_list:
             logger.debug("待广播投票消息")
@@ -597,9 +597,13 @@ class APP:
                 # 将待广播投票信息状态设为2
                 self.storageOfTemp.modifyStatusOfWaitVote(status=2, wait_vote=wait_vote)
                 continue
-            # 封装投票消息,将普通用户公钥转为主节点用户公钥
+            # 封装投票消息
+            # 将toNodeId转为toNodeUserPk
+            # 将普通用户公钥转为主节点用户公钥
             vote_message = VoteMessage()
-            vote_message.setVoteInfo(to_main_node_user_pk=wait_vote.toNodeUserPk, block_id=wait_vote.blockId,
+            to_main_node_info = self.mainNode.mainNodeList.getMainNodeByNodeId(node_id=wait_vote.toNodeId)
+            vote_message.setVoteInfo(to_main_node_user_pk=to_main_node_info["node_info"]["user_pk"],
+                                     block_id=wait_vote.blockId,
                                      election_period=wait_vote.electionPeriod, number_of_vote=wait_vote.vote,
                                      main_user_pk=self.user.getUserPKString())
             main_node_signature = self.user.sign(str(vote_message.getVoteInfo()).encode("utf-8"))
@@ -621,45 +625,48 @@ class APP:
 
     # 检测并且生成时代区块
     def checkAndGenerateBlockOfTimes(self):
+        logger.info("检测并且生成时代区块")
         # 检测是否有投票数量达到要求的时代区块推荐列表
         vote_of_times_block = self.voteCount.getVotesOfTimesBlockGenerate()
         res = self.webServerSDK.getTimesBlockQueueByVotes(votes=vote_of_times_block)
-        # 再次验证投票
-        beings_block_id = res["beings_block_id"]
-        serial_vote_list = res["vote_list"]
-        vote_message_list = []
-        for vote_i in serial_vote_list:
-            vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
-        if self.voteCount.checkVotesOfGenerateTimesBlock(beings_block_id=beings_block_id,
-                                                         vote_message_list=vote_message_list):
-            logger.info("生在生成时代区块,原众生区块ID为:" + beings_block_id)
-            # 修改状态
-            self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=2)
-            beings_users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=beings_block_id)
-            body_of_times_block = BodyOfTimesBlock(users_pk=beings_users_pk, block_id=beings_block_id)
-            body_signature = self.user.sign(str(body_of_times_block.getBody()).encode("utf-8"))
-            current_election_period = self.getElectionPeriod() - 1
-            [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
-                election_period=current_election_period)
-            while pre_block is None:
-                # 此时表明上一选举时期没有时代区块产生，继续向前寻找
-                logger.info("current_election_period:" + str(current_election_period) + "没有时代区块产生，继续向前寻找")
-                current_election_period -= 1
+        if res is not None:
+            # 再次验证投票
+            beings_block_id = res["beings_block_id"]
+            serial_vote_list = res["vote_list"]
+            vote_message_list = []
+            for vote_i in serial_vote_list:
+                vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+            if self.voteCount.checkVotesOfGenerateTimesBlock(beings_block_id=beings_block_id,
+                                                             vote_message_list=vote_message_list):
+                logger.info("生在生成时代区块,原众生区块ID为:" + beings_block_id)
+                # 修改状态
+                self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=2)
+                beings_users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=beings_block_id)
+                body_of_times_block = BodyOfTimesBlock(users_pk=beings_users_pk, block_id=beings_block_id)
+                body_signature = self.user.sign(str(body_of_times_block.getBody()).encode("utf-8"))
+                current_election_period = self.getElectionPeriod() - 1
                 [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
                     election_period=current_election_period)
-            new_block_of_times = NewBlockOfTimes(user_pk=[self.user.getUserPKString()],
-                                                 election_period=self.getElectionPeriod(),
-                                                 body_signature=body_signature, body=body_of_times_block,
-                                                 pre_block=pre_block, prev_block_header=prev_block_header).getBlock()
-            # 保存时代区块
-            logger.info("保存时代区块,时代区块ID:" + new_block_of_times.getBlockID())
-            self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=new_block_of_times)
-            # 广播生成时代区块的投票信息和生成的时代区块
-            logger.info("广播生成时代区块的投票信息和生成的时代区块")
-            serial_block_of_times = SerializationTimes.serialization(new_block_of_times)
-            self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfTimes(),
-                                 message=[serial_vote_list, serial_block_of_times])
-        else:
-            # 修改状态
-            self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=4)
-            logger.warning("再次验证投票发现投票数量未达到生成时代区块标准")
+                while pre_block is None:
+                    # 此时表明上一选举时期没有时代区块产生，继续向前寻找
+                    logger.info("current_election_period:" + str(current_election_period) + "没有时代区块产生，继续向前寻找")
+                    current_election_period -= 1
+                    [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
+                        election_period=current_election_period)
+                new_block_of_times = NewBlockOfTimes(user_pk=[self.user.getUserPKString()],
+                                                     election_period=self.getElectionPeriod(),
+                                                     body_signature=body_signature, body=body_of_times_block,
+                                                     pre_block=pre_block,
+                                                     prev_block_header=prev_block_header).getBlock()
+                # 保存时代区块
+                logger.info("保存时代区块,时代区块ID:" + new_block_of_times.getBlockID())
+                self.storageOfGalaxy.addBlockOfGalaxy(block_of_galaxy=new_block_of_times)
+                # 广播生成时代区块的投票信息和生成的时代区块
+                logger.info("广播生成时代区块的投票信息和生成的时代区块")
+                serial_block_of_times = SerializationTimes.serialization(new_block_of_times)
+                self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfTimes(),
+                                     message=[serial_vote_list, serial_block_of_times])
+            else:
+                # 修改状态
+                self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=4)
+                logger.warning("再次验证投票发现投票数量未达到生成时代区块标准")

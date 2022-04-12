@@ -81,6 +81,11 @@ class MainNodeList:
                 break
         logger.info("节点上次生成区块时间已更新，节点ID为：" + node_id + ",时间更新为：" + str(update_time))
 
+    def getMainNodeByNodeId(self, node_id):
+        for node_i in self.__nodeList:
+            if node_i["node_info"]["node_id"] == node_id:
+                return node_i
+
     def delMainNodeById(self, node_id):
         count = len(self.__nodeList)
         for i in range(count):

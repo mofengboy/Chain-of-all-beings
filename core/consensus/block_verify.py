@@ -21,10 +21,8 @@ class BlockVerify:
             if len(block_list) == 0:
                 start += 1
                 continue
-
-            if start > epoch:
+            if start >= epoch:
                 return epoch
-
             temp_block_list = []
             for serial_block in block_list:
                 block = SerializationBeings.deserialization(str(serial_block).encode("utf-8"))

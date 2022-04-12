@@ -464,6 +464,50 @@ def getVoteOfMainNode():
         return http_message.getJson()
 
 
+@api.route("/vote/add", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def initiateVoting():
+    """发起投票
+    {
+    "captcha“：{},
+    ”to_node_id“：”“,
+    ”block_id“：”“,
+    ”to_vote“：”“,
+    ”simple_user_pk“：”“,
+    "signature“：”“,
+    }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {}
+   }
+   """
+    if request.method == 'POST':
+        info = request.get_json()
+        try:
+            captcha = info["captcha"]
+            if not auth.verifyCaptcha(uuid=captcha["uuid"], word=captcha["word"]):
+                http_message = HttpMessage(is_success=False, data="验证码错误")
+                return http_message.getJson()
+            to_node_id = info["to_node_id"]
+            block_id = info["block_id"]
+            to_vote = info["to_vote"]
+            simple_user_pk = info["simple_user_pk"]
+            signature = info["signature"]
+            is_success = vote.initiateVoting(to_node_id=to_node_id, block_id=block_id, vote=to_vote,
+                                             simple_user_pk=simple_user_pk, signature=signature)
+            if is_success:
+                http_message = HttpMessage(is_success=True, data="投票成功")
+                return http_message.getJson()
+            else:
+                http_message = HttpMessage(is_success=False, data="投票失败")
+                return http_message.getJson()
+        except Exception as err:
+            print(err)
+            http_message = HttpMessage(is_success=False, data="参数错误")
+            return http_message.getJson()
+
+
 # 以下为后台接口，需要权限认证
 # 登录
 @api.route("/backstage/login", methods=['POST'])

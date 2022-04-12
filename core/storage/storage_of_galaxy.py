@@ -55,6 +55,6 @@ class StorageOfGalaxy(Sqlite):
             block_header_join += block_of_times.getBlockHeaderSHA256()
             block_join += block_of_times.getBlockSHA256()
 
-        block_header_abstract = CipherSuites.generateSHA256(block_header_join)
-        block_abstract = CipherSuites.generateSHA256(block_join)
+        block_header_abstract = CipherSuites.generateSHA256(block_header_join).hexdigest()
+        block_abstract = CipherSuites.generateSHA256(block_join).hexdigest()
         return [block_header_abstract, block_abstract]

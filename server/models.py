@@ -297,3 +297,28 @@ class Vote:
         if total_vote > (main_node_total_vote - main_node_used_vote):
             return False
         return self.db.modifyTotalVoteOfSimpleUser(user_pk, total_vote)
+
+    # 发起投票
+    def initiateVoting(self, to_node_id, block_id, vote, simple_user_pk, signature) -> bool:
+        if vote < 1.0:
+            return False
+        simple_user_vote = self.getSimpleUserVoteByUserPk(simple_user_pk)
+        if (simple_user_vote["total_vote"] - simple_user_vote["used_vote"]) < vote:
+            return False
+        # 验证签名
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        vote_info = "{'election_period': " + str(
+            current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + vote + ", 'simple_user_pk': " + simple_user_pk + "}"
+        try:
+            if not CipherSuites.verify(pk=simple_user_pk, signature=signature, message=str(vote_info).encode("utf-8")):
+                return False
+        except Exception as err:
+            print(err)
+            return False
+        self.addUsedVoteOfSimpleUser(user_pk=simple_user_vote, used_vote=vote)
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        self.dbOfTemp.addVoteMessage(election_period=current_election_period, to_node_id=to_node_id,
+                                     block_id=block_id, vote=vote, simple_user_pk=simple_user_pk, signature=signature)
+        return True
