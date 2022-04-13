@@ -114,7 +114,6 @@ export default {
       privateKeyDialog: false,
       privateKey: "",
       publicKeyRaw: "",
-      publicKey: "",
       body: '# 使用Markdown格式渲染',
       signature: "",
       signatureRaw: "",
@@ -133,6 +132,13 @@ export default {
       }
     }
   },
+  computed: {
+    publicKey: {
+      get() {
+        return "04" + this.publicKeyRaw
+      }
+    }
+  },
   methods: {
     //生成密钥对
     generatePK: function () {
@@ -148,9 +154,9 @@ export default {
         // const pubHexRaw = keyPairHex
         return [pubHex, prvHex]
       }, [this.path]).then((res) => {
-        _this.publicKey = res[0]
-        _this.privateKey = res[1]
+        // _this.publicKey = res[0]
         _this.publicKeyRaw = res[0].substring(2)
+        _this.privateKey = res[1]
         loading.close()
       })
     },

@@ -4,6 +4,7 @@ from core.consensus.block_generate import NewBlockOfTimesByExist
 from core.storage.sqlite import Sqlite
 from core.data.block_of_times import BlockOfTimes, BodyOfTimesBlock
 from core.utils.ciphersuites import CipherSuites
+from core.utils.serialization import SerializationTimes
 
 
 class StorageOfGalaxy(Sqlite):
@@ -58,3 +59,18 @@ class StorageOfGalaxy(Sqlite):
         block_header_abstract = CipherSuites.generateSHA256(block_header_join).hexdigest()
         block_abstract = CipherSuites.generateSHA256(block_join).hexdigest()
         return [block_header_abstract, block_abstract]
+
+    def getListOfGalaxyBlockByElectionPeriod(self, start, end) -> []:
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select id, election_period, block_id, user_pk, header, body 
+        from galaxy
+        where election_period >= ? and election_period < ?
+        """, (start, end))
+        res = cursor.fetchall()
+        times_block_list = []
+        for block_i in res:
+            header = literal_eval(bytes(block_i[4]).decode("utf-8"))
+            times_block = NewBlockOfTimesByExist(header=header, body=block_i[5]).getBlock()
+            times_block_list.append(times_block)
+        return times_block_list

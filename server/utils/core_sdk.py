@@ -201,6 +201,32 @@ class DBOfBlock:
                 list_of_simple_user[data[0]] = 1
         return list_of_simple_user
 
+    # 获取时代区块列表
+    def getListOfTimesByOffset(self, offset, count):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select id, election_period, block_id, user_pk, header, body
+        from galaxy
+        order by id desc limit ?,?
+        """, (offset, count))
+        res = cursor.fetchall()
+        times_block_dict_list = []
+        for block_i in res:
+            header = literal_eval(bytes(block_i[4]).decode("utf-8"))
+            times_block_dict = {
+                "id": block_i[0],
+                "block_id": block_i[2],
+                "election_period": block_i[1],
+                "prev_block": header["prevBlock"],
+                "prev_block_header": header["prevBlockHeader"],
+                "user_pk": header["userPK"],
+                "body_signature": header["bodySignature"],
+                "body": literal_eval(bytes(block_i[5]).decode("utf-8")),
+                "timestamp": header["timestamp"]
+            }
+            times_block_dict_list.append(times_block_dict)
+        return times_block_dict_list
+
 
 class VoteOfMainNode:
     def __init__(self):

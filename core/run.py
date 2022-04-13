@@ -96,17 +96,15 @@ def run(sk_string, pk_string, server_url):
                 app.addEpoch()
                 if app.getEpoch() % ElectionPeriodValue == 0:
                     # 进入下一个选举周期
-                    app.addElectionPeriod()
                     logger.info("进入下一个选举周期")
                     logger.info("暂停半小时")
                     app.initVote()
                     logger.info("睡眠")
-                    time.sleep(60)
-
-                if app.getEpoch() % 1440 == 0:
+                    # time.sleep(60)
                     # 校对时间
                     if not STime.proofreadingTime():
                         logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
+
                 phase1 = False
                 phase2 = False
                 phase3 = False
@@ -137,14 +135,11 @@ def run(sk_string, pk_string, server_url):
                     logger.info("Epoch:" + str(app.getEpoch()))
                     if app.getEpoch() % ElectionPeriodValue == 0:
                         # 进入下一个选举周期
-                        app.addElectionPeriod()
                         logger.info("进入下一个选举周期")
                         logger.info("暂停半小时")
                         app.initVote()
                         logger.info("睡眠")
                         # time.sleep(60)
-                        # 更新主节点的投票数据
-                    if app.getEpoch() % 1440 == 0:
                         # 校对时间
                         if not STime.proofreadingTime():
                             logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")

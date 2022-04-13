@@ -29,6 +29,7 @@ from core.utils.serialization import SerializationBeings, SerializationApplicati
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
 from core.utils.download import RemoteChainAsset
+from core.config.cycle_Info import ElectionPeriodValue
 
 logger = logging.getLogger("main")
 
@@ -36,7 +37,6 @@ logger = logging.getLogger("main")
 class APP:
     def __init__(self, sk_string, pk_string, server_url):
         self.currentEpoch = 0  # 当前epoch
-        self.electionPeriod = 0  # 选举期次
 
         self.storageOfBeings = StorageOfBeings()  # 众生区块存储类
         self.storageOfTemp = StorageOfTemp()  # 临时区存储类
@@ -71,22 +71,20 @@ class APP:
     def addEpoch(self):
         self.currentEpoch += 1
         self.storageOfTemp.setEpoch(self.currentEpoch)
+        logger.info("当前Epoch：" + str(self.currentEpoch))
 
     def getEpoch(self):
+        logger.info("当前Epoch：" + str(self.currentEpoch))
         return self.currentEpoch
 
     def setEpoch(self, epoch):
         self.currentEpoch = epoch
         self.storageOfTemp.setEpoch(epoch)
 
-    def addElectionPeriod(self):
-        self.electionPeriod += 1
-
     def getElectionPeriod(self):
-        return self.electionPeriod
-
-    def setElectionPeriod(self, election_period):
-        self.electionPeriod = election_period
+        current_election_period = int(self.getEpoch() / ElectionPeriodValue)
+        logger.info("当前ElectionPeriod：" + str(current_election_period))
+        return current_election_period
 
     # 周期处理的事件，单独线程执行
     def dealPeriodicEvents(self_out):

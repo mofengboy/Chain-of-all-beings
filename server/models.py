@@ -129,11 +129,11 @@ class BlockOfBeings:
 class BlockOfTimes:
     def __init__(self, db: DB):
         self.db = db
-        self.DBOfTemp = DBOfTemp()
+        self.dbOfTemp = DBOfTemp()
 
     # 推荐众生区块
     def addTimesBlockQueue(self, beings_block_id):
-        election_period = self.DBOfTemp.getElectionPeriod()
+        election_period = int(self.dbOfTemp.getEpoch() / self.dbOfTemp.getElectionPeriodValue())
         return self.db.insertTimesBlockQueue(election_period, beings_block_id, 0, [])
 
     # 撤销推荐众生区块
@@ -149,7 +149,7 @@ class BlockOfTimes:
         return data
 
 
-# 众生链（已经发布的区块）
+# 众生链（已经发布的众生区块）
 class ChainOfBeings:
     def __init__(self):
         self.dbOfBeings = DBOfBlock()
@@ -171,6 +171,15 @@ class ChainOfBeings:
 
     def getMaxEpoch(self):
         return self.dbOfBeings.getMaxEpoch()
+
+
+class ChainOfTimes:
+    def __init__(self):
+        self.dbOfBeings = DBOfBlock()
+
+    # 获取时代区块列表
+    def getListOfTimesByOffset(self, offset, count):
+        return self.dbOfBeings.getListOfTimesByOffset(offset, count)
 
 
 class MainNodeManager:

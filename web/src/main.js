@@ -54,7 +54,7 @@ app.config.globalProperties.$dayjs = dayjs
 //host_url
 const url = window.location.href
 const host = url.split("/")
-app.config.globalProperties.$host_url = host[0] + host[1] + host[2]
+app.config.globalProperties.$host_url = host[0]+"//" + host[1] + host[2]
 
 
 app.mount('#app')

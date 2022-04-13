@@ -8,7 +8,8 @@ sys.path.append("../")
 sys.path.append(os.path.abspath("."))
 
 from server.database import DB
-from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo, BlockOfTimes, Vote
+from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo, BlockOfTimes, Vote, \
+    ChainOfTimes
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -21,6 +22,7 @@ blockOfBeings = BlockOfBeings(db)
 blockOfTimes = BlockOfTimes(db)
 mainNodeManager = MainNodeManager(db)
 chainOfBlock = ChainOfBeings()
+chainOfTimes = ChainOfTimes()
 vote = Vote(db)
 
 
@@ -270,6 +272,33 @@ def getBeingsListOfChain():
             return http_message.getJson()
         id_list = chainOfBlock.getIDListOfBlockByEpoch(start=start, end=end)
         http_message = HttpMessage(is_success=True, data=id_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/times_list/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getTimesListOfChain():
+    """获取时代链区块列表
+   {
+     ?offset=0&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{}，{}。。。。]
+   """
+    try:
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多查询8个选举周期的区块")
+            return http_message.getJson()
+        times_list = chainOfTimes.getListOfTimesByOffset(offset, count)
+        http_message = HttpMessage(is_success=True, data=times_list)
         return http_message.getJson()
     except Exception as err:
         print(err)
