@@ -1,5 +1,7 @@
 import os
 import sys
+import traceback
+
 from flask import Flask, request
 from flask_cors import cross_origin
 import threading
@@ -306,6 +308,33 @@ def getTimesListOfChain():
         return http_message.getJson()
 
 
+@api.route("/chain/times_list/get_by_election_period", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getTimesListOfChainByElectionPeriod():
+    """获取时代链区块列表
+   {
+     ?start=0&end=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{}，{}。。。。]
+   """
+    try:
+        start = int(request.args.get("start"))
+        end = int(request.args.get("end"))
+        if end - start > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多查询8个选举周期的区块")
+            return http_message.getJson()
+        times_list = chainOfTimes.getListOfBlockByElectionPeriod(start, end)
+        http_message = HttpMessage(is_success=True, data=times_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @api.route("/chain/beings_list/offset_get", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
 def getBeingsListOfChainByOffset():
@@ -532,7 +561,7 @@ def initiateVoting():
                 http_message = HttpMessage(is_success=False, data="投票失败")
                 return http_message.getJson()
         except Exception as err:
-            print(err)
+            traceback.print_exc()
             http_message = HttpMessage(is_success=False, data="参数错误")
             return http_message.getJson()
 

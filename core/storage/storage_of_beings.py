@@ -159,7 +159,7 @@ class StorageOfBeings(Sqlite):
         where block_id = ?
         """, (block_id,))
         res = cursor.fetchone()
-        res = literal_eval(res[0])
+        res = literal_eval(bytes(res[0]).decode("utf-8"))
         return res
 
     def getMaxEpoch(self):

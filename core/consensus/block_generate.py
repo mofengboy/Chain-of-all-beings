@@ -97,7 +97,8 @@ class NewBlockOfBeingsByExist:
 # 生产时代区块
 class NewBlockOfTimes:
     def __init__(self, user_pk, election_period, body_signature, body: BodyOfTimesBlock, pre_block, prev_block_header):
-        if not CipherSuites.verify(pk=user_pk[0], signature=body_signature[0], message=body.getBody()):
+        if not CipherSuites.verify(pk=user_pk[0], signature=body_signature[0],
+                                   message=str(body.getBody()).encode("utf-8")):
             # 用户公钥、签名、内容不匹配 抛出错误
             raise "签名验证失败"
         self.newBlock = BlockOfTimes(election_period=election_period, prev_block_header=prev_block_header,

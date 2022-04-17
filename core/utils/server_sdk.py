@@ -157,11 +157,13 @@ class DB:
         """, (user_pk,))
         res = cursor.fetchone()
         if res is not None:
+            original_used_vote = round(res[0], 1)
+            print(original_used_vote)
             cursor.execute("""
             update simple_user_vote 
             set used_vote = ?
             where user_pk = ?
-            """, (float(used_vote) + float(res[0]), user_pk))
+            """, (round(used_vote, 1) + original_used_vote, user_pk))
             self.__DB.commit()
             return self.getSimpleUserVoteByUserPk(user_pk)
         else:
@@ -194,7 +196,7 @@ class DB:
         cursor.execute("""
         select id, election_period, beings_block_id, votes, vote_list, status, create_time 
         from times_block_queue
-        where status = 1 and votes >= ? limit 1
+        where status = 0 and votes >= ? limit 1
         """, (votes,))
         res = cursor.fetchone()
         if res is None:
@@ -219,14 +221,14 @@ class DB:
         """, (beings_block_id, 0))
         res = cursor.fetchone()
         if res is not None:
-            raw_votes = res[0]
+            raw_votes = round(res[0], 1)
             vote_list = literal_eval(bytes(res[1]).decode("utf-8"))
             vote_list.append(SerializationVoteMessage.serialization(vote_message))
             cursor.execute("""
             update times_block_queue
             set votes = ?, vote_list = ?
             where beings_block_id = ?
-            """, (float(raw_votes) + float(vote_message.numberOfVote), str(vote_list).encode("utf-8"), beings_block_id))
+            """, (raw_votes + round(vote_message.numberOfVote, 1), str(vote_list).encode("utf-8"), beings_block_id))
             self.__DB.commit()
 
 

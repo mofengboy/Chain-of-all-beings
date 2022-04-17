@@ -10,6 +10,7 @@ import FrontHome from "@/components/front_end/FrontHome";
 import BlockDetail from "@/components/front_end/BlockDetail";
 import TimesBlockRecommendation from "@/components/front_end/TimesBlockRecommendation";
 import VotingInformation from "@/components/front_end/VotingInformation";
+import BlockOfTimes from "@/components/front_end/BlockOfTimes";
 
 const routes = [
     //首页
@@ -35,8 +36,14 @@ const routes = [
                         path: '/chain/beings/detail',
                         name: "BlockDetail",
                         component: BlockDetail
-                    },
+                    }
                 ]
+            },
+            //时代区块查询
+            {
+                path: "/chain/times",
+                name: "BlockOfTimes",
+                component: BlockOfTimes,
             },
             //记录生命
             {

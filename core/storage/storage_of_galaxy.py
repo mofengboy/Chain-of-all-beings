@@ -46,7 +46,7 @@ class StorageOfGalaxy(Sqlite):
         res_list = cursor.fetchall()
         if res_list is None:
             # 上一选举阶段无选取区块生成
-            return [None, None]
+            return None, None
         block_header_join = ""
         block_join = ""
         for res in res_list:
@@ -55,10 +55,9 @@ class StorageOfGalaxy(Sqlite):
             block_of_times = NewBlockOfTimesByExist(header=header, body=body).getBlock()
             block_header_join += block_of_times.getBlockHeaderSHA256()
             block_join += block_of_times.getBlockSHA256()
-
-        block_header_abstract = CipherSuites.generateSHA256(block_header_join).hexdigest()
-        block_abstract = CipherSuites.generateSHA256(block_join).hexdigest()
-        return [block_header_abstract, block_abstract]
+        block_header_abstract = CipherSuites.generateSHA256(str(block_header_join).encode("utf-8")).hexdigest()
+        block_abstract = CipherSuites.generateSHA256(str(block_join).encode("utf-8")).hexdigest()
+        return block_header_abstract, block_abstract
 
     def getListOfGalaxyBlockByElectionPeriod(self, start, end) -> []:
         cursor = self.blockConn.cursor()

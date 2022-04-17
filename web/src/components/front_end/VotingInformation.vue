@@ -199,8 +199,8 @@ export default {
               "to_node_id": _this.toNodeId,
               "block_id": _this.blockId,
               "to_vote": _this.toVote,
-              "simple_user_pk": _this.simpleUserVote,
-              "signature": _this.signature
+              "simple_user_pk": _this.simpleUserPk,
+              "signature": _this.voteSignature
             }),
             headers: {"content-type": "	application/json"}
           }).then((res) => {
@@ -216,6 +216,7 @@ export default {
                 message: res.data["data"],
                 type: 'error',
               })
+              _this.getCAPTCHA()
             }
           })
         } else {
@@ -250,15 +251,16 @@ export default {
     sign: function () {
       const _this = this
       this.getVoteInfo().then((vote_info) => {
+        console.log(vote_info)
         const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
-        this.$worker.run((path, prvHex, message) => {
+        _this.$worker.run((path, prvHex, message) => {
           this.importScripts(path + "/static/js/jsrsasign/jsrsasign-all-min.js")
           const sig = new this.KJUR.crypto.Signature({'alg': 'SHA256withECDSA'});
           sig.init({d: prvHex, curve: 'NIST P-384'});
           sig.updateString(message);
           const sigValueHex = sig.sign()
           return [sigValueHex, this.KJUR.crypto.ECDSA.asn1SigToConcatSig(sigValueHex)]
-        }, [this.path, this.simpleUserSk, vote_info]).then((res) => {
+        }, [_this.path, _this.simpleUserSk, vote_info]).then((res) => {
           _this.asn1Signature = res[0]
           //后端通过这个格式的签名进行验证
           _this.voteSignature = res[1]
@@ -278,7 +280,7 @@ export default {
           sig.updateString(message);
           const result = sig.verify(sigValueHex);
           return result
-        }, [_this.path, _this.simpleUserPk, vote_info, _this.asn1Signature])
+        }, [_this.path, "04" + _this.simpleUserPk, vote_info, _this.asn1Signature])
             .then((res) => {
               loading.close()
               return res

@@ -181,6 +181,10 @@ class ChainOfTimes:
     def getListOfTimesByOffset(self, offset, count):
         return self.dbOfBeings.getListOfTimesByOffset(offset, count)
 
+    # 获取时代区块列表
+    def getListOfBlockByElectionPeriod(self, election_period_start, election_period_end):
+        return self.dbOfBeings.getListOfTimesByElectionPeriod(election_period_start, election_period_end)
+
 
 class MainNodeManager:
     def __init__(self, db: DB):
@@ -278,8 +282,9 @@ class Vote:
         self.db.clearSimpleUserVote()
         # 增加数据
         for user_pk in list_of_all_simple_user.keys():
+            # 每个普通用户分一半的票数（四舍五入)
             self.db.addSimpleUserVote(election_period=current_election_period, user_pk=user_pk,
-                                      total_vote=float(list_of_all_simple_user[user_pk]))
+                                      total_vote=round(list_of_all_simple_user[user_pk] / 2, 1))
 
     # 获取普通用户的票数信息列表 公钥列表
     def getListOfSimpleUserVote(self, offset, count):
@@ -312,20 +317,23 @@ class Vote:
         if vote < 1.0:
             return False
         simple_user_vote = self.getSimpleUserVoteByUserPk(simple_user_pk)
+        if simple_user_vote is None:
+            return False
         if (simple_user_vote["total_vote"] - simple_user_vote["used_vote"]) < vote:
             return False
         # 验证签名
         election_period_value = self.voteOfMainNode.getElectionPeriodValue()
         current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         vote_info = "{'election_period': " + str(
-            current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + vote + ", 'simple_user_pk': " + simple_user_pk + "}"
+            current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + str(
+            vote) + ", 'simple_user_pk': " + simple_user_pk + "}"
         try:
             if not CipherSuites.verify(pk=simple_user_pk, signature=signature, message=str(vote_info).encode("utf-8")):
                 return False
         except Exception as err:
             print(err)
             return False
-        self.addUsedVoteOfSimpleUser(user_pk=simple_user_vote, used_vote=vote)
+        self.addUsedVoteOfSimpleUser(user_pk=simple_user_pk, used_vote=vote)
         election_period_value = self.voteOfMainNode.getElectionPeriodValue()
         current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         self.dbOfTemp.addVoteMessage(election_period=current_election_period, to_node_id=to_node_id,

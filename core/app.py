@@ -97,27 +97,31 @@ class APP:
             def run(self) -> None:
                 logger.info("周期事件处理器启动完成")
                 while True:
-                    time.sleep(60)
-                    logger.info("周期事件开始处理")
-                    # 读取待发布的众生区块
-                    if self_out.storageOfTemp.getDataCount() < 5:
-                        logger.info("检测server是否有待发布的区块")
-                        webserver_beings_list = self_out.webServerSDK.getBeings()
-                        self_out.storageOfTemp.saveBatchData(webserver_beings_list)
-                    # 检测有无已经审核通过的，提交在本节点的申请书
-                    logger.info("检测有无已经审核通过的，提交在本节点的申请书")
-                    self_out.applyNewNodeJoin()
-                    # 检测有无已经审核通过的，从其他主节点接受到的申请书
-                    logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
-                    self_out.replyNewNodeJoin()
-                    # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
-                    logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
-                    self_out.checkNewNodeJoin()
-                    # 检测是否有待广播的投票消息
-                    self_out.broadcastVotingInfo()
-                    # 检测是否有待生成的众生区块
-                    self_out.checkAndGenerateBlockOfTimes()
-                    logger.info("周期事件处理完成")
+                    try:
+                        time.sleep(60)
+                        logger.info("周期事件开始处理")
+                        # 读取待发布的众生区块
+                        if self_out.storageOfTemp.getDataCount() < 5:
+                            logger.info("检测server是否有待发布的区块")
+                            webserver_beings_list = self_out.webServerSDK.getBeings()
+                            self_out.storageOfTemp.saveBatchData(webserver_beings_list)
+                        # 检测有无已经审核通过的，提交在本节点的申请书
+                        logger.info("检测有无已经审核通过的，提交在本节点的申请书")
+                        self_out.applyNewNodeJoin()
+                        # 检测有无已经审核通过的，从其他主节点接受到的申请书
+                        logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
+                        self_out.replyNewNodeJoin()
+                        # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
+                        logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
+                        self_out.checkNewNodeJoin()
+                        # 检测是否有待广播的投票消息
+                        self_out.broadcastVotingInfo()
+                        # 检测是否有待生成的众生区块
+                        self_out.checkAndGenerateBlockOfTimes()
+                        logger.info("周期事件处理完成")
+                    except Exception as err:
+                        logging.error("周期事件出现错误")
+                        logging.exception(err)
 
         periodic_events = PeriodicEvents()
         periodic_events.start()
@@ -309,10 +313,10 @@ class APP:
         self.chainAsset.saveBlockOfBeings(block_list_of_beings=block_list_of_beings)
         logger.info("创世区块存储完成")
 
-    # 创建推荐区块数据结构，准备接受其他节点的投票信息
-    def recommendedBlock(self, block_id):
-        # 检查数据库数据，是否有推荐区块
-        self.waitGalaxyBlock.addGalaxyBlock(block_id=block_id)
+    # # 创建推荐区块数据结构，准备接受其他节点的投票信息
+    # def recommendedBlock(self, block_id):
+    #     # 检查数据库数据，是否有推荐区块
+    #     self.waitGalaxyBlock.addGalaxyBlock(block_id=block_id)
 
     # 通过检测数据库中的node_join_other表，当存在is_audit=1或2时,即有消息要回复
     # 回复新节点加入申请，同意或拒绝
@@ -589,7 +593,7 @@ class APP:
             logger.debug(wait_vote.getMessage())
             # 验证投票信息签名
             if not CipherSuites.verify(pk=wait_vote.simpleUserPk, signature=wait_vote.getSignature(),
-                                       message=str(wait_vote.getInfo()).encode("utf-8")):
+                                       message=str(wait_vote.getInfoOfSignature()).encode("utf-8")):
                 logger.warning("签名验证失败,投票信息为:")
                 logger.warning(wait_vote.getInfo())
                 # 将待广播投票信息状态设为2
@@ -614,6 +618,12 @@ class APP:
             self.storageOfTemp.addVoteDigest(election_period=vote_message.electionPeriod, block_id=vote_message.blockId,
                                              vote_message_digest=hashlib.md5(
                                                  str(vote_message.getVoteMessage()).encode("utf-8")).hexdigest())
+
+            # 该投票是否是针对当前主节点推荐的区块
+            if self.webServerSDK.isExitTimesBlockQueueByBlockId(
+                    vote_message.blockId) and self.user.getUserPKString() == vote_message.mainUserPk:
+                self.webServerSDK.addVoteOfTimesBlockQueue(beings_block_id=vote_message.blockId,
+                                                           vote_message=vote_message)
             # 修改读取到的投票信息状态
             self.storageOfTemp.modifyStatusOfWaitVote(status=1, wait_vote=wait_vote)
             # 广播
@@ -643,18 +653,18 @@ class APP:
                 body_of_times_block = BodyOfTimesBlock(users_pk=beings_users_pk, block_id=beings_block_id)
                 body_signature = self.user.sign(str(body_of_times_block.getBody()).encode("utf-8"))
                 current_election_period = self.getElectionPeriod() - 1
-                [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
+                prev_block_header, prev_block = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
                     election_period=current_election_period)
-                while pre_block is None:
+                while prev_block_header is None:
                     # 此时表明上一选举时期没有时代区块产生，继续向前寻找
                     logger.info("current_election_period:" + str(current_election_period) + "没有时代区块产生，继续向前寻找")
                     current_election_period -= 1
-                    [pre_block, prev_block_header] = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
+                    prev_block_header, prev_block = self.storageOfGalaxy.getBlockAbstractByElectionPeriod(
                         election_period=current_election_period)
                 new_block_of_times = NewBlockOfTimes(user_pk=[self.user.getUserPKString()],
                                                      election_period=self.getElectionPeriod(),
-                                                     body_signature=body_signature, body=body_of_times_block,
-                                                     pre_block=pre_block,
+                                                     body_signature=[body_signature], body=body_of_times_block,
+                                                     pre_block=prev_block,
                                                      prev_block_header=prev_block_header).getBlock()
                 # 保存时代区块
                 logger.info("保存时代区块,时代区块ID:" + new_block_of_times.getBlockID())

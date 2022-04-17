@@ -465,7 +465,7 @@ class SUB(threading.Thread):
                     if message[0:len(SubscribeTopics.getVoteMessage())] == SubscribeTopics.getVoteMessage():
                         vote_message_bytes = literal_eval(message[len(SubscribeTopics.getVoteMessage()):])
                         vote_message = SerializationVoteMessage.deserialization(vote_message_bytes)
-                        # 检测是否已经存在
+                        # 检测是否已经存在该投票消息
                         if self.storageOfTemp.isExitVoteDigest(election_period=vote_message.electionPeriod,
                                                                block_id=vote_message.blockId,
                                                                vote_message_digest=hashlib.md5(
@@ -490,7 +490,8 @@ class SUB(threading.Thread):
                             self.storageOfTemp.addUsedVoteByNodeUserPk(vote=vote_message.numberOfVote,
                                                                        main_node_user_pk=vote_message.mainUserPk)
                         # 该投票是否是针对当前主节点推荐的区块
-                        if self.webServerSdk.isExitTimesBlockQueueByBlockId(beings_block_id=vote_message.blockId):
+                        if self.webServerSdk.isExitTimesBlockQueueByBlockId(
+                                vote_message.blockId) and self.user.getUserPKString() == vote_message.mainUserPk:
                             self.webServerSdk.addVoteOfTimesBlockQueue(beings_block_id=vote_message.blockId,
                                                                        vote_message=vote_message)
                             # 广播

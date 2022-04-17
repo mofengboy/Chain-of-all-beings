@@ -113,7 +113,7 @@ export default {
           if (data_list.length === 0) {
             ElNotification({
               title: 'Info',
-              message: "没有更多区块了，去发布一个吧",
+              message: "没有更多区块",
               type: 'info',
             })
           } else {

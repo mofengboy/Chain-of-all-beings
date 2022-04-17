@@ -45,7 +45,6 @@ class Block(ABC):
     # 仅获取区块头部哈希值
     def getBlockHeaderSHA256(self):
         header = self.__header.copy()
-        header["prevBlock"] = []
         return CipherSuites.generateSHA256(str(header).encode("utf-8")).hexdigest()
 
     # 获取区块哈希值

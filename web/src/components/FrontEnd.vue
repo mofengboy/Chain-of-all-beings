@@ -16,8 +16,8 @@
         <el-sub-menu index="4">
           <template #title>投票</template>
           <el-menu-item index="4-1">投票信息</el-menu-item>
-          <el-menu-item index="4-2">区块推荐</el-menu-item>
-          <el-menu-item index="4-3">区块标记</el-menu-item>
+          <el-menu-item index="4-2">时代区块推荐列表</el-menu-item>
+          <el-menu-item index="4-3">垃圾区块标记列表</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="5">主节点申请</el-menu-item>
         <el-menu-item index="6">源代码</el-menu-item>
@@ -66,6 +66,9 @@ export default {
           break
         case '2-1':
           this.$router.push("/chain/beings")
+          break
+        case '2-2':
+          this.$router.push("/chain/times")
           break
         case '3':
           this.$router.push("/release/beings")

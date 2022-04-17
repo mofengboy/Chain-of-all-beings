@@ -46,7 +46,7 @@ class CipherSuites:
 
     # 生成区块值哈希
     @staticmethod
-    def generateSHA256(string):
+    def generateSHA256(string: bytes):
         return hashlib.sha256(string)
 
     @staticmethod

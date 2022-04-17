@@ -1,5 +1,6 @@
 from ast import literal_eval
 
+from core.config.cycle_Info import ElectionPeriodValue
 from core.data.vote_info import WaitVote
 from core.storage.sqlite import Sqlite
 from core.utils.system_time import STime
@@ -330,26 +331,23 @@ class StorageOfTemp(Sqlite):
         """, (current_epoch, STime.getTimestamp(), "current_epoch"))
         self.tempConn.commit()
 
-    def setElectionPeriod(self, current_election_period):
-        cursor = self.tempConn.cursor()
-        cursor.execute("""
-        update core_info
-        set content = ?, update_time = ?
-        where info_name = ?
-        """, (current_election_period, STime.getTimestamp(), "election_period"))
-        self.tempConn.commit()
-
-    def getElectionPeriod(self):
+    def getEpoch(self):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         select content from core_info
         where info_name = ?
-        """, ("election_period",))
+        """, ("current_epoch",))
         res = cursor.fetchone()
         if res is None:
             return 0
         else:
             return int(res[0])
+
+    def getElectionPeriod(self):
+        current_epoch = self.getEpoch()
+        if current_epoch is None:
+            return None
+        return int(current_epoch / ElectionPeriodValue)
 
     def setNodeInfo(self, node_info: NodeInfo):
         cursor = self.tempConn.cursor()

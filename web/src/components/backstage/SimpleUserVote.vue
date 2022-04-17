@@ -1,5 +1,9 @@
 <template>
   <div>
+    <div style="margin-bottom: 20px">
+      <el-button type="primary" style="width: 100%" v-on:click="initSimpleUserVote">计算普通用户票数</el-button>
+      <p style="font-size: 10px">tips：初始化当前选举周期所有普通用户的票数,每个选举周期计算一次即可。</p>
+    </div>
     <div class="search-epoch">
       <el-form label-position="top">
         <div>
@@ -216,6 +220,32 @@ export default {
         } else {
           ElNotification({
             title: '修改失败',
+            message: "",
+            type: 'error',
+          })
+        }
+      })
+    },
+    initSimpleUserVote: function () {
+      const _this = this
+      this.axios({
+        method: 'post',
+        url: '/backstage/simple_user_vote/init',
+        data: JSON.stringify({
+          "token": _this.token
+        }),
+        headers: {"content-type": "	application/json"}
+      }).then((res) => {
+        if (res.data["is_success"] === true) {
+          ElNotification({
+            title: '初始化完成',
+            message: "",
+            type: 'success',
+          })
+          _this.getSimpleUserVoteList()
+        } else {
+          ElNotification({
+            title: '初始化失败',
             message: "",
             type: 'error',
           })

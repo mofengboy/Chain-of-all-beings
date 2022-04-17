@@ -204,18 +204,6 @@ class Sqlite(ABC):
             """, (1, "current_epoch", 0, STime.getTimestamp(), STime.getTimestamp()))
             self.tempConn.commit()
 
-        # 存储当前ElectionPeriod消息
-        cursor.execute("""
-        select count(*) from core_info
-        where info_name = ?
-        """, ("election_period",))
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("""
-            insert into core_info(info_id,info_name,content,update_time,create_time)
-            values (?,?,?,?,?)
-            """, (1, "election_period", 0, STime.getTimestamp(), STime.getTimestamp()))
-            self.tempConn.commit()
-
         # 主节点的票数信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'main_node_vote'")
         if cursor.fetchone()[0] == 0:

@@ -29,6 +29,12 @@ class WaitVote:
             "simple_user_pk": self.simpleUserPk
         }
 
+    def getInfoOfSignature(self):
+        info_of_signature = "{'election_period': " + str(
+            self.electionPeriod) + ", 'to_node_id': " + self.toNodeId + ", 'block_id': " + self.blockId + ", 'vote': " + str(
+            self.vote) + ", 'simple_user_pk': " + self.simpleUserPk + "}"
+        return info_of_signature
+
     def getSignature(self):
         return self.signature
 

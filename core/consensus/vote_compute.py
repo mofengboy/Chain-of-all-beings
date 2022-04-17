@@ -63,6 +63,7 @@ class VoteCount:
             if vote_message_i.electionPeriod != election_period:
                 logger.warning("投票不在本周期内")
                 logger.warning(vote_message_i.getVoteMessage())
+                logger.warning(election_period)
                 continue
             # 验证签名
             if not CipherSuites.verify(pk=vote_message_i.mainUserPk, signature=vote_message_i.getSignature(),

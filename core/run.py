@@ -39,20 +39,19 @@ def run(sk_string, pk_string, server_url):
     # #
 
     # 获取主节点列表（读取配置文件）
-    if not app.loadMainNodeListBySeed():
+    while not app.loadMainNodeListBySeed():
         logger.error("无法获得任何主节点IP的地址，请检测网络或者配置文件")
-        # 关闭所有线程并退出
-        app.stopAllSub(app.subList)
-        app.server.stop()
-        exit()
+        time.sleep(10)
     logger.info("配置文件读取完成")
 
     # 订阅
     app.reSubscribe()
 
     # 同步数据
+    logger.info("开始同步")
     while not app.getCurrentEpochByOtherMainNode():
         app.synchronizedBlockOfBeings()
+    logger.info("同步完成")
 
     # 检查主节点列表，即此时只有读取权限，没有写入权限
     # 不再主节点列表时，可接受订阅数据
@@ -94,13 +93,14 @@ def run(sk_string, pk_string, server_url):
                 logger.info("第三阶段完成：此时时间：" + str(STime.getSecond()))
 
                 app.addEpoch()
+                logger.info("Epoch:" + str(app.getEpoch()))
                 if app.getEpoch() % ElectionPeriodValue == 0:
                     # 进入下一个选举周期
                     logger.info("进入下一个选举周期")
                     logger.info("暂停半小时")
                     app.initVote()
                     logger.info("睡眠")
-                    # time.sleep(60)
+                    time.sleep(60)
                     # 校对时间
                     if not STime.proofreadingTime():
                         logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
@@ -139,7 +139,7 @@ def run(sk_string, pk_string, server_url):
                         logger.info("暂停半小时")
                         app.initVote()
                         logger.info("睡眠")
-                        # time.sleep(60)
+                        time.sleep(60)
                         # 校对时间
                         if not STime.proofreadingTime():
                             logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")

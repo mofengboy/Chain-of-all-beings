@@ -491,11 +491,13 @@ class DB:
         """, (user_pk,))
         res = cursor.fetchone()
         if res is not None:
+            original_used_vote = round(res[0], 1)
+            print(original_used_vote)
             cursor.execute("""
             update simple_user_vote 
             set used_vote = ?
             where user_pk = ?
-            """, (float(used_vote) + float(res[0]), user_pk))
+            """, (round(used_vote, 1) + original_used_vote, user_pk))
             self.__DB.commit()
             return self.getSimpleUserVoteByUserPk(user_pk)
         else:
