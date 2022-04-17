@@ -188,17 +188,17 @@ class DBOfBlock:
     def getListOfSimpleUser(self, main_node_user_pk, start_epoch, end_epoch):
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select user_pk from beings
-        where user_pk like ? and epoch >= ? and epoch < ?
-        """, ("%" + main_node_user_pk + "%", start_epoch, end_epoch))
+        select simple_user_pk,main_node_user_pk from beings
+        where main_node_user_pk = ? and epoch >= ? and epoch < ?
+        """, (main_node_user_pk, start_epoch, end_epoch))
         res = cursor.fetchall()
         list_of_simple_user = {}
         for data_i in res:
-            data = literal_eval(bytes(data_i[0]).decode("utf-8"))
-            if data[0] in list_of_simple_user.keys():
-                list_of_simple_user[data[0]] += 1
+            simple_user_pk = data_i[0]
+            if simple_user_pk in list_of_simple_user.keys():
+                list_of_simple_user[simple_user_pk] += 1
             else:
-                list_of_simple_user[data[0]] = 1
+                list_of_simple_user[simple_user_pk] = 1
         return list_of_simple_user
 
     # 获取时代区块列表

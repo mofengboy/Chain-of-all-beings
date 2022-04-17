@@ -34,24 +34,24 @@ def run(sk_string, pk_string, server_url):
 
     # # DEBUG模式 将自己添加到主节点列表
     # # 仅限DEBUG模式，线上模式需要申请加入主节点
-    # app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
-    # app.storageGenesisBlock()
+    app.mainNode.mainNodeList.addMainNode(node_info=app.mainNode.nodeInfo)
+    app.storageGenesisBlock()
     # #
 
-    # 获取主节点列表（读取配置文件）
-    while not app.loadMainNodeListBySeed():
-        logger.error("无法获得任何主节点IP的地址，请检测网络或者配置文件")
-        time.sleep(10)
-    logger.info("配置文件读取完成")
+    # # 获取主节点列表（读取配置文件）
+    # while not app.loadMainNodeListBySeed():
+    #     logger.error("无法获得任何主节点IP的地址，请检测网络或者配置文件")
+    #     time.sleep(10)
+    # logger.info("配置文件读取完成")
 
     # 订阅
     app.reSubscribe()
 
     # 同步数据
-    logger.info("开始同步")
-    while not app.getCurrentEpochByOtherMainNode():
-        app.synchronizedBlockOfBeings()
-    logger.info("同步完成")
+    # logger.info("开始同步")
+    # while not app.getCurrentEpochByOtherMainNode():
+    #     app.synchronizedBlockOfBeings()
+    # logger.info("同步完成")
 
     # 检查主节点列表，即此时只有读取权限，没有写入权限
     # 不再主节点列表时，可接受订阅数据

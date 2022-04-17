@@ -21,11 +21,14 @@ class VoteCount:
     # 初始化所有主节点的票的总数
     def initVotesOfMainNode(self, current_election_cycle):
         main_node_list = self.mainNode.mainNodeList.getNodeList()
+        logger.debug("初始化所有主节点的票的总数调试信息")
         for node_i in main_node_list:
             total_vote = self.computeMainUserVote(main_node_user_pk=node_i["node_info"]["user_pk"],
                                                   current_election_cycle=current_election_cycle)
             self.addMainUserVote(node_i["node_info"]["node_id"], main_node_user_pk=node_i["node_info"]["user_pk"],
                                  total_vote=total_vote)
+            logger.debug(node_i["node_info"])
+            logger.debug(total_vote)
 
     # 计算主节点的总票数
     def computeMainUserVote(self, main_node_user_pk, current_election_cycle):
@@ -38,6 +41,8 @@ class VoteCount:
                                                                           start=i * ElectionPeriodValue,
                                                                           end=(i + 1) * ElectionPeriodValue)
         # 时代区块产生的永久票
+        logger.debug("计算主节点的总票数,main_node_user_pk:" + main_node_user_pk)
+        logger.debug(beings_vote_count)
         times_vote_count = 0
         return beings_vote_count + times_vote_count
 

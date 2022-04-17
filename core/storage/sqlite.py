@@ -22,7 +22,8 @@ class Sqlite(ABC):
             id INTEGER PRIMARY KEY,
             epoch INTEGER NOT NULL,
             block_id TEXT NOT NULL UNIQUE,
-            user_pk TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            simple_user_pk TEXT NOT NULL,
             header BLOB NOT NULL,
             body BLOB NOT NULL
             )
