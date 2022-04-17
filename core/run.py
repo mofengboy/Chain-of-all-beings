@@ -99,7 +99,6 @@ def run(sk_string, pk_string, server_url):
                     logger.info("进入下一个选举周期")
                     logger.info("暂停半小时")
                     app.initVote()
-                    logger.info("睡眠")
                     time.sleep(60)
                     # 校对时间
                     if not STime.proofreadingTime():
@@ -138,7 +137,6 @@ def run(sk_string, pk_string, server_url):
                         logger.info("进入下一个选举周期")
                         logger.info("暂停半小时")
                         app.initVote()
-                        logger.info("睡眠")
                         time.sleep(60)
                         # 校对时间
                         if not STime.proofreadingTime():

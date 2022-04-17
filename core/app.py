@@ -571,6 +571,7 @@ class APP:
             def __init__(self):
                 super().__init__()
                 self.name = "init_vote"
+                self.current_election_period = self_out.getElectionPeriod()
                 logger.info("init_vote初始化完成")
 
             def run(self) -> None:
@@ -578,7 +579,7 @@ class APP:
                 # 清除上一选举周期产生票数数据
                 self_out.storageOfTemp.clearAllMainNodeVote()
                 # 初始化本次的票数数据
-                self_out.voteCount.initVotesOfMainNode(current_election_cycle=self_out.getElectionPeriod())
+                self_out.voteCount.initVotesOfMainNode(current_election_cycle=self.current_election_period)
                 logger.info("计算完成")
 
         init_vote_of_main_node = InitVoteOfMainNode()

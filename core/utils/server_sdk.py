@@ -55,6 +55,22 @@ class DB:
             """)
             self.__DB.commit()
 
+        # 推荐中的众生区块信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'times_block_queue'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table times_block_queue(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            votes FLOAT NOT NULL,
+            vote_list BLOB NOT NULL,
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
     def getWaitingBlockListOfBeingsToSDK(self):
         cursor = self.__DB.cursor()
         cursor.execute("""
