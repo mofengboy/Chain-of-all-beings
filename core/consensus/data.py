@@ -49,6 +49,49 @@ class VoteMessage:
         }
 
 
+# 长期票投票信息
+class LongTermVoteMessage:
+    def __init__(self):
+        self.toMainNodeUserPk = ""
+        self.blockId = ""
+        self.electionPeriod = 0
+        self.numberOfVote = 0.0
+        self.simpleUserPk = ""
+        self.signature = ""
+
+    def setSignature(self, signature):
+        self.signature = signature
+
+    def getSignature(self):
+        return self.signature
+
+    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, simple_user_pk):
+        self.toMainNodeUserPk = to_main_node_user_pk
+        self.blockId = block_id
+        self.electionPeriod = election_period
+        self.numberOfVote = number_of_vote
+        self.simpleUserPk = simple_user_pk
+
+    def getVoteInfo(self):
+        return {
+            "to_main_node_user_pk": self.toMainNodeUserPk,
+            "block_id": self.blockId,
+            "election_period": self.electionPeriod,
+            "number_of_vote": self.numberOfVote,
+            "simple_user_pk": self.simpleUserPk
+        }
+
+    def getVoteMessage(self):
+        return {
+            "to_main_node_user_pk": self.toMainNodeUserPk,
+            "block_id": self.blockId,
+            "election_period": self.electionPeriod,
+            "number_of_vote": self.numberOfVote,
+            "simple_user_pk": self.simpleUserPk,
+            "signature": self.signature
+        }
+
+
 # 等待成为银河区块的区块
 class WaitGalaxyBlock:
     def __init__(self, main_node_id, main_user_pk):

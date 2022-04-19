@@ -18,7 +18,7 @@ from core.utils.ciphersuites import CipherSuites
 from core.utils.server_sdk import SDK
 from core.utils.system_time import STime
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, SerializationNetworkMessage, \
-    SerializationReplyApplicationForm, SerializationVoteMessage, SerializationTimes
+    SerializationReplyApplicationForm, SerializationVoteMessage, SerializationTimes, SerializationLongTermVoteMessage
 from core.data.network_message import SubscribeTopics, NetworkMessage, NetworkMessageType
 from core.data.block_of_beings import BlockListOfBeings, EmptyBlock
 from core.data.node_info import MainNodeList, NodeInfo
@@ -223,10 +223,9 @@ class SUB(threading.Thread):
                 # 收集其他节点产生的时代区块
                 try:
                     if message[0:len(SubscribeTopics.getBlockTopicOfTimes())] == SubscribeTopics.getBlockTopicOfTimes():
-                        serial_vote_list_bytes, serial_block_of_times_bytes = literal_eval(
-                            message[len(SubscribeTopics.getBlockTopicOfTimes()):])
+                        serial_vote_list, serial_block_of_times = literal_eval(
+                            bytes(message[len(SubscribeTopics.getBlockTopicOfTimes()):]).decode("utf-8"))
                         vote_message_list = []
-                        serial_vote_list = literal_eval(bytes(serial_vote_list_bytes).decode("utf-8"))
                         for vote_i in serial_vote_list:
                             vote_message_list.append(
                                 SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
@@ -241,7 +240,7 @@ class SUB(threading.Thread):
                                                                     beings_main_node_user_pk=user_pk_list[1]):
                             logger.info("生成时代区块的投票消息已经存在")
                             continue
-                        block_of_times = SerializationTimes.deserialization(serial_block_of_times_bytes)
+                        block_of_times = SerializationTimes.deserialization(str(serial_block_of_times).encode("utf-8"))
                         body_dict = literal_eval(bytes(block_of_times.body).decode("utf-8"))
                         # 验证票数和签名
                         if not self.voteCount.checkVotesOfGenerateTimesBlock(beings_block_id=body_dict["block_id"],
@@ -460,7 +459,7 @@ class SUB(threading.Thread):
                 except Exception as err:
                     logger.exception(err)
 
-                # 投票消息
+                # 短期票投票消息
                 try:
                     if message[0:len(SubscribeTopics.getVoteMessage())] == SubscribeTopics.getVoteMessage():
                         vote_message_bytes = literal_eval(message[len(SubscribeTopics.getVoteMessage()):])
@@ -498,7 +497,55 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getVoteMessage(),
                                              message=SerializationVoteMessage.serialization(vote_message=vote_message))
                         logger.debug("广播完成")
+                except Exception as err:
+                    logger.exception(err)
 
+                # 长期票投票消息
+                try:
+                    if message[
+                       0:len(SubscribeTopics.getLongTermVoteMessage())] == SubscribeTopics.getLongTermVoteMessage():
+                        long_term_vote_message_bytes = literal_eval(
+                            message[len(SubscribeTopics.getLongTermVoteMessage()):])
+                        long_term_vote_message = SerializationLongTermVoteMessage.deserialization(
+                            long_term_vote_message_bytes)
+                        # 检测是否已经存在该投票消息
+                        if self.storageOfTemp.isExitVoteDigest(election_period=long_term_vote_message.electionPeriod,
+                                                               block_id=long_term_vote_message.blockId,
+                                                               vote_message_digest=hashlib.md5(
+                                                                   str(long_term_vote_message.getVoteMessage()).encode(
+                                                                       "utf-8")).hexdigest()):
+                            logger.info("投票信息已经存在")
+                            logger.info("推荐区块ID为" + long_term_vote_message.blockId)
+                            continue
+                        # 验证签名
+                        if not CipherSuites.verify(pk=long_term_vote_message.simpleUserPk,
+                                                   signature=long_term_vote_message.getSignature(),
+                                                   message=str(long_term_vote_message.getVoteInfo()).encode("utf-8")):
+                            logger.warning("签名验证失败")
+                            logger.warning(long_term_vote_message.getVoteMessage())
+                            continue
+                        # 验证主节点票数是否足够 增加主节点已使用的票数
+                        simple_user_permanent_vote = self.storageOfTemp.getSimpleUserPermanentVoteByUserPk(
+                            simple_user_pk=long_term_vote_message.simpleUserPk)
+                        if (simple_user_permanent_vote["total_vote"] - simple_user_permanent_vote["used_vote"]) < long_term_vote_message.numberOfVote:
+                            logger.warning("剩余票数不足")
+                            logger.warning(long_term_vote_message.getVoteMessage())
+                        else:
+                            self.storageOfTemp.addUsedPermanentVoteOfSimpleUser(
+                                vote=long_term_vote_message.numberOfVote,
+                                simple_user_pk=long_term_vote_message.simpleUserPk)
+                        # 该投票是否是针对当前主节点推荐的区块
+                        # 该长期票投票是否是针对当前主节点推荐的区块
+                        if self.webServerSdk.isExitTimesBlockQueueByBlockId(
+                                long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk:
+                            self.webServerSdk.addPermanentVoteOfTimesBlockQueue(
+                                beings_block_id=long_term_vote_message.blockId,
+                                long_term_vote_message=long_term_vote_message)
+                        # 广播
+                        self.pub.sendMessage(topic=SubscribeTopics.getLongTermVoteMessage(),
+                                             message=SerializationLongTermVoteMessage.serialization(
+                                                 long_term_vote_message=long_term_vote_message))
+                        logger.debug("长期票投票消息广播完成")
                 except Exception as err:
                     logger.exception(err)
 

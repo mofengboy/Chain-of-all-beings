@@ -5,9 +5,10 @@ import sqlite3
 # web server数据库
 from ast import literal_eval
 
-from core.consensus.data import VoteMessage
+from core.consensus.data import VoteMessage, LongTermVoteMessage
 from core.data.block_of_beings import BlockListOfBeings
-from core.utils.serialization import SerializationAssetOfBeings, SerializationVoteMessage
+from core.utils.serialization import SerializationAssetOfBeings, SerializationVoteMessage, \
+    SerializationLongTermVoteMessage
 
 logger = logging.getLogger("main")
 
@@ -247,6 +248,25 @@ class DB:
             """, (raw_votes + round(vote_message.numberOfVote, 1), str(vote_list).encode("utf-8"), beings_block_id))
             self.__DB.commit()
 
+    def addPermanentVoteOfTimesBlockQueue(self, beings_block_id, long_term_vote_message: LongTermVoteMessage):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select votes, vote_list from times_block_queue
+        where beings_block_id = ? and status = ?
+        """, (beings_block_id, 0))
+        res = cursor.fetchone()
+        if res is not None:
+            raw_votes = round(res[0], 1)
+            vote_list = literal_eval(bytes(res[1]).decode("utf-8"))
+            vote_list.append(SerializationLongTermVoteMessage.serialization(long_term_vote_message))
+            cursor.execute("""
+            update times_block_queue
+            set votes = ?, vote_list = ?
+            where beings_block_id = ?
+            """, (raw_votes + round(long_term_vote_message.numberOfVote, 1), str(vote_list).encode("utf-8"),
+                  beings_block_id))
+            self.__DB.commit()
+
 
 # core部分读取server部分的数据库
 class SDK:
@@ -294,6 +314,9 @@ class SDK:
 
     def addVoteOfTimesBlockQueue(self, beings_block_id, vote_message: VoteMessage):
         self.db.addVoteOfTimesBlockQueue(beings_block_id, vote_message)
+
+    def addPermanentVoteOfTimesBlockQueue(self, beings_block_id, long_term_vote_message: LongTermVoteMessage):
+        self.db.addPermanentVoteOfTimesBlockQueue(beings_block_id, long_term_vote_message)
 
     def getTimesBlockQueueByVotes(self, votes):
         return self.db.getTimesBlockQueueByVotes(votes)

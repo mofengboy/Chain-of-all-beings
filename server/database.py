@@ -465,7 +465,8 @@ class DB:
     def getSimpleUserVoteByUserPk(self, user_pk):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time from simple_user_vote
+        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time 
+        from simple_user_vote
         where user_pk = ?
         """, (user_pk,))
         res = cursor.fetchone()

@@ -14,11 +14,11 @@
                 </el-input>
               </el-form-item>
               <el-form-item label="时代区块用户公钥">
-                <el-input v-model="props.row.user_pk[0]" :autosize="{minRows: 1}" readonly type="textarea">
+                <el-input v-model="props.row.user_pk" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
               <el-form-item label="时代区块用户签名">
-                <el-input v-model="props.row.body_signature[0]" :autosize="{minRows: 1}" readonly type="textarea">
+                <el-input v-model="props.row.body_signature" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
               <el-form-item label="原众生区块普通用户公钥">

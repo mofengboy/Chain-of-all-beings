@@ -40,7 +40,10 @@ class Sqlite(ABC):
             block_id TEXT NOT NULL UNIQUE,
             user_pk TEXT NOT NULL,
             header BLOB NOT NULL,
-            body BLOB NOT NULL
+            body BLOB NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            beings_simple_user_pk TEXT NOT NULL,
+            beings_main_node_user_pk TEXT NOT NULL
             )
             """)
             self.blockConn.commit()
@@ -48,7 +51,20 @@ class Sqlite(ABC):
         # 垃圾标注链
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'garbage'")
         if cursor.fetchone()[0] == 0:
-            print("创建垃圾标注链")
+            cursor.execute("""
+            create table garbage(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            block_id TEXT NOT NULL UNIQUE,
+            user_pk TEXT NOT NULL,
+            header BLOB NOT NULL,
+            body BLOB NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            beings_simple_user_pk TEXT NOT NULL,
+            beings_main_node_user_pk TEXT NOT NULL
+            )
+            """)
+            self.blockConn.commit()
 
     def initTempDB(self):
         cursor = self.tempConn.cursor()
@@ -146,11 +162,29 @@ class Sqlite(ABC):
             """)
             self.tempConn.commit()
 
-        # 存储待广播的投票信息
+        # 存储待广播的短期投票信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'wait_votes'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
             create table wait_votes(
+            id INTEGER PRIMARY KEY,
+            to_node_id TEXT NOT NULL,
+            election_period INTEGER NOT NULL,
+            block_id TEXT NOT NULL,
+            user_pk TEXT NOT NULL,
+            vote_info BLOB NOT NULL,
+            signature TEXT NOT NULL,
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储待广播的长期投票信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'wait_votes_of_long'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table wait_votes_of_long(
             id INTEGER PRIMARY KEY,
             to_node_id TEXT NOT NULL,
             election_period INTEGER NOT NULL,
@@ -213,6 +247,22 @@ class Sqlite(ABC):
             id INTEGER PRIMARY KEY,
             main_node_id TEXT NOT NULL,
             main_node_user_pk TEXT NOT NULL,
+            total_vote float NOT NULL,
+            used_vote float NOT NULL,
+            update_time INTEGER NOT NULL, 
+            create_time INTEGER NOT NULL
+            ) 
+            """)
+            self.tempConn.commit()
+
+        # 普通用户的票数信息
+        cursor.execute(
+            "select count(*) from sqlite_master where type = 'table' and name = 'simple_user_permanent_vote'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table simple_user_permanent_vote(
+            id INTEGER PRIMARY KEY,
+            simple_user_pk TEXT NOT NULL,
             total_vote float NOT NULL,
             used_vote float NOT NULL,
             update_time INTEGER NOT NULL, 

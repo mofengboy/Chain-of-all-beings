@@ -455,7 +455,8 @@ class StorageOfTemp(Sqlite):
     def getVoteMessage(self, status: int):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select id, to_node_id, election_period, block_id, user_pk, vote_info, signature,status, create_time from wait_votes
+        select id, to_node_id, election_period, block_id, user_pk, vote_info, signature,status, create_time 
+        from wait_votes
         where status = ? limit 10
         """, (status,))
         res = cursor.fetchall()
@@ -475,6 +476,36 @@ class StorageOfTemp(Sqlite):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         update wait_votes
+        set status = ?
+        where election_period = ? and block_id = ? and user_pk = ? and to_node_id = ? and signature = ?
+        """, (status, wait_vote.electionPeriod, wait_vote.blockId, wait_vote.simpleUserPk, wait_vote.toNodeId,
+              wait_vote.signature))
+        self.tempConn.commit()
+
+    def getLongTermVoteMessage(self, status: int):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, to_node_id, election_period, block_id, user_pk, vote_info, signature,status, create_time 
+        from wait_votes_of_long
+        where status = ? limit 10
+        """, (status,))
+        res = cursor.fetchall()
+        wait_vote_list = []
+        for data in res:
+            vote_info_dict = literal_eval(bytes(data[5]).decode("utf-8"))
+            wait_vote = WaitVote()
+            wait_vote.setInfo(election_period=vote_info_dict["election_period"],
+                              to_node_id=vote_info_dict["to_node_id"],
+                              block_id=vote_info_dict["block_id"], vote=vote_info_dict["vote"],
+                              simple_user_pk=vote_info_dict["simple_user_pk"])
+            wait_vote.setSignature(data[6])
+            wait_vote_list.append(wait_vote)
+        return wait_vote_list
+
+    def modifyStatusOfLongTermWaitVote(self, status, wait_vote: WaitVote):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update wait_votes_of_long
         set status = ?
         where election_period = ? and block_id = ? and user_pk = ? and to_node_id = ? and signature = ?
         """, (status, wait_vote.electionPeriod, wait_vote.blockId, wait_vote.simpleUserPk, wait_vote.toNodeId,
@@ -507,3 +538,66 @@ class StorageOfTemp(Sqlite):
         delete from vote_digest
         """)
         self.tempConn.commit()
+
+    def clearAllSimpleUserPermanentVote(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        delete from simple_user_permanent_vote
+        """)
+        self.tempConn.commit()
+
+    def addBatchPermanentVoteOfSimpleUser(self, data_dict: dict):
+        data_list = []
+        current_time = STime.getTimestamp()
+        for key in data_dict.keys():
+            data_list.append(
+                (
+                    key,
+                    data_dict[key],
+                    0,
+                    current_time,
+                    current_time
+                )
+            )
+        cursor = self.tempConn.cursor()
+        cursor.executemany("""
+        insert into simple_user_permanent_vote(simple_user_pk, total_vote, used_vote, update_time, create_time)
+        values (?,?,?,?,?)
+        """, data_list)
+        self.tempConn.commit()
+
+    def addUsedPermanentVoteOfSimpleUser(self, vote: float, simple_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select used_vote from simple_user_permanent_vote
+        where simple_user_pk = ?
+        """, (simple_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            total_used_vote = float(res[0]) + vote
+            cursor.execute("""
+            update simple_user_permanent_vote
+            set used_vote = ?, update_time = ?
+            where simple_user_pk = ?
+            """, (total_used_vote, STime.getTimestamp(), simple_user_pk))
+            self.tempConn.commit()
+
+    def getSimpleUserPermanentVoteByUserPk(self, simple_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, simple_user_pk, total_vote, used_vote, update_time, create_time
+        from simple_user_permanent_vote
+        where simple_user_pk = ?
+        """, (simple_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            return {
+                "id": res[0],
+                "simple_user_pk": res[1],
+                "total_vote": res[2],
+                "used_vote": res[3],
+                "update_time": res[4],
+                "create_time": res[5],
+            }
+        else:
+            return None

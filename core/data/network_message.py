@@ -40,10 +40,15 @@ class SubscribeTopics:
     def getNodeTopicOfDelete():
         return b"node delete "
 
-    # 投票消息广播主题
+    # 短期票投票消息广播主题
     @staticmethod
     def getVoteMessage():
         return b"vote message "
+
+    # 长期票投票消息广播主题
+    @staticmethod
+    def getLongTermVoteMessage():
+        return b"long term vote message "
 
 
 # 消息类型

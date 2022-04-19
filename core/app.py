@@ -16,7 +16,7 @@ from core.network.net import PUB, SUB, Server, Client
 from core.consensus.node_management import NodeManager
 from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfTimes
 from core.consensus.vote_compute import VoteCount
-from core.consensus.data import ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock, VoteMessage
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock, VoteMessage, LongTermVoteMessage
 from core.consensus.data import NodeDelApplicationForm
 from core.consensus.block_verify import BlockVerify
 from core.storage.storage_of_beings import StorageOfBeings
@@ -25,7 +25,8 @@ from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.utils.ciphersuites import CipherSuites
 from core.utils.server_sdk import SDK, ChainAsset
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
-    SerializationReplyApplicationForm, SerializationNetworkMessage, SerializationVoteMessage, SerializationTimes
+    SerializationReplyApplicationForm, SerializationNetworkMessage, SerializationVoteMessage, SerializationTimes, \
+    SerializationLongTermVoteMessage
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
 from core.utils.download import RemoteChainAsset
@@ -50,7 +51,7 @@ class APP:
         self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
                                                main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp,
-                                   main_node=self.mainNode)  # 票数计算
+                                   main_node=self.mainNode, storage_of_times=self.storageOfGalaxy)  # 票数计算
         self.blockVerify = BlockVerify(storage_of_beings=self.storageOfBeings)
         self.pub = PUB()  # 发布者
         self.pub.start()
@@ -98,7 +99,7 @@ class APP:
                 logger.info("周期事件处理器启动完成")
                 while True:
                     try:
-                        time.sleep(60)
+                        time.sleep(10)
                         logger.info("周期事件开始处理")
                         # 读取待发布的众生区块
                         if self_out.storageOfTemp.getDataCount() < 5:
@@ -114,7 +115,7 @@ class APP:
                         # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
                         logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
                         self_out.checkNewNodeJoin()
-                        # 检测是否有待广播的投票消息
+                        # 检测是否有待广播的短期票投票消息
                         self_out.broadcastVotingInfo()
                         # 检测是否有待生成的众生区块
                         self_out.checkAndGenerateBlockOfTimes()
@@ -560,7 +561,9 @@ class APP:
             self.mainNode.currentBlockList.reset()
         return is_finish
 
+    # 每个选举周期开始前
     # 初始化所有主节点的投票信息
+    # 初始化所有拥有长期票的普通用户的票数信息
     def initVote(self_out):
         class InitVoteOfMainNode(threading.Thread):
             def __init__(self):
@@ -571,31 +574,32 @@ class APP:
 
             def run(self) -> None:
                 logger.info("开始计算所有主节点的票数信息")
-                # 清除上一选举周期产生票数数据
-                self_out.storageOfTemp.clearAllMainNodeVote()
+                # 主节点用户
                 # 初始化本次的票数数据
                 self_out.voteCount.initVotesOfMainNode(current_election_cycle=self.current_election_period)
+                # 普通用户的长期票
+                self_out.voteCount.initPermanentVotesOfSimpleUser(current_election_cycle=self.current_election_period)
                 logger.info("计算完成")
 
         init_vote_of_main_node = InitVoteOfMainNode()
         init_vote_of_main_node.start()
 
-    # 广播投票消息
+    # 广播短期票投票消息
     def broadcastVotingInfo(self):
-        logger.info("广播投票消息")
+        logger.info("广播短期票投票消息")
         wait_vote_list = self.storageOfTemp.getVoteMessage(status=0)
         for wait_vote in wait_vote_list:
-            logger.debug("待广播投票消息")
+            logger.debug("待广播短期票投票消息")
             logger.debug(wait_vote.getMessage())
             # 验证投票信息签名
             if not CipherSuites.verify(pk=wait_vote.simpleUserPk, signature=wait_vote.getSignature(),
                                        message=str(wait_vote.getInfoOfSignature()).encode("utf-8")):
-                logger.warning("签名验证失败,投票信息为:")
+                logger.warning("签名验证失败,短期票投票信息为:")
                 logger.warning(wait_vote.getInfo())
-                # 将待广播投票信息状态设为2
+                # 将待广播短期票投票信息状态设为2
                 self.storageOfTemp.modifyStatusOfWaitVote(status=2, wait_vote=wait_vote)
                 continue
-            # 封装投票消息
+            # 封装短期票投票消息
             # 将toNodeId转为toNodeUserPk
             # 将普通用户公钥转为主节点用户公钥
             vote_message = VoteMessage()
@@ -610,22 +614,70 @@ class APP:
             self.webServerSDK.addUsedVoteOfSimpleUser(user_pk=wait_vote.simpleUserPk, used_vote=wait_vote.vote)
             self.storageOfTemp.addUsedVoteByNodeUserPk(vote=wait_vote.vote,
                                                        main_node_user_pk=self.user.getUserPKString())
-            # 暂存投票消息摘要
+            # 暂存短期票投票消息摘要
             self.storageOfTemp.addVoteDigest(election_period=vote_message.electionPeriod, block_id=vote_message.blockId,
                                              vote_message_digest=hashlib.md5(
                                                  str(vote_message.getVoteMessage()).encode("utf-8")).hexdigest())
 
-            # 该投票是否是针对当前主节点推荐的区块
+            # 该短期票投票是否是针对当前主节点推荐的区块
             if self.webServerSDK.isExitTimesBlockQueueByBlockId(
-                    vote_message.blockId) and self.user.getUserPKString() == vote_message.mainUserPk:
+                    vote_message.blockId) and self.user.getUserPKString() == vote_message.toMainNodeUserPk:
                 self.webServerSDK.addVoteOfTimesBlockQueue(beings_block_id=vote_message.blockId,
                                                            vote_message=vote_message)
-            # 修改读取到的投票信息状态
+            # 修改读取到的短期票投票信息状态
             self.storageOfTemp.modifyStatusOfWaitVote(status=1, wait_vote=wait_vote)
             # 广播
             self.pub.sendMessage(topic=SubscribeTopics.getVoteMessage(),
                                  message=SerializationVoteMessage.serialization(vote_message=vote_message))
-            logger.debug("广播完成")
+            logger.debug("短期票广播完成")
+
+    # 广播长期票投票消息
+    def broadcastLongTermVotingInfo(self):
+        logger.info("广播长期票投票消息")
+        long_term_wait_vote_list = self.storageOfTemp.getLongTermVoteMessage(status=0)
+        for long_term_wait_vote in long_term_wait_vote_list:
+            logger.debug("待广播长期票投票消息")
+            logger.debug(long_term_wait_vote.getMessage())
+            # 验证投票信息签名
+            if not CipherSuites.verify(pk=long_term_wait_vote.simpleUserPk,
+                                       signature=long_term_wait_vote.getSignature(),
+                                       message=str(long_term_wait_vote.getInfoOfSignature()).encode("utf-8")):
+                logger.warning("签名验证失败,长期投票信息为:")
+                logger.warning(long_term_wait_vote.getInfo())
+                # 将待广播短期票投票信息状态设为2
+                self.storageOfTemp.modifyStatusOfLongTermWaitVote(status=2, wait_vote=long_term_wait_vote)
+                continue
+            # 增加普通用户已使用的长期票票数
+            self.storageOfTemp.addUsedPermanentVoteOfSimpleUser(vote=long_term_wait_vote.vote,
+                                                                simple_user_pk=long_term_wait_vote.simpleUserPk)
+            # 封装长期票消息
+            long_term_vote_message = LongTermVoteMessage()
+            to_main_node_info = self.mainNode.mainNodeList.getMainNodeByNodeId(node_id=long_term_wait_vote.toNodeId)
+            long_term_vote_message.setVoteInfo(to_main_node_user_pk=to_main_node_info["node_info"]["user_pk"],
+                                               block_id=long_term_wait_vote.blockId,
+                                               election_period=long_term_wait_vote.electionPeriod,
+                                               number_of_vote=long_term_wait_vote.vote,
+                                               simple_user_pk=long_term_wait_vote.simpleUserPk)
+            long_term_vote_message.setSignature(signature=long_term_wait_vote.getSignature())
+            # 暂存短期票投票消息摘要
+            self.storageOfTemp.addVoteDigest(election_period=long_term_vote_message.electionPeriod,
+                                             block_id=long_term_vote_message.blockId,
+                                             vote_message_digest=hashlib.md5(
+                                                 str(long_term_vote_message.getVoteMessage()).encode(
+                                                     "utf-8")).hexdigest())
+
+            # 该长期票投票是否是针对当前主节点推荐的区块
+            if self.webServerSDK.isExitTimesBlockQueueByBlockId(
+                    long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk:
+                self.webServerSDK.addPermanentVoteOfTimesBlockQueue(beings_block_id=long_term_vote_message.blockId,
+                                                                    long_term_vote_message=long_term_vote_message)
+            # 修改读取到的长期票投票信息状态
+            self.storageOfTemp.modifyStatusOfLongTermWaitVote(status=1, wait_vote=long_term_wait_vote)
+            # 广播
+            self.pub.sendMessage(topic=SubscribeTopics.getLongTermVoteMessage(),
+                                 message=SerializationLongTermVoteMessage.serialization(
+                                     long_term_vote_message=long_term_vote_message))
+            logger.debug("长期票广播完成")
 
     # 检测并且生成时代区块
     def checkAndGenerateBlockOfTimes(self):

@@ -101,7 +101,40 @@ class DBOfTemp:
               signature, 0, time.time()))
         self.tempConn.commit()
 
-    # def get
+    # 获取普通用户的长期票投票信息
+    def getSimpleUserPermanentVoteByUserPk(self, simple_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, simple_user_pk, total_vote, used_vote, update_time, create_time
+        from simple_user_permanent_vote
+        where simple_user_pk = ?
+        """, (simple_user_pk,))
+        res = cursor.fetchone()
+        if res is not None:
+            return {
+                "id": res[0],
+                "simple_user_pk": res[1],
+                "total_vote": res[2],
+                "used_vote": res[3],
+                "update_time": res[4],
+                "create_time": res[5],
+            }
+        else:
+            return None
+
+    # 添加待广播的普通用户的长期票投票信息
+    def addSimpleUserPermanentVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, signature):
+        wait_vote = WaitVote()
+        wait_vote.setInfo(election_period=election_period, to_node_id=to_node_id, block_id=block_id,
+                          vote=vote, simple_user_pk=simple_user_pk)
+        wait_vote.setSignature(signature)
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into wait_votes_of_long(to_node_id, election_period, block_id, user_pk, vote_info, signature, status, create_time)
+        values (?,?,?,?,?,?,?,?)
+        """, (to_node_id, election_period, block_id, simple_user_pk, str(wait_vote.getInfo()).encode("utf-8"),
+              signature, 0, time.time()))
+        self.tempConn.commit()
 
 
 class DBOfBlock:

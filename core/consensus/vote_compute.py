@@ -3,6 +3,7 @@ import logging
 from core.consensus.data import VoteMessage
 from core.node.main_node import MainNode
 from core.storage.storage_of_beings import StorageOfBeings
+from core.storage.storage_of_galaxy import StorageOfGalaxy
 from core.storage.storage_of_temp import StorageOfTemp
 from core.utils.ciphersuites import CipherSuites
 from core.config.cycle_Info import ElectionPeriodValue
@@ -13,15 +14,22 @@ logger = logging.getLogger("main")
 
 # 票数计算
 class VoteCount:
-    def __init__(self, storage_of_beings: StorageOfBeings, storage_of_temp: StorageOfTemp, main_node: MainNode):
+    def __init__(self, storage_of_beings: StorageOfBeings, storage_of_times: StorageOfGalaxy,
+                 storage_of_temp: StorageOfTemp, main_node: MainNode):
         self.storageOfBeings = storage_of_beings
+        self.storageOfTimes = storage_of_times
         self.storageOfTemp = storage_of_temp
         self.mainNode = main_node
 
     # 初始化所有主节点的票的总数
     def initVotesOfMainNode(self, current_election_cycle):
+        # 清空投票摘要
+        logger.info("清空投票摘要")
+        self.storageOfTemp.clearVoteDigest()
         main_node_list = self.mainNode.mainNodeList.getNodeList()
         logger.debug("初始化所有主节点的票的总数调试信息")
+        # 清除上一选举周期产生票数数据
+        self.storageOfTemp.clearAllMainNodeVote()
         for node_i in main_node_list:
             total_vote = self.computeMainUserVote(main_node_user_pk=node_i["node_info"]["user_pk"],
                                                   current_election_cycle=current_election_cycle)
@@ -29,6 +37,15 @@ class VoteCount:
                                  total_vote=total_vote)
             logger.debug(node_i["node_info"])
             logger.debug(total_vote)
+
+    # 初始化普通用户的长期票的总数
+    def initPermanentVotesOfSimpleUser(self, current_election_cycle):
+        logger.debug("初始化普通用户的长期票的总数调试信息")
+        simple_user_vote_dict = self.storageOfTimes.computeSimpleUserInfoOfPermanentVote(current_election_cycle)
+        # 清除已有数据
+        self.storageOfTemp.clearAllSimpleUserPermanentVote()
+        # 保存
+        self.storageOfTemp.addBatchPermanentVoteOfSimpleUser(data_dict=simple_user_vote_dict)
 
     # 计算主节点的总票数
     def computeMainUserVote(self, main_node_user_pk, current_election_cycle):
@@ -41,9 +58,7 @@ class VoteCount:
                                                                           start=i * ElectionPeriodValue,
                                                                           end=(i + 1) * ElectionPeriodValue)
         # 时代区块产生的永久票
-        logger.debug("计算主节点的总票数,main_node_user_pk:" + main_node_user_pk)
-        logger.debug(beings_vote_count)
-        times_vote_count = 0
+        times_vote_count = self.storageOfTimes.getMainNodeUserCount(main_node_user_pk=main_node_user_pk)
         return beings_vote_count + times_vote_count
 
     def addMainUserVote(self, main_node_id, main_node_user_pk, total_vote):

@@ -5,7 +5,7 @@ import base64
 from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
 from core.data.block_of_times import BlockOfTimes
 from core.consensus.block_generate import NewBlockOfBeingsByExist, NewBlockOfTimesByExist
-from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage
 from core.data.network_message import NetworkMessage
 from core.data.node_info import NodeInfo
 
@@ -180,7 +180,7 @@ class SerializationAssetOfBeings:
         return block_list_of_beings
 
 
-# 序列化投票消息
+# 序列化短期投票消息
 class SerializationVoteMessage:
     @staticmethod
     def serialization(vote_message: VoteMessage):
@@ -205,3 +205,30 @@ class SerializationVoteMessage:
                                  main_user_pk=vote_message_dict["main_user_pk"])
         vote_message.setSignature(vote_message_dict["signature"])
         return vote_message
+
+
+# 序列化长期投票消息
+class SerializationLongTermVoteMessage:
+    @staticmethod
+    def serialization(long_term_vote_message: LongTermVoteMessage):
+        data = {
+            "to_main_node_user_pk": long_term_vote_message.toMainNodeUserPk,
+            "block_id": long_term_vote_message.blockId,
+            "election_period": long_term_vote_message.electionPeriod,
+            "number_of_vote": long_term_vote_message.numberOfVote,
+            "simple_user_pk": long_term_vote_message.simpleUserPk,
+            "signature": long_term_vote_message.signature
+        }
+        return data
+
+    @staticmethod
+    def deserialization(long_term_vote_message_bytes: bytes) -> LongTermVoteMessage:
+        vote_message_dict = literal_eval(bytes(long_term_vote_message_bytes).decode("utf-8"))
+        long_term_vote_message = LongTermVoteMessage()
+        long_term_vote_message.setVoteInfo(to_main_node_user_pk=vote_message_dict["to_main_node_user_pk"],
+                                           block_id=vote_message_dict["block_id"],
+                                           election_period=vote_message_dict["election_period"],
+                                           number_of_vote=vote_message_dict["number_of_vote"],
+                                           simple_user_pk=vote_message_dict["simple_user_pk"])
+        long_term_vote_message.setSignature(vote_message_dict["signature"])
+        return long_term_vote_message

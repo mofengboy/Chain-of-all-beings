@@ -294,6 +294,10 @@ class Vote:
     def getSimpleUserVoteByUserPk(self, user_pk):
         return self.db.getSimpleUserVoteByUserPk(user_pk)
 
+    # 获取普通用户的长期票票数信息
+    def getSimpleUserPermanentVoteByUserPk(self, user_pk):
+        return self.dbOfTemp.getSimpleUserPermanentVoteByUserPk(simple_user_pk=user_pk)
+
     # 增加已使用的票数
     def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
         return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
@@ -302,6 +306,7 @@ class Vote:
     # 修改后的总票数不能低于已经使用的票数
     # 修改后的总票数不能高于当前主节点剩余的票数
     def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote):
+        total_vote = float(total_vote)
         main_node_user_pk = self.dbOfTemp.getNodeInfo().userPk
         res_data = self.getMainNodeVoteByMainNodeUserPk(main_node_user_pk)
         if res_data is None:
@@ -312,7 +317,7 @@ class Vote:
             return False
         return self.db.modifyTotalVoteOfSimpleUser(user_pk, total_vote)
 
-    # 发起投票
+    # 发起短期票投票
     def initiateVoting(self, to_node_id, block_id, vote, simple_user_pk, signature) -> bool:
         if vote < 1.0:
             return False
@@ -333,9 +338,32 @@ class Vote:
         except Exception as err:
             print(err)
             return False
-        self.addUsedVoteOfSimpleUser(user_pk=simple_user_pk, used_vote=vote)
-        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
-        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         self.dbOfTemp.addVoteMessage(election_period=current_election_period, to_node_id=to_node_id,
                                      block_id=block_id, vote=vote, simple_user_pk=simple_user_pk, signature=signature)
+        return True
+
+    # 发起长期票投票
+    def initiatePermanentVoting(self, to_node_id, block_id, vote, simple_user_pk, signature) -> bool:
+        if vote < 1.0:
+            return False
+        simple_user_permanent_vote = self.getSimpleUserVoteByUserPk(simple_user_pk)
+        if simple_user_permanent_vote is None:
+            return False
+        if (simple_user_permanent_vote["total_vote"] - simple_user_permanent_vote["used_vote"]) < vote:
+            return False
+        # 验证签名
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        vote_info = "{'election_period': " + str(
+            current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + str(
+            vote) + ", 'simple_user_pk': " + simple_user_pk + "}"
+        try:
+            if not CipherSuites.verify(pk=simple_user_pk, signature=signature, message=str(vote_info).encode("utf-8")):
+                return False
+        except Exception as err:
+            print(err)
+            return False
+        self.dbOfTemp.addSimpleUserPermanentVoteMessage(election_period=current_election_period, to_node_id=to_node_id,
+                                                        block_id=block_id, vote=vote, simple_user_pk=simple_user_pk,
+                                                        signature=signature)
         return True
