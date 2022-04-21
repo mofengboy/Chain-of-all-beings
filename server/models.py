@@ -149,6 +149,30 @@ class BlockOfTimes:
         return data
 
 
+# 垃圾区块（待发布）
+class BlockOfGarbage:
+    def __init__(self, db: DB):
+        self.db = db
+        self.dbOfTemp = DBOfTemp()
+
+    # 标记众生区块
+    def addGarbageBlockQueue(self, beings_block_id):
+        election_period = int(self.dbOfTemp.getEpoch() / self.dbOfTemp.getElectionPeriodValue())
+        return self.db.insertGarbageBlockQueue(election_period, beings_block_id, 0, [])
+
+    # 撤销标记众生区块
+    def revocationGarbageBlockQueueByBlockId(self, beings_block_id):
+        self.db.modifyStatusOfGarbageBlockQueue(beings_block_id, 2)
+
+    def getListOfGarbageBlockQueue(self, offset, count, election_period):
+        data = self.db.getListOfGarbageBlockQueue(offset, count, election_period)
+        return data
+
+    def getGarbageBlockQueue(self, beings_block_id):
+        data = self.db.getGarbageBlockQueue(beings_block_id)
+        return data
+
+
 # 众生链（已经发布的众生区块）
 class ChainOfBeings:
     def __init__(self):
@@ -173,6 +197,7 @@ class ChainOfBeings:
         return self.dbOfBeings.getMaxEpoch()
 
 
+# 时代链（已经发布的时代区块）
 class ChainOfTimes:
     def __init__(self):
         self.dbOfBeings = DBOfBlock()
@@ -184,6 +209,20 @@ class ChainOfTimes:
     # 获取时代区块列表
     def getListOfBlockByElectionPeriod(self, election_period_start, election_period_end):
         return self.dbOfBeings.getListOfTimesByElectionPeriod(election_period_start, election_period_end)
+
+
+# 垃圾链（已经发布的垃圾区块）
+class ChainOfGarbage:
+    def __init__(self):
+        self.dbOfBeings = DBOfBlock()
+
+    # 获取垃圾区块列表
+    def getListOfGarbageByOffset(self, offset, count):
+        return self.dbOfBeings.getListOfGarbageByOffset(offset, count)
+
+    # 获取垃圾区块列表
+    def getListOfBlockByElectionPeriod(self, election_period_start, election_period_end):
+        return self.dbOfBeings.getListOfGarbageByElectionPeriod(election_period_start, election_period_end)
 
 
 class MainNodeManager:
@@ -290,7 +329,7 @@ class Vote:
     def getListOfSimpleUserVote(self, offset, count):
         return self.db.getListOfSimpleUserVote(offset, count)
 
-    # 获取普通用户的票数信息
+    # 获取普通用户的短期票票数信息
     def getSimpleUserVoteByUserPk(self, user_pk):
         return self.db.getSimpleUserVoteByUserPk(user_pk)
 
@@ -302,7 +341,7 @@ class Vote:
     def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
         return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
 
-    # 修改普通用户的总票数
+    # 修改普通用户的短期票总票数
     # 修改后的总票数不能低于已经使用的票数
     # 修改后的总票数不能高于当前主节点剩余的票数
     def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote):

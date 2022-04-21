@@ -13,6 +13,11 @@ class SubscribeTopics:
     # 时代区块生成订阅主题
     @staticmethod
     def getBlockTopicOfTimes():
+        return b"block t "
+
+    # 垃圾区块生成订阅主题
+    @staticmethod
+    def getBlockTopicOfGarbage():
         return b"block g "
 
     # 新节点申请加入订阅主题

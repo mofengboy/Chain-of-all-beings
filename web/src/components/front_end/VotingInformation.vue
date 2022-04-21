@@ -107,6 +107,8 @@ export default {
       captchaSrc: "",
       captchaInput: "",
       signatureDialog: false,
+      // 1为推荐区块投票，2为标记区块投票
+      voteType: 1,
       epoch: 0,
       electionPeriodValue: 1
     }
@@ -244,7 +246,7 @@ export default {
     },
     getVoteInfo: function () {
       return this.getPeriod().then(() => {
-        return "{'election_period': " + Math.floor(this.epoch / this.electionPeriodValue) + ", 'to_node_id': " + this.toNodeId + ", 'block_id': " + this.blockId + ", 'vote': " + this.toVote + ", 'simple_user_pk': " + this.simpleUserPk + "}"
+        return "{'election_period': " + Math.floor(this.epoch / this.electionPeriodValue) + ", 'to_node_id': " + this.toNodeId + ", 'block_id': " + this.blockId + ", 'vote': " + this.toVote + ", 'simple_user_pk': " + this.simpleUserPk + ", 'vote_type': " + this.voteType + "}"
       })
     },
     //签名

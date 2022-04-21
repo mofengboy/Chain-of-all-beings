@@ -6,17 +6,19 @@ import time
 from ast import literal_eval
 
 from core.data.block_of_beings import EmptyBlock, BlockListOfBeings
+from core.data.block_of_garbage import BodyOfGarbageBlock
 from core.data.block_of_times import BodyOfTimesBlock
 from core.data.node_info import NodeInfo
 from core.data.network_message import NetworkMessageType, NetworkMessage, SubscribeTopics
 from core.data.genesis_block import GenesisBlock
+from core.storage.storage_of_garbage import StorageOfGarbage
 from core.user.user import User
 from core.node.main_node import MainNode
 from core.network.net import PUB, SUB, Server, Client
 from core.consensus.node_management import NodeManager
-from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfTimes
+from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfTimes, NewBlockOfGarbage
 from core.consensus.vote_compute import VoteCount
-from core.consensus.data import ApplicationForm, ReplyApplicationForm, WaitGalaxyBlock, VoteMessage, LongTermVoteMessage
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage
 from core.consensus.data import NodeDelApplicationForm
 from core.consensus.block_verify import BlockVerify
 from core.storage.storage_of_beings import StorageOfBeings
@@ -26,7 +28,7 @@ from core.utils.ciphersuites import CipherSuites
 from core.utils.server_sdk import SDK, ChainAsset
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
     SerializationReplyApplicationForm, SerializationNetworkMessage, SerializationVoteMessage, SerializationTimes, \
-    SerializationLongTermVoteMessage
+    SerializationLongTermVoteMessage, SerializationGarbage
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
 from core.utils.download import RemoteChainAsset
@@ -41,17 +43,17 @@ class APP:
 
         self.storageOfBeings = StorageOfBeings()  # 众生区块存储类
         self.storageOfTemp = StorageOfTemp()  # 临时区存储类
-        self.storageOfGalaxy = StorageOfGalaxy()  # 银河区块存储类
+        self.storageOfGalaxy = StorageOfGalaxy()  # 时代区块存储类
+        self.storageOfGarbage = StorageOfGarbage()  # 垃圾区块存储类
 
         self.user = User()  # 用户
         self.user.login(sk_string, pk_string)
         self.mainNode = MainNode(self.user, server_url, self.storageOfTemp)  # 主节点
         self.nodeManager = NodeManager(user=self.user, main_node=self.mainNode,
                                        storage_of_temp=self.storageOfTemp)  # 节点管理
-        self.waitGalaxyBlock = WaitGalaxyBlock(main_node_id=self.mainNode.getNodeId(),
-                                               main_user_pk=self.user.getUserPKString())  # 推荐成为银河区块的众生区块列表
         self.voteCount = VoteCount(storage_of_beings=self.storageOfBeings, storage_of_temp=self.storageOfTemp,
-                                   main_node=self.mainNode, storage_of_times=self.storageOfGalaxy)  # 票数计算
+                                   main_node=self.mainNode, storage_of_times=self.storageOfGalaxy,
+                                   storage_of_garbage=self.storageOfGarbage)  # 票数计算
         self.blockVerify = BlockVerify(storage_of_beings=self.storageOfBeings)
         self.pub = PUB()  # 发布者
         self.pub.start()
@@ -130,7 +132,7 @@ class APP:
     # 增加订阅
     def addSub(self, ip):
         sub = SUB(ip=ip, pub=self.pub, blockListOfBeings=self.mainNode.currentBlockList,
-                  web_server_sdk=self.webServerSDK,
+                  web_server_sdk=self.webServerSDK, storage_of_garbage=self.storageOfGarbage,
                   user=self.user, vote_count=self.voteCount, node_manager=self.nodeManager,
                   main_node=self.mainNode, reSubscribe=self.reSubscribe, storage_of_temp=self.storageOfTemp,
                   getEpoch=self.getEpoch, getElectionPeriod=self.getElectionPeriod,
@@ -621,9 +623,15 @@ class APP:
 
             # 该短期票投票是否是针对当前主节点推荐的区块
             if self.webServerSDK.isExitTimesBlockQueueByBlockId(
-                    vote_message.blockId) and self.user.getUserPKString() == vote_message.toMainNodeUserPk:
+                    vote_message.blockId) and self.user.getUserPKString() == vote_message.toMainNodeUserPk and int(
+                vote_message.voteType) == 1:
                 self.webServerSDK.addVoteOfTimesBlockQueue(beings_block_id=vote_message.blockId,
                                                            vote_message=vote_message)
+            if self.webServerSDK.isExitGarbageBlockQueueByBlockId(
+                    vote_message.blockId) and self.user.getUserPKString() == vote_message.toMainNodeUserPk and int(
+                vote_message.voteType) == 2:
+                self.webServerSDK.addVoteOfGarbageBlockQueue(beings_block_id=vote_message.blockId,
+                                                             vote_message=vote_message)
             # 修改读取到的短期票投票信息状态
             self.storageOfTemp.modifyStatusOfWaitVote(status=1, wait_vote=wait_vote)
             # 广播
@@ -668,9 +676,13 @@ class APP:
 
             # 该长期票投票是否是针对当前主节点推荐的区块
             if self.webServerSDK.isExitTimesBlockQueueByBlockId(
-                    long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk:
+                    long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk and long_term_vote_message.voteType == 1:
                 self.webServerSDK.addPermanentVoteOfTimesBlockQueue(beings_block_id=long_term_vote_message.blockId,
                                                                     long_term_vote_message=long_term_vote_message)
+            if self.webServerSDK.isExitGarbageBlockQueueByBlockId(
+                    long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk and long_term_vote_message.voteType == 2:
+                self.webServerSDK.addPermanentVoteOfGarbageBlockQueue(beings_block_id=long_term_vote_message.blockId,
+                                                                      long_term_vote_message=long_term_vote_message)
             # 修改读取到的长期票投票信息状态
             self.storageOfTemp.modifyStatusOfLongTermWaitVote(status=1, wait_vote=long_term_wait_vote)
             # 广播
@@ -691,7 +703,14 @@ class APP:
             serial_vote_list = res["vote_list"]
             vote_message_list = []
             for vote_i in serial_vote_list:
-                vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+                # 判断是长期票还是短期票
+                if "main_user_pk" in vote_i:
+                    # 短期票
+                    vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+                else:
+                    # 长期票
+                    vote_message_list.append(
+                        SerializationLongTermVoteMessage.deserialization(str(vote_i).encode("utf-8")))
             if self.voteCount.checkVotesOfGenerateTimesBlock(beings_block_id=beings_block_id,
                                                              vote_message_list=vote_message_list):
                 logger.info("生在生成时代区块,原众生区块ID为:" + beings_block_id)
@@ -726,3 +745,58 @@ class APP:
                 # 修改状态
                 self.webServerSDK.modifyStatusOfTimesBlockQueue(beings_block_id=beings_block_id, status=4)
                 logger.warning("再次验证投票发现投票数量未达到生成时代区块标准")
+
+    # 检测并且生成垃圾区块
+    def checkAndGenerateBlockOfGarbage(self):
+        logger.info("检测并且生成垃圾区块")
+        # 检测是否有投票数量达到要求的时代区块推荐列表
+        vote_of_garbage_block = self.voteCount.getVotesOfGarbageBlockGenerate()
+        res = self.webServerSDK.getGarbageBlockQueueByVotes(votes=vote_of_garbage_block)
+        if res is not None:
+            # 再次验证投票
+            beings_block_id = res["beings_block_id"]
+            serial_vote_list = res["vote_list"]
+            vote_message_list = []
+            for vote_i in serial_vote_list:
+                # 判断是长期票还是短期票
+                if "main_user_pk" in vote_i:
+                    # 短期票
+                    vote_message_list.append(SerializationVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+                else:
+                    # 长期票
+                    vote_message_list.append(
+                        SerializationLongTermVoteMessage.deserialization(str(vote_i).encode("utf-8")))
+            if self.voteCount.checkVotesOfGenerateGarbageBlock(beings_block_id=beings_block_id,
+                                                               vote_message_list=vote_message_list):
+                logger.info("生在生成垃圾区块,原众生区块ID为:" + beings_block_id)
+                # 修改状态
+                self.webServerSDK.modifyStatusOfGarbageBlockQueue(beings_block_id=beings_block_id, status=2)
+                beings_users_pk = self.storageOfBeings.getUserPkByBlockId(block_id=beings_block_id)
+                body_of_garbage_block = BodyOfGarbageBlock(users_pk=beings_users_pk, block_id=beings_block_id)
+                body_signature = self.user.sign(str(body_of_garbage_block.getBody()).encode("utf-8"))
+                current_election_period = self.getElectionPeriod() - 1
+                prev_block_header, prev_block = self.storageOfGarbage.getBlockAbstractByElectionPeriod(
+                    election_period=current_election_period)
+                while prev_block_header is None:
+                    # 此时表明上一选举时期没有垃圾区块产生，继续向前寻找
+                    logger.info("current_election_period:" + str(current_election_period) + "没有垃圾区块产生，继续向前寻找")
+                    current_election_period -= 1
+                    prev_block_header, prev_block = self.storageOfGarbage.getBlockAbstractByElectionPeriod(
+                        election_period=current_election_period)
+                new_block_of_garbage = NewBlockOfGarbage(user_pk=[self.user.getUserPKString()],
+                                                         election_period=self.getElectionPeriod(),
+                                                         body_signature=[body_signature], body=body_of_garbage_block,
+                                                         pre_block=prev_block,
+                                                         prev_block_header=prev_block_header).getBlock()
+                # 保存时代区块
+                logger.info("保存垃圾区块,垃圾区块ID:" + new_block_of_garbage.getBlockID())
+                self.storageOfGarbage.addBlockOfGarbage(block_of_garbage=new_block_of_garbage)
+                # 广播生成时代区块的投票信息和生成的时代区块
+                logger.info("广播生成时代区块的投票信息和生成的垃圾区块")
+                serial_block_of_garbage = SerializationGarbage.serialization(new_block_of_garbage)
+                self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfGarbage(),
+                                     message=[serial_vote_list, serial_block_of_garbage])
+            else:
+                # 修改状态
+                self.webServerSDK.modifyStatusOfGarbageBlockQueue(beings_block_id=beings_block_id, status=4)
+                logger.warning("再次验证投票发现投票数量未达到生成垃圾区块标准")

@@ -1,6 +1,7 @@
 import logging
 import random
 
+from core.data.block_of_garbage import BodyOfGarbageBlock, BlockOfGarbage
 from core.data.node_info import MainNodeList, NodeInfo
 from core.data.block_of_beings import BlockOfBeings
 from core.data.block_of_times import BlockOfTimes, BodyOfTimesBlock
@@ -119,4 +120,34 @@ class NewBlockOfTimesByExist:
         self.newBlock.setHeader(header)
 
     def getBlock(self) -> BlockOfTimes:
+        return self.newBlock
+
+
+# 生产垃圾区块
+class NewBlockOfGarbage:
+    def __init__(self, user_pk, election_period, body_signature, body: BodyOfGarbageBlock, pre_block,
+                 prev_block_header):
+        if not CipherSuites.verify(pk=user_pk[0], signature=body_signature[0],
+                                   message=str(body.getBody()).encode("utf-8")):
+            # 用户公钥、签名、内容不匹配 抛出错误
+            raise "签名验证失败"
+        self.newBlock = BlockOfGarbage(election_period=election_period, prev_block_header=prev_block_header,
+                                       pre_block=pre_block, user_pk=user_pk[0], body_signature=body_signature[0],
+                                       body=str(body.getBody()).encode("utf-8"))
+
+    def getBlock(self) -> BlockOfGarbage:
+        return self.newBlock
+
+
+# 生产垃圾区块
+class NewBlockOfGarbageByExist:
+    def __init__(self, header, body: bytes):
+        for i in range(len(header["userPK"])):
+            if not CipherSuites.verify(pk=header["userPK"][i], signature=header["bodySignature"][i], message=body):
+                # 用户公钥、签名、内容不匹配 抛出错误
+                raise "签名验证失败"
+        self.newBlock = BlockOfGarbage(body=body)
+        self.newBlock.setHeader(header)
+
+    def getBlock(self) -> BlockOfGarbage:
         return self.newBlock

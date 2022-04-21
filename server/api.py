@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath("."))
 
 from server.database import DB
 from server.models import Auth, BlockOfBeings, MainNodeManager, ChainOfBeings, BackStageInfo, BlockOfTimes, Vote, \
-    ChainOfTimes
+    ChainOfTimes, BlockOfGarbage, ChainOfGarbage
 from server.utils.message import HttpMessage
 from server.utils.ciphersuites import CipherSuites
 from server.config import Allow_Url_List
@@ -22,9 +22,11 @@ auth = Auth(db=db)
 backstageInfo = BackStageInfo(db)
 blockOfBeings = BlockOfBeings(db)
 blockOfTimes = BlockOfTimes(db)
+blockOfGarbage = BlockOfGarbage(db)
 mainNodeManager = MainNodeManager(db)
 chainOfBlock = ChainOfBeings()
 chainOfTimes = ChainOfTimes()
+chainOfGarbage = ChainOfGarbage()
 vote = Vote(db)
 
 
@@ -362,6 +364,87 @@ def getBeingsListOfChainByOffset():
         return http_message.getJson()
 
 
+@api.route("/chain/garbage_list/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getGarbageListOfChain():
+    """获取垃圾链区块列表
+   {
+     ?offset=0&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{}，{}。。。。]
+   """
+    try:
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多查询8个选举周期的垃圾区块")
+            return http_message.getJson()
+        garbage_list = chainOfGarbage.getListOfGarbageByOffset(offset, count)
+        http_message = HttpMessage(is_success=True, data=garbage_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/garbage_list/get_by_election_period", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getGarbageListOfChainByElectionPeriod():
+    """获取垃圾链区块列表
+   {
+     ?start=0&end=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{}，{}。。。。]
+   """
+    try:
+        start = int(request.args.get("start"))
+        end = int(request.args.get("end"))
+        if end - start > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多查询8个选举周期的区块")
+            return http_message.getJson()
+        garbage_list = chainOfGarbage.getListOfBlockByElectionPeriod(start, end)
+        http_message = HttpMessage(is_success=True, data=garbage_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/chain/beings_list/offset_get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getBeingsListOfChainByOffset():
+    """获取众生链区块ID列表(倒序偏移获取）
+   {
+     ?offset=128&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [id...]
+   """
+    try:
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多获取8个Epoch的区块")
+            return http_message.getJson()
+        id_list = chainOfBlock.getIDListOfBlockByOffset(offset, count)
+        http_message = HttpMessage(is_success=True, data=id_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @api.route("/chain/beings/epoch_list", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
 def getEpochListOfBeingsChain():
@@ -457,6 +540,66 @@ def getTimesBlock():
     try:
         beings_block_id = request.args.get("block_id")
         res = blockOfTimes.getTimesBlockQueue(beings_block_id)
+        if res is None:
+            http_message = HttpMessage(is_success=False, data=res)
+        else:
+            http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/garbage_block_list/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getListOfGarbageBlockQueue():
+    """获取正在标记的众生区块列表(倒序偏移获取）
+    {
+     ?election_period=0&offset=0&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [{id,election_period,beings_block_id,votes}]
+   """
+    try:
+        election_period = int(request.args.get("election_period"))
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 32:
+            http_message = HttpMessage(is_success=False, data="每次最多获取32个众生区块ID信息")
+            return http_message.getJson()
+        res = blockOfGarbage.getListOfGarbageBlockQueue(offset, count, election_period)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/garbage_block/get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getGarbageBlock():
+    """获取正在推荐的众生区块
+    {
+     ?block_id=
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {"id": ,
+            "election_period":
+            "beings_block_id":
+            "votes":
+            "vote_list":
+            "status":
+            "create_time":
+   """
+    try:
+        beings_block_id = request.args.get("block_id")
+        res = blockOfGarbage.getGarbageBlockQueue(beings_block_id)
         if res is None:
             http_message = HttpMessage(is_success=False, data=res)
         else:
@@ -880,10 +1023,10 @@ def recommendBeings():
         return http_message.getJson()
 
 
-@api.route("/backstage/beings/revocation", methods=['POST'])
+@api.route("/backstage/beings/marker", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
-def revocationBeings():
-    """撤销推荐众生区块
+def markerBeings():
+    """标记众生区块
         Content-Type: application/json
         {
           "token":"",
@@ -903,8 +1046,43 @@ def revocationBeings():
             return http_message.getJson()
         # 获取列表
         beings_block_id = info["block_id"]
-        blockOfTimes.revocationTimesBlockQueueByBlockId(beings_block_id)
-        http_message = HttpMessage(is_success=True, data="撤销推荐成功")
+        if blockOfGarbage.addGarbageBlockQueue(beings_block_id):
+            http_message = HttpMessage(is_success=True, data="标记成功")
+            return http_message.getJson()
+        else:
+            http_message = HttpMessage(is_success=False, data="该区块已经被标记")
+            return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@api.route("/backstage/beings/unmark", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def revocationBeings():
+    """撤销标记众生区块
+        Content-Type: application/json
+        {
+          "token":"",
+          "block_id":""
+        }
+        返回 json
+        {
+        "is_success":bool,
+        "data":
+        """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        beings_block_id = info["block_id"]
+        blockOfGarbage.revocationGarbageBlockQueueByBlockId(beings_block_id)
+        http_message = HttpMessage(is_success=True, data="撤销标记成功")
         return http_message.getJson()
     except Exception as err:
         print(err)

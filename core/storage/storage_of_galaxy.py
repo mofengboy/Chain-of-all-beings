@@ -79,13 +79,13 @@ class StorageOfGalaxy(Sqlite):
             times_block_list.append(times_block)
         return times_block_list
 
-    def getMainNodeUserCount(self, main_node_user_pk):
+    def getMainNodeUserCount(self, main_node_user_pk, election_period):
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select count(id)
         from galaxy
-        where user_pk = ? or beings_main_node_user_pk = ?
-        """, (main_node_user_pk, main_node_user_pk))
+        where user_pk = ? or beings_main_node_user_pk = ? and election_period >= ?
+        """, (main_node_user_pk, main_node_user_pk, election_period - 128))
         res = cursor.fetchone()
         if res is None:
             return 0

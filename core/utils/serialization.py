@@ -3,8 +3,9 @@ from ast import literal_eval
 import base64
 
 from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
+from core.data.block_of_garbage import BlockOfGarbage
 from core.data.block_of_times import BlockOfTimes
-from core.consensus.block_generate import NewBlockOfBeingsByExist, NewBlockOfTimesByExist
+from core.consensus.block_generate import NewBlockOfBeingsByExist, NewBlockOfTimesByExist, NewBlockOfGarbageByExist
 from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage
 from core.data.network_message import NetworkMessage
 from core.data.node_info import NodeInfo
@@ -53,6 +54,27 @@ class SerializationTimes:
         dict_of_times = literal_eval(bytes(block_of_times_bytes).decode("utf-8"))
         block_of_times = NewBlockOfTimesByExist(header=dict_of_times["header"], body=dict_of_times["body"]).getBlock()
         return block_of_times
+
+
+# 垃圾区块对象序列化与反序列化
+class SerializationGarbage:
+    # 序列化
+    @staticmethod
+    def serialization(block_of_garbage: BlockOfGarbage):
+        block_header = block_of_garbage.getBlockHeader()
+        body = block_of_garbage.body
+        return {
+            "header": block_header,
+            "body": body
+        }
+
+    # 反序列化
+    @staticmethod
+    def deserialization(block_of_garbage_bytes: bytes) -> BlockOfGarbage:
+        dict_of_garbage = literal_eval(bytes(block_of_garbage_bytes).decode("utf-8"))
+        block_of_garbage = NewBlockOfGarbageByExist(header=dict_of_garbage["header"],
+                                                    body=dict_of_garbage["body"]).getBlock()
+        return block_of_garbage
 
 
 # 申请书对象序列化与反序列化
@@ -190,6 +212,7 @@ class SerializationVoteMessage:
             "election_period": vote_message.electionPeriod,
             "number_of_vote": vote_message.numberOfVote,
             "main_user_pk": vote_message.mainUserPk,
+            "vote_type": vote_message.voteType,
             "signature": vote_message.signature
         }
         return data
@@ -202,7 +225,8 @@ class SerializationVoteMessage:
                                  block_id=vote_message_dict["block_id"],
                                  election_period=vote_message_dict["election_period"],
                                  number_of_vote=vote_message_dict["number_of_vote"],
-                                 main_user_pk=vote_message_dict["main_user_pk"])
+                                 main_user_pk=vote_message_dict["main_user_pk"],
+                                 vote_type=vote_message_dict["vote_type"])
         vote_message.setSignature(vote_message_dict["signature"])
         return vote_message
 
@@ -217,6 +241,7 @@ class SerializationLongTermVoteMessage:
             "election_period": long_term_vote_message.electionPeriod,
             "number_of_vote": long_term_vote_message.numberOfVote,
             "simple_user_pk": long_term_vote_message.simpleUserPk,
+            "vote_type": long_term_vote_message.voteType,
             "signature": long_term_vote_message.signature
         }
         return data
@@ -229,6 +254,7 @@ class SerializationLongTermVoteMessage:
                                            block_id=vote_message_dict["block_id"],
                                            election_period=vote_message_dict["election_period"],
                                            number_of_vote=vote_message_dict["number_of_vote"],
-                                           simple_user_pk=vote_message_dict["simple_user_pk"])
+                                           simple_user_pk=vote_message_dict["simple_user_pk"],
+                                           vote_type=vote_message_dict["vote_type"])
         long_term_vote_message.setSignature(vote_message_dict["signature"])
         return long_term_vote_message

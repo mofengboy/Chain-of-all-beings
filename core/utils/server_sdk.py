@@ -267,6 +267,87 @@ class DB:
                   beings_block_id))
             self.__DB.commit()
 
+    def isExitGarbageBlockQueueByBlockId(self, beings_block_id):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select count(id) 
+        from garbage_block_queue
+        where beings_block_id = ?
+        """, (beings_block_id,))
+        res = cursor.fetchone()
+        if res[0] > 0:
+            return True
+        else:
+            return False
+
+    def modifyStatusOfGarbageBlockQueue(self, beings_block_id, status):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        update garbage_block_queue
+        set status = ?
+        where beings_block_id = ?
+        """, (status, beings_block_id))
+        self.__DB.commit()
+
+    def getGarbageBlockQueueByVotes(self, votes):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes, vote_list, status, create_time 
+        from garbage_block_queue
+        where status = 0 and votes >= ? limit 1
+        """, (votes,))
+        res = cursor.fetchone()
+        if res is None:
+            return None
+        else:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "beings_block_id": res[2],
+                "votes": res[3],
+                "vote_list": literal_eval(bytes(res[4]).decode("utf-8")),
+                "status": res[5],
+                "create_time": res[6]
+            }
+            return data
+
+    def addVoteOfGarbageBlockQueue(self, beings_block_id, vote_message: VoteMessage):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select votes, vote_list from garbage_block_queue
+        where beings_block_id = ? and status = ?
+        """, (beings_block_id, 0))
+        res = cursor.fetchone()
+        if res is not None:
+            raw_votes = round(res[0], 1)
+            vote_list = literal_eval(bytes(res[1]).decode("utf-8"))
+            vote_list.append(SerializationVoteMessage.serialization(vote_message))
+            cursor.execute("""
+            update garbage_block_queue
+            set votes = ?, vote_list = ?
+            where beings_block_id = ?
+            """, (raw_votes + round(vote_message.numberOfVote, 1), str(vote_list).encode("utf-8"), beings_block_id))
+            self.__DB.commit()
+
+    def addPermanentVoteOfGarbageBlockQueue(self, beings_block_id, long_term_vote_message: LongTermVoteMessage):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select votes, vote_list from garbage_block_queue
+        where beings_block_id = ? and status = ?
+        """, (beings_block_id, 0))
+        res = cursor.fetchone()
+        if res is not None:
+            raw_votes = round(res[0], 1)
+            vote_list = literal_eval(bytes(res[1]).decode("utf-8"))
+            vote_list.append(SerializationLongTermVoteMessage.serialization(long_term_vote_message))
+            cursor.execute("""
+            update garbage_block_queue
+            set votes = ?, vote_list = ?
+            where beings_block_id = ?
+            """, (raw_votes + round(long_term_vote_message.numberOfVote, 1), str(vote_list).encode("utf-8"),
+                  beings_block_id))
+            self.__DB.commit()
+
 
 # core部分读取server部分的数据库
 class SDK:
@@ -318,11 +399,27 @@ class SDK:
     def addPermanentVoteOfTimesBlockQueue(self, beings_block_id, long_term_vote_message: LongTermVoteMessage):
         self.db.addPermanentVoteOfTimesBlockQueue(beings_block_id, long_term_vote_message)
 
+    # 短期票
     def getTimesBlockQueueByVotes(self, votes):
         return self.db.getTimesBlockQueueByVotes(votes)
 
     def modifyStatusOfTimesBlockQueue(self, beings_block_id, status):
         self.db.modifyStatusOfTimesBlockQueue(beings_block_id, status)
+
+    def isExitGarbageBlockQueueByBlockId(self, beings_block_id):
+        return self.db.isExitGarbageBlockQueueByBlockId(beings_block_id)
+
+    def addVoteOfGarbageBlockQueue(self, beings_block_id, vote_message: VoteMessage):
+        self.db.addVoteOfGarbageBlockQueue(beings_block_id, vote_message)
+
+    def addPermanentVoteOfGarbageBlockQueue(self, beings_block_id, long_term_vote_message: LongTermVoteMessage):
+        self.db.addPermanentVoteOfGarbageBlockQueue(beings_block_id, long_term_vote_message)
+
+    def getGarbageBlockQueueByVotes(self, votes):
+        return self.db.getGarbageBlockQueueByVotes(votes)
+
+    def modifyStatusOfGarbageBlockQueue(self, beings_block_id, status):
+        self.db.modifyStatusOfGarbageBlockQueue(beings_block_id, status)
 
 
 # server部分的区块资源

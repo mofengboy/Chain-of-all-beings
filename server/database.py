@@ -65,6 +65,22 @@ class DB:
             """)
             self.__DB.commit()
 
+        # 推荐中的垃圾区块信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'garbage_block_queue'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table garbage_block_queue(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            votes FLOAT NOT NULL,
+            vote_list BLOB NOT NULL,
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
         # 存储授权给简单用户节点的票
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'simple_user_vote'")
         if cursor.fetchone()[0] == 0:
@@ -364,6 +380,73 @@ class DB:
         cursor.execute("""
         select id, election_period, beings_block_id, votes, vote_list, status, create_time 
         from times_block_queue
+        where beings_block_id = ?
+        """, (beings_block_id,))
+        res = cursor.fetchone()
+        if res is None:
+            return None
+        else:
+            data = {
+                "id": res[0],
+                "election_period": res[1],
+                "beings_block_id": res[2],
+                "votes": res[3],
+                "vote_list": literal_eval(bytes(res[4]).decode("utf-8")),
+                "status": res[5],
+                "create_time": res[6]
+            }
+            return data
+
+    def insertGarbageBlockQueue(self, election_period, beings_block_id, votes, vote_list):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select count(id) from garbage_block_queue
+        where beings_block_id = ? and election_period = ?
+        """, (beings_block_id, election_period))
+        res = cursor.fetchone()
+        if res[0] != 0:
+            return False
+        else:
+            cursor.execute("""
+            insert into garbage_block_queue(election_period, beings_block_id, votes, vote_list, status, create_time) 
+            values (?,?,?,?,?,?)
+            """, (election_period, beings_block_id, votes, str(vote_list).encode("utf-8"), 0, time.time()))
+            self.__DB.commit()
+            return True
+
+    def modifyStatusOfGarbageBlockQueue(self, beings_block_id, status):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        update garbage_block_queue
+        set status = ?
+        where beings_block_id = ?
+        """, (status, beings_block_id))
+        self.__DB.commit()
+
+    def getListOfGarbageBlockQueue(self, offset, count, election_period):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes 
+        from garbage_block_queue
+        where status = 0 and election_period = ?
+        order by id desc limit ?,?
+        """, (election_period, offset, count))
+        res = cursor.fetchall()
+        res_list = []
+        for data in res:
+            res_list.append({
+                "id": data[0],
+                "election_period": data[1],
+                "beings_block_id": data[2],
+                "votes": data[3]
+            })
+        return res_list
+
+    def getGarbageBlockQueue(self, beings_block_id):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, election_period, beings_block_id, votes, vote_list, status, create_time 
+        from garbage_block_queue
         where beings_block_id = ?
         """, (beings_block_id,))
         res = cursor.fetchone()

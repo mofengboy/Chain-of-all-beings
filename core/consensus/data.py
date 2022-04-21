@@ -15,6 +15,7 @@ class VoteMessage:
         self.numberOfVote = 0.0
         self.mainUserPk = ""
         self.signature = ""
+        self.voteType = 1  # 1为推荐区块投票，2为标记区块投票
 
     def setSignature(self, signature):
         self.signature = signature
@@ -22,12 +23,13 @@ class VoteMessage:
     def getSignature(self):
         return self.signature
 
-    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, main_user_pk):
+    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, main_user_pk, vote_type):
         self.toMainNodeUserPk = to_main_node_user_pk
         self.blockId = block_id
         self.electionPeriod = election_period
         self.numberOfVote = number_of_vote
         self.mainUserPk = main_user_pk
+        self.voteType = vote_type
 
     def getVoteInfo(self):
         return {
@@ -35,7 +37,8 @@ class VoteMessage:
             "block_id": self.blockId,
             "election_period": self.electionPeriod,
             "number_of_vote": self.numberOfVote,
-            "main_user_pk": self.mainUserPk
+            "main_user_pk": self.mainUserPk,
+            "vote_type": self.voteType
         }
 
     def getVoteMessage(self):
@@ -45,6 +48,7 @@ class VoteMessage:
             "election_period": self.electionPeriod,
             "number_of_vote": self.numberOfVote,
             "main_user_pk": self.mainUserPk,
+            "vote_type": self.voteType,
             "signature": self.signature
         }
 
@@ -58,6 +62,7 @@ class LongTermVoteMessage:
         self.numberOfVote = 0.0
         self.simpleUserPk = ""
         self.signature = ""
+        self.voteType = 1  # 1为推荐区块投票，2为标记区块投票
 
     def setSignature(self, signature):
         self.signature = signature
@@ -65,12 +70,13 @@ class LongTermVoteMessage:
     def getSignature(self):
         return self.signature
 
-    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, simple_user_pk):
+    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, simple_user_pk, vote_type):
         self.toMainNodeUserPk = to_main_node_user_pk
         self.blockId = block_id
         self.electionPeriod = election_period
         self.numberOfVote = number_of_vote
         self.simpleUserPk = simple_user_pk
+        self.voteType = vote_type
 
     def getVoteInfo(self):
         return {
@@ -78,7 +84,8 @@ class LongTermVoteMessage:
             "block_id": self.blockId,
             "election_period": self.electionPeriod,
             "number_of_vote": self.numberOfVote,
-            "simple_user_pk": self.simpleUserPk
+            "simple_user_pk": self.simpleUserPk,
+            "vote_type": self.voteType
         }
 
     def getVoteMessage(self):
@@ -88,6 +95,7 @@ class LongTermVoteMessage:
             "election_period": self.electionPeriod,
             "number_of_vote": self.numberOfVote,
             "simple_user_pk": self.simpleUserPk,
+            "vote_type": self.voteType,
             "signature": self.signature
         }
 
