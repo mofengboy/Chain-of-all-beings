@@ -218,6 +218,79 @@ def getBeingsListOfChain():
         return http_message.getJson()
 
 
+@chain.route("/chain/beings_list/offset_get", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getBeingsListOfChainByOffset():
+    """获取众生链区块ID列表(倒序偏移获取）
+   {
+     ?offset=128&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [id...]
+   """
+    try:
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 8:
+            http_message = HttpMessage(is_success=False, data="每次最多获取8个Epoch的区块")
+            return http_message.getJson()
+        id_list = chainOfBlock.getIDListOfBlockByOffset(offset, count)
+        http_message = HttpMessage(is_success=True, data=id_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@chain.route("/chain/beings/epoch_list", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getEpochListOfBeingsChain():
+    """获取众生链区块Epoch列表
+   {
+     ?offset=0&count=8
+   }
+   返回 json
+   {
+   "is_success":bool,
+   "data": [id...]
+   """
+    try:
+        offset = int(request.args.get("offset"))
+        count = int(request.args.get("count"))
+        if count > 1024:
+            http_message = HttpMessage(is_success=False, data="每次最多查询1024个Epoch列表")
+            return http_message.getJson()
+        epoch_list = chainOfBlock.getEpochLIst(offset, count)
+        http_message = HttpMessage(is_success=True, data=epoch_list)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@chain.route("/chain/beings/max_epoch", methods=['GET'])
+@cross_origin(origins=Allow_Url_List)
+def getMaxEpoch():
+    """获取众生链区块最大期次
+   返回 json
+   {
+   "is_success":bool,
+   "data": int
+   """
+    try:
+        epoch = chainOfBlock.getMaxEpoch()
+        http_message = HttpMessage(is_success=True, data=epoch)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @chain.route("/chain/times_list/get", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
 def getTimesListOfChain():
@@ -272,33 +345,6 @@ def getTimesListOfChainByElectionPeriod():
         return http_message.getJson()
 
 
-@chain.route("/chain/beings_list/offset_get", methods=['GET'])
-@cross_origin(origins=Allow_Url_List)
-def getBeingsListOfChainByOffset():
-    """获取众生链区块ID列表(倒序偏移获取）
-   {
-     ?offset=128&count=8
-   }
-   返回 json
-   {
-   "is_success":bool,
-   "data": [id...]
-   """
-    try:
-        offset = int(request.args.get("offset"))
-        count = int(request.args.get("count"))
-        if count > 8:
-            http_message = HttpMessage(is_success=False, data="每次最多获取8个Epoch的区块")
-            return http_message.getJson()
-        id_list = chainOfBlock.getIDListOfBlockByOffset(offset, count)
-        http_message = HttpMessage(is_success=True, data=id_list)
-        return http_message.getJson()
-    except Exception as err:
-        print(err)
-        http_message = HttpMessage(is_success=False, data="参数错误")
-        return http_message.getJson()
-
-
 @chain.route("/chain/garbage_list/get", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
 def getGarbageListOfChain():
@@ -346,52 +392,6 @@ def getGarbageListOfChainByElectionPeriod():
             return http_message.getJson()
         garbage_list = chainOfGarbage.getListOfBlockByElectionPeriod(start, end)
         http_message = HttpMessage(is_success=True, data=garbage_list)
-        return http_message.getJson()
-    except Exception as err:
-        print(err)
-        http_message = HttpMessage(is_success=False, data="参数错误")
-        return http_message.getJson()
-
-
-@chain.route("/chain/beings/epoch_list", methods=['GET'])
-@cross_origin(origins=Allow_Url_List)
-def getEpochListOfBeingsChain():
-    """获取众生链区块Epoch列表
-   {
-     ?offset=0&count=8
-   }
-   返回 json
-   {
-   "is_success":bool,
-   "data": [id...]
-   """
-    try:
-        offset = int(request.args.get("offset"))
-        count = int(request.args.get("count"))
-        if count > 1024:
-            http_message = HttpMessage(is_success=False, data="每次最多查询1024个Epoch列表")
-            return http_message.getJson()
-        epoch_list = chainOfBlock.getEpochLIst(offset, count)
-        http_message = HttpMessage(is_success=True, data=epoch_list)
-        return http_message.getJson()
-    except Exception as err:
-        print(err)
-        http_message = HttpMessage(is_success=False, data="参数错误")
-        return http_message.getJson()
-
-
-@chain.route("/chain/beings/max_epoch", methods=['GET'])
-@cross_origin(origins=Allow_Url_List)
-def getMaxEpoch():
-    """获取众生链区块最大期次
-   返回 json
-   {
-   "is_success":bool,
-   "data": int
-   """
-    try:
-        epoch = chainOfBlock.getMaxEpoch()
-        http_message = HttpMessage(is_success=True, data=epoch)
         return http_message.getJson()
     except Exception as err:
         print(err)
@@ -490,7 +490,7 @@ def getListOfGarbageBlockQueue():
 @chain.route("/garbage_block/get", methods=['GET'])
 @cross_origin(origins=Allow_Url_List)
 def getGarbageBlock():
-    """获取正在推荐的众生区块
+    """获取正在标记的众生区块
     {
      ?block_id=
    }
@@ -576,7 +576,7 @@ def getVoteOfMainNode():
 @chain.route("/vote/add", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def initiateVoting():
-    """发起投票
+    """发起临时票投票
     {
     "captcha“：{},
     ”to_node_id“：”“,
@@ -605,6 +605,50 @@ def initiateVoting():
             signature = info["signature"]
             is_success = vote.initiateVoting(to_node_id=to_node_id, block_id=block_id, vote=to_vote,
                                              simple_user_pk=simple_user_pk, signature=signature)
+            if is_success:
+                http_message = HttpMessage(is_success=True, data="投票成功")
+                return http_message.getJson()
+            else:
+                http_message = HttpMessage(is_success=False, data="投票失败")
+                return http_message.getJson()
+        except Exception as err:
+            traceback.print_exc()
+            http_message = HttpMessage(is_success=False, data="参数错误")
+            return http_message.getJson()
+
+
+@chain.route("/permanent_vote/add", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def initiatePermanentVoting():
+    """发起长期票投票
+    {
+    "captcha“：{},
+    ”to_node_id“：”“,
+    ”block_id“：”“,
+    ”to_vote“：”“,
+    ”simple_user_pk“：”“,
+    "signature“：”“,
+    }
+   返回 json
+   {
+   "is_success":bool,
+   "data": {}
+   }
+   """
+    if request.method == 'POST':
+        info = request.get_json()
+        try:
+            captcha = info["captcha"]
+            if not auth.verifyCaptcha(uuid=captcha["uuid"], word=captcha["word"]):
+                http_message = HttpMessage(is_success=False, data="验证码错误")
+                return http_message.getJson()
+            to_node_id = info["to_node_id"]
+            block_id = info["block_id"]
+            to_vote = info["to_vote"]
+            simple_user_pk = info["simple_user_pk"]
+            signature = info["signature"]
+            is_success = vote.initiatePermanentVoting(to_node_id=to_node_id, block_id=block_id, vote=to_vote,
+                                                      simple_user_pk=simple_user_pk, signature=signature)
             if is_success:
                 http_message = HttpMessage(is_success=True, data="投票成功")
                 return http_message.getJson()

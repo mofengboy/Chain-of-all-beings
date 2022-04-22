@@ -11,6 +11,7 @@ import BlockDetail from "@/components/front_end/BlockDetail";
 import TimesBlockRecommendation from "@/components/front_end/TimesBlockRecommendation";
 import VotingInformation from "@/components/front_end/VotingInformation";
 import BlockOfTimes from "@/components/front_end/BlockOfTimes";
+import BlockOfGarbage from "@/components/front_end/BlockOfGarbage";
 
 const routes = [
     //首页
@@ -44,6 +45,12 @@ const routes = [
                 path: "/chain/times",
                 name: "BlockOfTimes",
                 component: BlockOfTimes,
+            },
+            //垃圾区块查询
+            {
+                path: "/chain/garbage",
+                name: "BlockOfGarbage",
+                component: BlockOfGarbage,
             },
             //记录生命
             {

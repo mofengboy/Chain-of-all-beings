@@ -38,15 +38,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="election_period" label="上链期次(选举周期)"></el-table-column>
-        <el-table-column label="选举的众生区块ID">
+        <el-table-column label="标记的众生区块ID">
           <template #default="scope">
             <div>{{ scope.row.body_block_id }}</div>
           </template>
         </el-table-column>
-
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfTimesByOffset">获取更多
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfGarbageByOffset">获取更多
         </el-button>
       </div>
       <div class="search-epoch">
@@ -60,7 +59,7 @@
             </el-form-item>
           </div>
           <div>
-            <el-button type="primary" style="width: 100%" v-on:click="getListOfTimesByElectionPeriod">查找</el-button>
+            <el-button type="primary" style="width: 100%" v-on:click="getListOfGarbageByElectionPeriod">查找</el-button>
           </div>
         </el-form>
       </div>
@@ -72,7 +71,7 @@
 import {ElNotification, ElTable, ElTableColumn} from "element-plus";
 
 export default {
-  name: "BlockOfTimes",
+  name: "BlockOfGarbage",
   data() {
     return {
       tableData: [],
@@ -89,7 +88,7 @@ export default {
     ElTableColumn
   },
   created() {
-    this.getListOfTimesByOffset()
+    this.getListOfGarbageByOffset()
   },
   methods: {
     changeStartEpoch: function (value) {
@@ -109,11 +108,11 @@ export default {
       }
     },
     //倒序获取区块列表
-    getListOfTimesByOffset: function () {
+    getListOfGarbageByOffset: function () {
       const _this = this
       this.axios({
         method: 'get',
-        url: "/chain/times_list/get?offset=" + _this.more_offset + "&count=8"
+        url: "/chain/garbage_list/get?offset=" + _this.more_offset + "&count=8"
       }).then((res) => {
         if (res.data["is_success"]) {
           const id_list = res.data["data"]
@@ -159,11 +158,11 @@ export default {
         }
       })
     },
-    getListOfTimesByElectionPeriod: function () {
+    getListOfGarbageByElectionPeriod: function () {
       const _this = this
       this.axios({
         method: 'get',
-        url: '/chain/times_list/get_by_election_period?start=' + _this.start_election_period + "&end=" + _this.end_election_period
+        url: '/chain/garbage_list/get_by_election_period?start=' + _this.start_election_period + "&end=" + _this.end_election_period
       }).then((res) => {
         if (res.data["is_success"]) {
           const id_list = res.data["data"]

@@ -18,6 +18,8 @@
         </el-sub-menu>
         <el-sub-menu index="4">
           <template #title>垃圾区块管理</template>
+          <el-menu-item index="4-1">垃圾区块标记</el-menu-item>
+          <el-menu-item index="4-2">垃圾区块标记列表</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="5">
           <template #title>节点管理</template>
@@ -37,6 +39,8 @@
       <BeingsWaitingRelease v-if="menu==='2-2'"></BeingsWaitingRelease>
       <TimeBlockRecommend v-if="menu==='3-1'"></TimeBlockRecommend>
       <TimesBlockList v-if="menu==='3-2'"></TimesBlockList>
+      <GarbageBlockMark v-if="menu==='4-1'"></GarbageBlockMark>
+      <GarbageBlockList v-if="menu==='4-2'"></GarbageBlockList>
       <MainNodeApplicationList v-if="menu==='5-1'"></MainNodeApplicationList>
       <OtherNodeApplicationList v-if="menu==='5-2'"></OtherNodeApplicationList>
       <SimpleUserVote v-if="menu==='6-1'"></SimpleUserVote>
@@ -54,10 +58,14 @@ import WebConfig from "@/components/backstage/WebConfig";
 import TimeBlockRecommend from "@/components/backstage/TimeBlockRecommend";
 import TimesBlockList from "@/components/backstage/TimesBlockList";
 import SimpleUserVote from "@/components/backstage/SimpleUserVote";
+import GarbageBlockMark from "@/components/backstage/GarbageBlockMark";
+import GarbageBlockList from "@/components/backstage/GarbageBlockList";
 
 export default {
   name: "BackstageMain",
   components: {
+    GarbageBlockList,
+    GarbageBlockMark,
     SimpleUserVote,
     TimesBlockList,
     WebConfig, OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease,

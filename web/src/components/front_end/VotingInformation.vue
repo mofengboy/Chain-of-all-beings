@@ -1,18 +1,32 @@
 <template>
   <div>
     <div>
-      <p style="text-align: center">普通用户票数查询（仅显示在本主节点拥有的票数）</p>
+      <p style="text-align: center">普通用户票数查询</p>
       <el-input v-model="simpleUserPk" class="simple-user-input" type="textarea" :autosize="{ minRows: 1}"
                 placeholder="用户公钥"></el-input>
       <el-button class="simple-user-button" type="primary" v-on:click="getSimpleUserVote">查询</el-button>
-      <div class="simple-user">
-        <div class="simple-user-show">已使用票数：{{ simpleUserUsedVote }}</div>
-        <div class="simple-user-show">总票数：{{ simpleUserVote }}</div>
+      <div class="border">
+        <div class="simple-user">
+          <p>短期票（仅显示在本主节点拥有的短期票票数）</p>
+          <div class="simple-user-show">已使用票数：{{ simpleUserUsedVote }}</div>
+          <div class="simple-user-show">总票数：{{ simpleUserVote }}</div>
+        </div>
+        <div class="simple-user">
+          <p>长期票</p>
+          <div class="simple-user-show">已使用票数：{{ simpleUserPermanentUsedVote }}</div>
+          <div class="simple-user-show">总票数：{{ simpleUserPermanentVote }}</div>
+        </div>
       </div>
     </div>
     <el-divider/>
     <div>
-      <p style="text-align: center">发起投票</p>
+      <el-steps style="margin: 0 auto;width: 80%" :active="longTermActive">
+        <el-step v-on:click="this.isLongTerm=false;longTermActive=0" title="短期票"/>
+        <el-step v-on:click="this.isLongTerm=true;longTermActive=1" title="长期票"/>
+      </el-steps>
+    </div>
+    <div v-if="!isLongTerm">
+      <p style="text-align: center">发起投票(短期票)</p>
       <p class="sk-alert">注意：在投票之前一定要确认目标主节点推荐了该区块并且确保输入正确，避免票被浪费。</p>
       <el-form label-position="left" label-width="100px" size="default">
         <div>
@@ -23,6 +37,10 @@
           <el-form-item label="区块ID">
             <el-input v-model="blockId" :autosize="{minRows: 1}" type="textarea">
             </el-input>
+          </el-form-item>
+          <el-form-item label="投票类型">
+            <el-radio v-model="voteType" label="1" border>推荐为时代区块</el-radio>
+            <el-radio v-model="voteType" label="2" border>标记为垃圾区块</el-radio>
           </el-form-item>
           <el-form-item label="用户公钥">
             <el-input v-model="simpleUserPk" :autosize="{minRows: 1}" type="textarea">
@@ -74,6 +92,73 @@
         </div>
       </el-form>
     </div>
+    <div v-if="isLongTerm">
+      <p style="text-align: center">发起投票(长期票)</p>
+      <p class="sk-alert">注意：在投票之前一定要确认目标主节点推荐了该区块并且确保输入正确，避免票被浪费。</p>
+      <el-form label-position="left" label-width="100px" size="default">
+        <div>
+          <el-form-item label="目标主节点ID">
+            <el-input v-model="toNodeId" :autosize="{minRows: 1}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="区块ID">
+            <el-input v-model="blockId" :autosize="{minRows: 1}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="投票类型">
+            <el-radio v-model="voteType" label="1" border>推荐为时代区块</el-radio>
+            <el-radio v-model="voteType" label="2" border>标记为垃圾区块</el-radio>
+          </el-form-item>
+          <el-form-item label="用户公钥">
+            <el-input v-model="simpleUserPk" :autosize="{minRows: 1}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="签名">
+            <el-input v-model="voteSignature" :autosize="{minRows: 1}" type="textarea">
+            </el-input>
+            <div>
+              <el-link type="primary" v-on:click="signatureDialog = true">如何计算签名？</el-link>
+            </div>
+          </el-form-item>
+          <!--签名弹框-->
+          <el-dialog v-model="signatureDialog" title="计算签名" width="80%">
+            <div>
+              <el-form>
+                <p>若内容发生改变，则必须重新计算签名。</p>
+                <div>
+                  <el-form-item label="用户私钥：" label-width="90px">
+                    <el-input v-model="simpleUserSk" autosize type="textarea"/>
+                  </el-form-item>
+                </div>
+                <div>
+                  <el-form-item label="签名：" label-width="90px">
+                    <el-input v-model="voteSignature" autosize type="textarea"/>
+                  </el-form-item>
+                </div>
+                <div class="button-sign">
+                  <el-button type="primary" style="width: 100%" v-on:click="sign">生成签名</el-button>
+                </div>
+              </el-form>
+            </div>
+          </el-dialog>
+          <el-form-item label="投票数量">
+            <el-input-number v-model="toVote" :precision="1" :step="0.1" :min="1.0"/>
+          </el-form-item>
+          <el-form-item label="验证码">
+            <div>
+              <div class="CAPTCHA" v-on:click="getCAPTCHA">
+                <el-image :src="'data:image/png;base64,'+this.captchaSrc['pic_base64']"></el-image>
+              </div>
+              <div class="CAPTCHA_input">
+                <el-input v-model="captchaInput"></el-input>
+              </div>
+            </div>
+            <p class="CAPTCHA_tip">点击图片刷新验证码，验证码有效期为五分钟</p>
+          </el-form-item>
+          <el-button style="width: 100%" type="primary" v-on:click="initPermanentVote">发起投票</el-button>
+        </div>
+      </el-form>
+    </div>
     <el-divider/>
     <div>
       <p style="text-align: center">所有主节点的拥有的票数信息</p>
@@ -98,6 +183,8 @@ export default {
       simpleUserPk: "",
       simpleUserVote: 0,
       simpleUserUsedVote: 0,
+      simpleUserPermanentVote: 0,
+      simpleUserPermanentUsedVote: 0,
       toNodeId: "",
       blockId: "",
       toVote: 1.0,
@@ -108,9 +195,11 @@ export default {
       captchaInput: "",
       signatureDialog: false,
       // 1为推荐区块投票，2为标记区块投票
-      voteType: 1,
+      voteType: "1",
       epoch: 0,
-      electionPeriodValue: 1
+      electionPeriodValue: 1,
+      isLongTerm: false,
+      longTermActive: 0
     }
   },
   created() {
@@ -118,7 +207,11 @@ export default {
     this.getCAPTCHA()
   },
   methods: {
-    getSimpleUserVote: function () {
+    getSimpleUserVote:function (){
+      this.getSimpleUserShortTermVote()
+      this.getSimpleUserPermanentVote()
+    },
+    getSimpleUserShortTermVote: function () {
       const _this = this
       this.axios({
         method: 'post',
@@ -132,6 +225,29 @@ export default {
           const data = res.data["data"]
           _this.simpleUserVote = data["total_vote"]
           _this.simpleUserUsedVote = data["used_vote"]
+        } else {
+          ElNotification({
+            title: '获取失败',
+            message: res.data["data"],
+            type: 'error',
+          })
+        }
+      })
+    },
+    getSimpleUserPermanentVote: function () {
+      const _this = this
+      this.axios({
+        method: 'post',
+        url: '/backstage/simple_user_permanent_vote/get',
+        data: JSON.stringify({
+          "user_pk": _this.simpleUserPk
+        }),
+        headers: {"content-type": "	application/json"}
+      }).then((res) => {
+        if (res.data["is_success"] === true) {
+          const data = res.data["data"]
+          _this.simpleUserPermanentVote = data["total_vote"]
+          _this.simpleUserPermanentUsedVote = data["used_vote"]
         } else {
           ElNotification({
             title: '获取失败',
@@ -200,6 +316,53 @@ export default {
               },
               "to_node_id": _this.toNodeId,
               "block_id": _this.blockId,
+              "vote_type": parseInt(_this.voteType),
+              "to_vote": _this.toVote,
+              "simple_user_pk": _this.simpleUserPk,
+              "signature": _this.voteSignature
+            }),
+            headers: {"content-type": "	application/json"}
+          }).then((res) => {
+            if (res.data["is_success"]) {
+              ElNotification({
+                title: '投票成功',
+                message: res.data["data"],
+                type: 'success',
+              })
+            } else {
+              ElNotification({
+                title: '投票失败',
+                message: res.data["data"],
+                type: 'error',
+              })
+              _this.getCAPTCHA()
+            }
+          })
+        } else {
+          // 签名验证失败
+          ElNotification({
+            title: '投票信息签名验证失败',
+            message: '请重新计算签名！',
+            type: 'error',
+          })
+        }
+      })
+    },
+    initPermanentVote: function () {
+      const _this = this
+      this.verifySign().then((res) => {
+        if (res) {
+          _this.axios({
+            method: 'post',
+            url: '/permanent_vote/add',
+            data: JSON.stringify({
+              "captcha": {
+                "uuid": _this.captchaSrc["uuid"],
+                "word": _this.captchaInput
+              },
+              "to_node_id": _this.toNodeId,
+              "block_id": _this.blockId,
+              "vote_type": parseInt(_this.voteType),
               "to_vote": _this.toVote,
               "simple_user_pk": _this.simpleUserPk,
               "signature": _this.voteSignature
@@ -305,7 +468,7 @@ export default {
 
 .simple-user-show {
   display: inline-block;
-  width: 20%;
+  width: 40%;
   margin-right: 5%;
   text-align: left;
 }
@@ -346,5 +509,9 @@ export default {
   width: 100%;
   height: 40px;
 }
-
+.border{
+  margin: 10px auto;
+  padding: 5px;
+  border: dotted grey;
+}
 </style>

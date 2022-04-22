@@ -700,7 +700,7 @@ def getSimpleUserPermanentVote():
 @backstage.route("/backstage/simple_user_used_vote/add", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def addUsedVoteOfSimpleUser():
-    """增加已使用的票数
+    """增加已使用的临时票票数
     Content-Type: application/json
     {
       "token":"",

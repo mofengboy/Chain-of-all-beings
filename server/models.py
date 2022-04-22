@@ -337,7 +337,7 @@ class Vote:
     def getSimpleUserPermanentVoteByUserPk(self, user_pk):
         return self.dbOfTemp.getSimpleUserPermanentVoteByUserPk(simple_user_pk=user_pk)
 
-    # 增加已使用的票数
+    # 增加已使用的短期票票数
     def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
         return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
 
