@@ -12,6 +12,7 @@ import TimesBlockRecommendation from "@/components/front_end/TimesBlockRecommend
 import VotingInformation from "@/components/front_end/VotingInformation";
 import BlockOfTimes from "@/components/front_end/BlockOfTimes";
 import BlockOfGarbage from "@/components/front_end/BlockOfGarbage";
+import GarbageBlockMarker from "@/components/front_end/GarbageBlockMarker";
 
 const routes = [
     //首页
@@ -69,6 +70,12 @@ const routes = [
                 path: "/beings/recommendation/list",
                 name: "TimesBlockRecommendation",
                 component: TimesBlockRecommendation
+            },
+            //众生区块标记列表
+            {
+                path: "/beings/marker/list",
+                name: "GarbageBlockMarker",
+                component: GarbageBlockMarker
             },
             //主节点申请
             {

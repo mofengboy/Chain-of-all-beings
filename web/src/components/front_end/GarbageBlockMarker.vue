@@ -7,14 +7,14 @@
             <el-form-item label="搜索众生区块ID">
               <el-input v-model="search_block_id">
                 <template #append>
-                  <el-button v-on:click="searchTimesBlock">搜索</el-button>
+                  <el-button v-on:click="searchGarbageBlock">搜索</el-button>
                 </template>
               </el-input>
             </el-form-item>
           </div>
         </el-form>
       </div>
-      <div style="text-align: center;">本主节点推荐的区块列表</div>
+      <div style="text-align: center;">本主节点标记的区块列表</div>
       <el-table stripe :data="tableData" class="main-table">
         <el-table-column prop="beings_block_id" label="众生区块ID"></el-table-column>
         <el-table-column prop="votes" label="当前票数" width="80"></el-table-column>
@@ -25,11 +25,11 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfTimesBlock">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfGarbageBlock">获取更多</el-button>
       </div>
     </div>
     <div v-show="is_detail" class="detail">
-      <el-page-header content="推荐区块详细信息" @back="closeDetail"/>
+      <el-page-header content="标记区块详细信息" @back="closeDetail"/>
       <div class="detail-header">
         <el-tag class="ml-2" type="success" style="margin-right:10px">区块ID:{{ timesBlockDetail["beings_block_id"] }}
         </el-tag>
@@ -47,7 +47,7 @@
 import {ElNotification, ElTable, ElTableColumn} from "element-plus";
 
 export default {
-  name: "TimesBlockRecommendation",
+  name: "GarbageBlockMarker",
   data() {
     return {
       tableData: [],
@@ -70,7 +70,7 @@ export default {
   created() {
     const _this = this
     this.getPeriod().then(() => {
-      _this.getListOfTimesBlock()
+      _this.getListOfGarbageBlock()
     })
   },
   beforeUnmount() {
@@ -79,7 +79,7 @@ export default {
   methods: {
     openDetail: function (beings_block_id) {
       this.is_detail = true
-      this.getTimesBlock(beings_block_id)
+      this.getGarbageBlock(beings_block_id)
     },
     closeDetail: function () {
       this.is_detail = false
@@ -99,13 +99,13 @@ export default {
         }
       })
     },
-    getListOfTimesBlock: function () {
+    getListOfGarbageBlock: function () {
       const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
       let election_period = Math.floor(this.epoch / this.electionPeriodValue)
       const _this = this
       this.axios({
         method: 'get',
-        url: "/times_block_list/get?election_period=" + election_period + "&offset=" + _this.moreOffset + "&count=8"
+        url: "/garbage_block_list/get?election_period=" + election_period + "&offset=" + _this.moreOffset + "&count=8"
       }).then((res) => {
         loading.close()
         if (res.data["is_success"]) {
@@ -136,12 +136,12 @@ export default {
         }
       })
     },
-    getTimesBlock: function (beings_block_id) {
+    getGarbageBlock: function (beings_block_id) {
       const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
       const _this = this
       this.axios({
         method: 'get',
-        url: "/times_block/get?block_id=" + beings_block_id
+        url: "/garbage_block/get?block_id=" + beings_block_id
       }).then((res) => {
         loading.close()
         if (res.data["is_success"]) {
@@ -164,12 +164,12 @@ export default {
         }
       })
     },
-    searchTimesBlock: function () {
+    searchGarbageBlock: function () {
       const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
       const _this = this
       this.axios({
         method: 'get',
-        url: "/times_block/get?block_id=" + this.search_block_id
+        url: "/garbage_block/get?block_id=" + this.search_block_id
       }).then((res) => {
         loading.close()
         if (res.data["is_success"]) {

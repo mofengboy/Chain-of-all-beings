@@ -82,6 +82,9 @@ export default {
         case '4-2':
           this.$router.push("/beings/recommendation/list")
           break
+        case '4-3':
+          this.$router.push("/beings/marker/list")
+          break
         case '5':
           this.$router.push("/main_node_apply")
           break
