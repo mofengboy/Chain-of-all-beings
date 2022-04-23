@@ -605,13 +605,16 @@ class SUB(threading.Thread):
                                 simple_user_pk=long_term_vote_message.simpleUserPk)
                         # 该投票是否是针对当前主节点推荐的区块
                         # 该长期票投票是否是针对当前主节点推荐的区块
+                        to_main_node_info = self.mainNode.mainNodeList.getMainNodeByNodeId(
+                            node_id=long_term_vote_message.toMainNodeId)
+                        to_main_node_user_pk = to_main_node_info["node_info"]["user_pk"]
                         if self.webServerSdk.isExitTimesBlockQueueByBlockId(
-                                long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk and long_term_vote_message.voteType == 1:
+                                long_term_vote_message.blockId) and self.user.getUserPKString() == to_main_node_user_pk and long_term_vote_message.voteType == 1:
                             self.webServerSdk.addPermanentVoteOfTimesBlockQueue(
                                 beings_block_id=long_term_vote_message.blockId,
                                 long_term_vote_message=long_term_vote_message)
                         if self.webServerSdk.isExitGarbageBlockQueueByBlockId(
-                                long_term_vote_message.blockId) and self.user.getUserPKString() == long_term_vote_message.toMainNodeUserPk and long_term_vote_message.voteType == 2:
+                                long_term_vote_message.blockId) and self.user.getUserPKString() == to_main_node_user_pk and long_term_vote_message.voteType == 2:
                             self.webServerSdk.addPermanentVoteOfGarbageBlockQueue(
                                 beings_block_id=long_term_vote_message.blockId,
                                 long_term_vote_message=long_term_vote_message)

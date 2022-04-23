@@ -158,7 +158,8 @@ class StorageOfBeings(Sqlite):
     def getUserPkByBlockId(self, block_id) -> []:
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        select simple_user_pk,main_node_user_pk from beings 
+        select simple_user_pk,main_node_user_pk 
+        from beings 
         where block_id = ?
         """, (block_id,))
         res = cursor.fetchone()

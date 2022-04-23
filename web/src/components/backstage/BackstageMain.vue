@@ -29,7 +29,6 @@
         <el-sub-menu index="6">
           <template #title>投票管理</template>
           <el-menu-item index="6-1">普通用户票数信息</el-menu-item>
-          <el-menu-item index="6-2">申请书列表(其他节点)</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="7">网站配置</el-menu-item>
       </el-menu>

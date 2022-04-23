@@ -1,3 +1,4 @@
+import math
 import time
 
 from server.utils.captcha import Captcha
@@ -322,16 +323,27 @@ class Vote:
         # 增加数据
         for user_pk in list_of_all_simple_user.keys():
             # 每个普通用户分一半的票数（四舍五入)
+            # 垃圾区块扣除票数
+            # 底数为2的指数
+            raw_garbage_deduct_vote_count = self.dbOfBlock.getSimpleUserCountOfGarbageBlock(simple_user_pk=user_pk)
+            garbage_deduct_vote_count = 8 * (math.pow(2, raw_garbage_deduct_vote_count) - 1)
+            total = round(list_of_all_simple_user[user_pk] / 2, 1) - garbage_deduct_vote_count
+            if total < 0:
+                total = 0
             self.db.addSimpleUserVote(election_period=current_election_period, user_pk=user_pk,
-                                      total_vote=round(list_of_all_simple_user[user_pk] / 2, 1))
+                                      total_vote=total)
 
     # 获取普通用户的票数信息列表 公钥列表
     def getListOfSimpleUserVote(self, offset, count):
-        return self.db.getListOfSimpleUserVote(offset, count)
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        return self.db.getListOfSimpleUserVote(offset, count, current_election_period)
 
     # 获取普通用户的短期票票数信息
     def getSimpleUserVoteByUserPk(self, user_pk):
-        return self.db.getSimpleUserVoteByUserPk(user_pk)
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        return self.db.getSimpleUserVoteByUserPk(user_pk, current_election_period)
 
     # 获取普通用户的长期票票数信息
     def getSimpleUserPermanentVoteByUserPk(self, user_pk):
@@ -339,12 +351,16 @@ class Vote:
 
     # 增加已使用的短期票票数
     def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
-        return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
+        return self.db.addUsedVoteOfSimpleUser(user_pk, used_vote, current_election_period)
 
     # 修改普通用户的短期票总票数
     # 修改后的总票数不能低于已经使用的票数
     # 修改后的总票数不能高于当前主节点剩余的票数
     def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote):
+        election_period_value = self.voteOfMainNode.getElectionPeriodValue()
+        current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         total_vote = float(total_vote)
         main_node_user_pk = self.dbOfTemp.getNodeInfo().userPk
         res_data = self.getMainNodeVoteByMainNodeUserPk(main_node_user_pk)
@@ -354,10 +370,10 @@ class Vote:
         main_node_used_vote = res_data["used_vote"]
         if total_vote > (main_node_total_vote - main_node_used_vote):
             return False
-        return self.db.modifyTotalVoteOfSimpleUser(user_pk, total_vote)
+        return self.db.modifyTotalVoteOfSimpleUser(user_pk, total_vote, current_election_period)
 
     # 发起短期票投票
-    def initiateVoting(self, to_node_id, block_id, vote, simple_user_pk, signature) -> bool:
+    def initiateVoting(self, to_node_id, block_id, vote, simple_user_pk, signature, vote_type) -> bool:
         if vote < 1.0:
             return False
         simple_user_vote = self.getSimpleUserVoteByUserPk(simple_user_pk)
@@ -370,7 +386,7 @@ class Vote:
         current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         vote_info = "{'election_period': " + str(
             current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + str(
-            vote) + ", 'simple_user_pk': " + simple_user_pk + "}"
+            vote) + ", 'simple_user_pk': " + simple_user_pk + ", 'vote_type': " + str(vote_type) + "}"
         try:
             if not CipherSuites.verify(pk=simple_user_pk, signature=signature, message=str(vote_info).encode("utf-8")):
                 return False
@@ -378,11 +394,12 @@ class Vote:
             print(err)
             return False
         self.dbOfTemp.addVoteMessage(election_period=current_election_period, to_node_id=to_node_id,
+                                     vote_type=vote_type,
                                      block_id=block_id, vote=vote, simple_user_pk=simple_user_pk, signature=signature)
         return True
 
     # 发起长期票投票
-    def initiatePermanentVoting(self, to_node_id, block_id, vote, simple_user_pk, signature) -> bool:
+    def initiatePermanentVoting(self, to_node_id, block_id, vote, simple_user_pk, signature, vote_type) -> bool:
         if vote < 1.0:
             return False
         simple_user_permanent_vote = self.getSimpleUserVoteByUserPk(simple_user_pk)
@@ -395,7 +412,7 @@ class Vote:
         current_election_period = int(self.dbOfTemp.getEpoch() / election_period_value)
         vote_info = "{'election_period': " + str(
             current_election_period) + ", 'to_node_id': " + to_node_id + ", 'block_id': " + block_id + ", 'vote': " + str(
-            vote) + ", 'simple_user_pk': " + simple_user_pk + "}"
+            vote) + ", 'simple_user_pk': " + simple_user_pk + ", 'vote_type': " + str(vote_type) + "}"
         try:
             if not CipherSuites.verify(pk=simple_user_pk, signature=signature, message=str(vote_info).encode("utf-8")):
                 return False
@@ -404,5 +421,5 @@ class Vote:
             return False
         self.dbOfTemp.addSimpleUserPermanentVoteMessage(election_period=current_election_period, to_node_id=to_node_id,
                                                         block_id=block_id, vote=vote, simple_user_pk=simple_user_pk,
-                                                        signature=signature)
+                                                        signature=signature, vote_type=vote_type)
         return True

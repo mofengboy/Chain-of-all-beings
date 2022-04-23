@@ -5,12 +5,16 @@
         <el-table-column type="expand">
           <template #default="props">
             <el-form label-width="100px">
+              <el-form-item label="垃圾区块ID">
+                <el-input v-model="props.row.block_id" :autosize="{minRows: 1}" readonly type="textarea">
+                </el-input>
+              </el-form-item>
               <el-form-item label="上一区块头部Hash">
                 <el-input v-model="props.row.prev_block_header" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
               <el-form-item label="上一区块Hash">
-                <el-input v-model="props.row.prev_block_header" :autosize="{minRows: 1}" readonly type="textarea">
+                <el-input v-model="props.row.prev_block" :autosize="{minRows: 1}" readonly type="textarea">
                 </el-input>
               </el-form-item>
               <el-form-item label="时代区块用户公钥">

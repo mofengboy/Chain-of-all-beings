@@ -44,11 +44,21 @@ class VoteCount:
     # 初始化普通用户的长期票的总数
     def initPermanentVotesOfSimpleUser(self, current_election_cycle):
         logger.debug("初始化普通用户的长期票的总数调试信息")
-        simple_user_vote_dict = self.storageOfTimes.computeSimpleUserInfoOfPermanentVote(current_election_cycle)
+        # 普通用户的永久票
+        simple_user_permanent_vote_dict = self.storageOfTimes.computeSimpleUserInfoOfPermanentVote(
+            current_election_cycle)
+        # 若记录的区块被标记为垃圾区块，则扣除所有永久票的一半
+        simple_user_list_of_garbage_deduct_vote = self.storageOfGarbage.getListOfSimpleUser()
+        for simple_user in simple_user_list_of_garbage_deduct_vote:
+            try:
+                simple_user_permanent_vote_dict[simple_user] = int(simple_user_permanent_vote_dict[simple_user] / 2)
+            except KeyError as err:
+                logger.info(err)
+                logger.info("该用户不存在永久票,普通用户公钥为：" + simple_user)
         # 清除已有数据
         self.storageOfTemp.clearAllSimpleUserPermanentVote()
         # 保存
-        self.storageOfTemp.addBatchPermanentVoteOfSimpleUser(data_dict=simple_user_vote_dict)
+        self.storageOfTemp.addBatchPermanentVoteOfSimpleUser(data_dict=simple_user_permanent_vote_dict)
 
     # 计算主节点的总票数
     def computeMainUserVote(self, main_node_user_pk, current_election_cycle):
@@ -68,8 +78,12 @@ class VoteCount:
                                                                         election_period=current_election_cycle)
         # 垃圾区块扣除票数
         # 底数为2的指数
-        garbage_deduct_vote_count = self.storageOfGarbage.getMainNodeOfBeingsBlockUserCount(main_node_user_pk)
-        return beings_vote_count + times_vote_count + garbage_vote_count - (math.pow(2, garbage_deduct_vote_count) - 1)
+        raw_garbage_deduct_vote_count = self.storageOfGarbage.getMainNodeOfBeingsBlockUserCount(main_node_user_pk)
+        garbage_deduct_vote_count = 8 * (math.pow(2, raw_garbage_deduct_vote_count) - 1)
+        total = beings_vote_count + times_vote_count + garbage_vote_count - garbage_deduct_vote_count
+        if total < 0:
+            total = 0
+        return total
 
     def addMainUserVote(self, main_node_id, main_node_user_pk, total_vote):
         self.storageOfTemp.addMainNodeVote(main_node_id=main_node_id, main_node_user_pk=main_node_user_pk,
@@ -96,7 +110,7 @@ class VoteCount:
                 logger.warning(election_period)
                 continue
             # 判断短期票还是长期票
-            if "main_user_pk" in vote_message_i:
+            if hasattr(vote_message_i, "mainUserPk"):
                 # 短期票
                 # 验证签名
                 if not CipherSuites.verify(pk=vote_message_i.mainUserPk, signature=vote_message_i.getSignature(),
@@ -109,7 +123,7 @@ class VoteCount:
                 # 长期票
                 # 验证签名
                 if not CipherSuites.verify(pk=vote_message_i.simpleUserPk, signature=vote_message_i.getSignature(),
-                                           message=str(vote_message_i.getVoteInfo()).encode("utf-8")):
+                                           message=str(vote_message_i.getInfoOfSignature()).encode("utf-8")):
                     logger.warning("投票验证失败")
                     logger.warning(vote_message_i.getVoteMessage())
                     continue
@@ -136,7 +150,7 @@ class VoteCount:
                 logger.warning(election_period)
                 continue
             # 判断短期票还是长期票
-            if "main_user_pk" in vote_message_i:
+            if hasattr(vote_message_i, "mainUserPk"):
                 # 短期票
                 # 验证签名
                 if not CipherSuites.verify(pk=vote_message_i.mainUserPk, signature=vote_message_i.getSignature(),
@@ -149,7 +163,7 @@ class VoteCount:
                 # 长期票
                 # 验证签名
                 if not CipherSuites.verify(pk=vote_message_i.simpleUserPk, signature=vote_message_i.getSignature(),
-                                           message=str(vote_message_i.getVoteInfo()).encode("utf-8")):
+                                           message=str(vote_message_i.getInfoOfSignature()).encode("utf-8")):
                     logger.warning("投票验证失败")
                     logger.warning(vote_message_i.getVoteMessage())
                     continue

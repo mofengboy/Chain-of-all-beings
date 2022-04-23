@@ -3,7 +3,7 @@ from core.data.block import Block
 
 # 时代区块body结构体
 class BodyOfGarbageBlock:
-    def __init__(self, users_pk: [], block_id):
+    def __init__(self, users_pk: list, block_id):
         self.usersPK = users_pk  # 被推荐区块的用户公钥（包含主节点用户和简单节点用户）
         self.blockId = block_id
 

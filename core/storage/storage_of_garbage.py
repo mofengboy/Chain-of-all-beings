@@ -44,10 +44,12 @@ class StorageOfGarbage(Sqlite):
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header,body
-        from garbage where election_period = ?
+        from garbage 
+        where election_period = ?
+        ORDER BY block_id ASC
         """, (election_period,))
         res_list = cursor.fetchall()
-        if res_list is None:
+        if len(res_list) == 0:
             # 上一选举阶段无选取区块生成
             return None, None
         block_header_join = ""
@@ -62,7 +64,7 @@ class StorageOfGarbage(Sqlite):
         block_abstract = CipherSuites.generateSHA256(str(block_join).encode("utf-8")).hexdigest()
         return block_header_abstract, block_abstract
 
-    def getListOfGarbageBlockByElectionPeriod(self, start, end) -> []:
+    def getListOfGarbageBlockByElectionPeriod(self, start, end) -> list[BlockOfGarbage]:
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header, body 
@@ -115,3 +117,15 @@ class StorageOfGarbage(Sqlite):
             return 0
         else:
             return res[0]
+
+    def getListOfSimpleUser(self) -> list:
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select beings_simple_user_pk
+        from garbage
+        """)
+        simple_user_list = []
+        res = cursor.fetchall()
+        for data_i in res:
+            simple_user_list.append(data_i[0])
+        return simple_user_list

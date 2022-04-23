@@ -65,7 +65,7 @@ class DB:
             """)
             self.__DB.commit()
 
-        # 推荐中的垃圾区块信息
+        # 标记中的垃圾区块信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'garbage_block_queue'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
@@ -533,25 +533,25 @@ class DB:
         """)
         self.__DB.commit()
 
-    def getListOfSimpleUserVote(self, offset, count):
+    def getListOfSimpleUserVote(self, offset, count, election_period):
         cursor = self.__DB.cursor()
         cursor.execute("""
         select user_pk from simple_user_vote
-        where id >= ? and id < ?
-        """, (offset, count))
+        where id >= ? and id < ? and election_period = ?
+        """, (offset, count, election_period))
         res = cursor.fetchall()
         user_pk_list = []
         for data in res:
             user_pk_list.append(data[0])
         return user_pk_list
 
-    def getSimpleUserVoteByUserPk(self, user_pk):
+    def getSimpleUserVoteByUserPk(self, user_pk, election_period):
         cursor = self.__DB.cursor()
         cursor.execute("""
         select id, election_period, user_pk, total_vote, used_vote, update_time, create_time 
         from simple_user_vote
-        where user_pk = ?
-        """, (user_pk,))
+        where user_pk = ? and election_period = ?
+        """, (user_pk, election_period))
         res = cursor.fetchone()
         if res is not None:
             data = {
@@ -567,28 +567,27 @@ class DB:
         else:
             return None
 
-    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote, election_period):
         cursor = self.__DB.cursor()
         cursor.execute("""
         select used_vote from simple_user_vote
-        where user_pk = ?
-        """, (user_pk,))
+        where user_pk = ? and election_period = ?
+        """, (user_pk, election_period))
         res = cursor.fetchone()
         if res is not None:
             original_used_vote = round(res[0], 1)
-            print(original_used_vote)
             cursor.execute("""
             update simple_user_vote 
             set used_vote = ?
-            where user_pk = ?
-            """, (round(used_vote, 1) + original_used_vote, user_pk))
+            where user_pk = ? and election_period = ?
+            """, (round(used_vote, 1) + original_used_vote, user_pk, election_period))
             self.__DB.commit()
-            return self.getSimpleUserVoteByUserPk(user_pk)
+            return self.getSimpleUserVoteByUserPk(user_pk, election_period)
         else:
             return None
 
-    def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote) -> bool:
-        data = self.getSimpleUserVoteByUserPk(user_pk)
+    def modifyTotalVoteOfSimpleUser(self, user_pk, total_vote, election_period) -> bool:
+        data = self.getSimpleUserVoteByUserPk(user_pk, election_period)
         if data is None:
             return False
         used_vote = data["used_vote"]

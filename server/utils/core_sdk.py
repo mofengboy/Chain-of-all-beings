@@ -88,10 +88,10 @@ class DBOfTemp:
     def getElectionPeriodValue():
         return ElectionPeriodValue
 
-    def addVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, signature):
+    def addVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, vote_type, signature):
         wait_vote = WaitVote()
         wait_vote.setInfo(election_period=election_period, to_node_id=to_node_id, block_id=block_id,
-                          vote=vote, simple_user_pk=simple_user_pk)
+                          vote=vote, simple_user_pk=simple_user_pk, vote_type=vote_type)
         wait_vote.setSignature(signature)
         cursor = self.tempConn.cursor()
         cursor.execute("""
@@ -123,10 +123,11 @@ class DBOfTemp:
             return None
 
     # 添加待广播的普通用户的长期票投票信息
-    def addSimpleUserPermanentVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, signature):
+    def addSimpleUserPermanentVoteMessage(self, election_period, to_node_id, block_id, vote, simple_user_pk, vote_type,
+                                          signature):
         wait_vote = WaitVote()
         wait_vote.setInfo(election_period=election_period, to_node_id=to_node_id, block_id=block_id,
-                          vote=vote, simple_user_pk=simple_user_pk)
+                          vote=vote, simple_user_pk=simple_user_pk, vote_type=vote_type)
         wait_vote.setSignature(signature)
         cursor = self.tempConn.cursor()
         cursor.execute("""
@@ -337,6 +338,16 @@ class DBOfBlock:
             }
             garbage_block_dict_list.append(garbage_block_dict)
         return garbage_block_dict_list
+
+    def getSimpleUserCountOfGarbageBlock(self, simple_user_pk):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select count(id)
+        from garbage
+        where beings_simple_user_pk = ?
+        """, (simple_user_pk,))
+        res = cursor.fetchone()
+        return res[0]
 
 
 class VoteOfMainNode:

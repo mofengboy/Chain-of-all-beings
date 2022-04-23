@@ -56,7 +56,7 @@ class VoteMessage:
 # 长期票投票信息
 class LongTermVoteMessage:
     def __init__(self):
-        self.toMainNodeUserPk = ""
+        self.toMainNodeId = ""
         self.blockId = ""
         self.electionPeriod = 0
         self.numberOfVote = 0.0
@@ -70,8 +70,8 @@ class LongTermVoteMessage:
     def getSignature(self):
         return self.signature
 
-    def setVoteInfo(self, to_main_node_user_pk, block_id, election_period, number_of_vote, simple_user_pk, vote_type):
-        self.toMainNodeUserPk = to_main_node_user_pk
+    def setVoteInfo(self, to_main_node_id, block_id, election_period, number_of_vote, simple_user_pk, vote_type):
+        self.toMainNodeId = to_main_node_id
         self.blockId = block_id
         self.electionPeriod = election_period
         self.numberOfVote = number_of_vote
@@ -80,20 +80,27 @@ class LongTermVoteMessage:
 
     def getVoteInfo(self):
         return {
-            "to_main_node_user_pk": self.toMainNodeUserPk,
+            "to_node_id": self.toMainNodeId,
             "block_id": self.blockId,
             "election_period": self.electionPeriod,
-            "number_of_vote": self.numberOfVote,
+            "vote": self.numberOfVote,
             "simple_user_pk": self.simpleUserPk,
             "vote_type": self.voteType
         }
 
+    def getInfoOfSignature(self):
+        info_of_signature = "{'election_period': " + str(
+            self.electionPeriod) + ", 'to_node_id': " + self.toMainNodeId + ", 'block_id': " + self.blockId + ", 'vote': " + str(
+            self.numberOfVote) + ", 'simple_user_pk': " + self.simpleUserPk + ", 'vote_type': " + str(
+            self.voteType) + "}"
+        return info_of_signature
+
     def getVoteMessage(self):
         return {
-            "to_main_node_user_pk": self.toMainNodeUserPk,
+            "to_node_id": self.toMainNodeId,
             "block_id": self.blockId,
             "election_period": self.electionPeriod,
-            "number_of_vote": self.numberOfVote,
+            "vote": self.numberOfVote,
             "simple_user_pk": self.simpleUserPk,
             "vote_type": self.voteType,
             "signature": self.signature

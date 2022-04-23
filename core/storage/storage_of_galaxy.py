@@ -46,10 +46,12 @@ class StorageOfGalaxy(Sqlite):
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header,body
-        from galaxy where election_period = ?
+        from galaxy 
+        where election_period = ?
+        ORDER BY block_id ASC
         """, (election_period,))
         res_list = cursor.fetchall()
-        if res_list is None:
+        if len(res_list) == 0:
             # 上一选举阶段无选取区块生成
             return None, None
         block_header_join = ""
@@ -64,7 +66,7 @@ class StorageOfGalaxy(Sqlite):
         block_abstract = CipherSuites.generateSHA256(str(block_join).encode("utf-8")).hexdigest()
         return block_header_abstract, block_abstract
 
-    def getListOfGalaxyBlockByElectionPeriod(self, start, end) -> []:
+    def getListOfGalaxyBlockByElectionPeriod(self, start, end) -> list[BlockOfTimes]:
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header, body 

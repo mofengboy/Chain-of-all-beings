@@ -1,4 +1,6 @@
-from ecdsa import SigningKey, NIST384p, VerifyingKey
+import logging
+
+from ecdsa import SigningKey, NIST384p, VerifyingKey, BadSignatureError
 import hashlib
 import random
 
@@ -10,7 +12,7 @@ class CipherSuites:
     # 生成区块ID
     @staticmethod
     def generateBlockID(e, block_type, user_pk):
-        tail = hashlib.sha256((str(e) + str(user_pk)).encode("utf-8")).hexdigest()[0:32]
+        tail = hashlib.sha256((str(e) + str(user_pk) + str(random.random())).encode("utf-8")).hexdigest()[0:32]
         block_id = block_type + "e" + str(e) + "z" + tail  # 区块ID 构成:类型+e+轮次+z+mad5(轮次+用户公钥）
         return block_id
 
@@ -41,8 +43,12 @@ class CipherSuites:
     # 验证签名
     @staticmethod
     def verify(pk, signature, message: bytes) -> bool:
-        vk = VerifyingKey.from_string(bytes.fromhex(pk), curve=NIST384p, hashfunc=hashlib.sha256)
-        return vk.verify(bytes.fromhex(signature), message)
+        try:
+            vk = VerifyingKey.from_string(bytes.fromhex(pk), curve=NIST384p, hashfunc=hashlib.sha256)
+            return vk.verify(bytes.fromhex(signature), message)
+        except BadSignatureError as err:
+            print(err)
+            return False
 
     # 生成区块值哈希
     @staticmethod

@@ -603,8 +603,9 @@ def initiateVoting():
             to_vote = info["to_vote"]
             simple_user_pk = info["simple_user_pk"]
             signature = info["signature"]
+            vote_type = info["vote_type"]
             is_success = vote.initiateVoting(to_node_id=to_node_id, block_id=block_id, vote=to_vote,
-                                             simple_user_pk=simple_user_pk, signature=signature)
+                                             simple_user_pk=simple_user_pk, signature=signature, vote_type=vote_type)
             if is_success:
                 http_message = HttpMessage(is_success=True, data="投票成功")
                 return http_message.getJson()
@@ -647,8 +648,10 @@ def initiatePermanentVoting():
             to_vote = info["to_vote"]
             simple_user_pk = info["simple_user_pk"]
             signature = info["signature"]
+            vote_type = info["vote_type"]
             is_success = vote.initiatePermanentVoting(to_node_id=to_node_id, block_id=block_id, vote=to_vote,
-                                                      simple_user_pk=simple_user_pk, signature=signature)
+                                                      simple_user_pk=simple_user_pk, signature=signature,
+                                                      vote_type=vote_type)
             if is_success:
                 http_message = HttpMessage(is_success=True, data="投票成功")
                 return http_message.getJson()

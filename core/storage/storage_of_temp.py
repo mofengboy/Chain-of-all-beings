@@ -314,7 +314,8 @@ class StorageOfTemp(Sqlite):
     def getSimpleUserVoteByUserPk(self, user_pk, election_period):
         cursor = self.tempConn.cursor()
         cursor.execute("""
-        select total_vote,used_vote from simple_user_vote where user_pk =? and election_period=?
+        select total_vote,used_vote from simple_user_vote 
+        where user_pk = ? and election_period= ?
         """, (user_pk, election_period))
         res = cursor.fetchone()
         if res is None:
@@ -465,7 +466,7 @@ class StorageOfTemp(Sqlite):
             vote_info_dict = literal_eval(bytes(data[5]).decode("utf-8"))
             wait_vote = WaitVote()
             wait_vote.setInfo(election_period=vote_info_dict["election_period"],
-                              to_node_id=vote_info_dict["to_node_id"],
+                              to_node_id=vote_info_dict["to_node_id"], vote_type=vote_info_dict["vote_type"],
                               block_id=vote_info_dict["block_id"], vote=vote_info_dict["vote"],
                               simple_user_pk=vote_info_dict["simple_user_pk"])
             wait_vote.setSignature(data[6])
@@ -495,7 +496,7 @@ class StorageOfTemp(Sqlite):
             vote_info_dict = literal_eval(bytes(data[5]).decode("utf-8"))
             wait_vote = WaitVote()
             wait_vote.setInfo(election_period=vote_info_dict["election_period"],
-                              to_node_id=vote_info_dict["to_node_id"],
+                              to_node_id=vote_info_dict["to_node_id"], vote_type=vote_info_dict["vote_type"],
                               block_id=vote_info_dict["block_id"], vote=vote_info_dict["vote"],
                               simple_user_pk=vote_info_dict["simple_user_pk"])
             wait_vote.setSignature(data[6])

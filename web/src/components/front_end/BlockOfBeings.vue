@@ -179,7 +179,12 @@ export default {
                 }
               }
               if (!is_exit) {
-                this.tableData.push(id_list[i])
+                this.tableData.push({
+                  id: id_list[i]["id"],
+                  block_id: id_list[i]["block_id"],
+                  epoch: id_list[i]["epoch"],
+                  body_digest: Buffer.from(id_list[i]["body_digest"], "base64").toString("utf-8").substring(0, 32)
+                })
               }
             }
             _this.more_offset += id_list.length

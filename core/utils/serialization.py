@@ -167,7 +167,7 @@ class SerializationNetworkMessage:
         return network_message
 
 
-# 序列化区块列表
+# 序列化众生区块列表
 class SerializationAssetOfBeings:
     @staticmethod
     def serialization(blockListOfBeings: BlockListOfBeings):
@@ -200,6 +200,76 @@ class SerializationAssetOfBeings:
             body = block_dict["body"]
             block_list_of_beings.addBlock(NewBlockOfBeingsByExist(header, body).getBlock())
         return block_list_of_beings
+
+
+# 序列化时代区块列表
+class SerializationAssetOfTimes:
+    @staticmethod
+    def serialization(list_of_times_block: list[BlockOfTimes]):
+        if len(list_of_times_block) == 0:
+            return b"{}"
+        election_period = list_of_times_block[0].electionPeriod
+        block_list = []
+        for block_of_times in list_of_times_block:
+            header = block_of_times.getBlockHeader()
+            body = block_of_times.body
+            block_id = block_of_times.getBlockID()
+            block_list.append({
+                "block_id": block_id,
+                "header": header,
+                "body": body
+            })
+        data = str({
+            "election_period": election_period,
+            "block_list": block_list
+        }).encode("utf-8")
+        return base64.b64encode(data)
+
+    @staticmethod
+    def deserialization(block_list_bytes: bytes) -> list[BlockOfTimes]:
+        block_list_dict = literal_eval(bytes(base64.b64decode(block_list_bytes)).decode("utf-8"))
+        block_list = block_list_dict["block_list"]
+        list_of_times_block = []
+        for block_dict_i in block_list:
+            header = block_dict_i["header"]
+            body = block_dict_i["body"]
+            list_of_times_block.append(NewBlockOfTimesByExist(header, body).getBlock())
+        return list_of_times_block
+
+
+# 序列化垃圾区块列表
+class SerializationAssetOfGarbage:
+    @staticmethod
+    def serialization(list_of_garbage_block: list[BlockOfGarbage]):
+        if len(list_of_garbage_block) == 0:
+            return b"{}"
+        election_period = list_of_garbage_block[0].electionPeriod
+        block_list = []
+        for block_of_garbage in list_of_garbage_block:
+            header = block_of_garbage.getBlockHeader()
+            body = block_of_garbage.body
+            block_id = block_of_garbage.getBlockID()
+            block_list.append({
+                "block_id": block_id,
+                "header": header,
+                "body": body
+            })
+        data = str({
+            "election_period": election_period,
+            "block_list": block_list
+        }).encode("utf-8")
+        return base64.b64encode(data)
+
+    @staticmethod
+    def deserialization(block_list_bytes: bytes) -> list[BlockOfGarbage]:
+        block_list_dict = literal_eval(bytes(base64.b64decode(block_list_bytes)).decode("utf-8"))
+        block_list = block_list_dict["block_list"]
+        list_of_garbage_block = []
+        for block_dict_i in block_list:
+            header = block_dict_i["header"]
+            body = block_dict_i["body"]
+            list_of_garbage_block.append(NewBlockOfGarbageByExist(header, body).getBlock())
+        return list_of_garbage_block
 
 
 # 序列化短期投票消息
@@ -236,10 +306,10 @@ class SerializationLongTermVoteMessage:
     @staticmethod
     def serialization(long_term_vote_message: LongTermVoteMessage):
         data = {
-            "to_main_node_user_pk": long_term_vote_message.toMainNodeUserPk,
+            "to_node_id": long_term_vote_message.toMainNodeId,
             "block_id": long_term_vote_message.blockId,
             "election_period": long_term_vote_message.electionPeriod,
-            "number_of_vote": long_term_vote_message.numberOfVote,
+            "vote": long_term_vote_message.numberOfVote,
             "simple_user_pk": long_term_vote_message.simpleUserPk,
             "vote_type": long_term_vote_message.voteType,
             "signature": long_term_vote_message.signature
@@ -250,10 +320,10 @@ class SerializationLongTermVoteMessage:
     def deserialization(long_term_vote_message_bytes: bytes) -> LongTermVoteMessage:
         vote_message_dict = literal_eval(bytes(long_term_vote_message_bytes).decode("utf-8"))
         long_term_vote_message = LongTermVoteMessage()
-        long_term_vote_message.setVoteInfo(to_main_node_user_pk=vote_message_dict["to_main_node_user_pk"],
+        long_term_vote_message.setVoteInfo(to_main_node_id=vote_message_dict["to_node_id"],
                                            block_id=vote_message_dict["block_id"],
                                            election_period=vote_message_dict["election_period"],
-                                           number_of_vote=vote_message_dict["number_of_vote"],
+                                           number_of_vote=vote_message_dict["vote"],
                                            simple_user_pk=vote_message_dict["simple_user_pk"],
                                            vote_type=vote_message_dict["vote_type"])
         long_term_vote_message.setSignature(vote_message_dict["signature"])

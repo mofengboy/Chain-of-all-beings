@@ -102,7 +102,7 @@ class NewBlockOfTimes:
             # 用户公钥、签名、内容不匹配 抛出错误
             raise "签名验证失败"
         self.newBlock = BlockOfTimes(election_period=election_period, prev_block_header=prev_block_header,
-                                     pre_block=pre_block, user_pk=user_pk[0], body_signature=body_signature[0],
+                                     pre_block=pre_block, user_pk=user_pk, body_signature=body_signature,
                                      body=str(body.getBody()).encode("utf-8"))
 
     def getBlock(self) -> BlockOfTimes:
@@ -118,6 +118,7 @@ class NewBlockOfTimesByExist:
                 raise "签名验证失败"
         self.newBlock = BlockOfTimes(body=body)
         self.newBlock.setHeader(header)
+        self.newBlock.electionPeriod = header["electionPeriod"]
 
     def getBlock(self) -> BlockOfTimes:
         return self.newBlock
@@ -132,7 +133,7 @@ class NewBlockOfGarbage:
             # 用户公钥、签名、内容不匹配 抛出错误
             raise "签名验证失败"
         self.newBlock = BlockOfGarbage(election_period=election_period, prev_block_header=prev_block_header,
-                                       pre_block=pre_block, user_pk=user_pk[0], body_signature=body_signature[0],
+                                       pre_block=pre_block, user_pk=user_pk, body_signature=body_signature,
                                        body=str(body.getBody()).encode("utf-8"))
 
     def getBlock(self) -> BlockOfGarbage:
@@ -148,6 +149,7 @@ class NewBlockOfGarbageByExist:
                 raise "签名验证失败"
         self.newBlock = BlockOfGarbage(body=body)
         self.newBlock.setHeader(header)
+        self.newBlock.electionPeriod = header["electionPeriod"]
 
     def getBlock(self) -> BlockOfGarbage:
         return self.newBlock

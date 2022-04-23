@@ -7,8 +7,10 @@ from ast import literal_eval
 
 from core.consensus.data import VoteMessage, LongTermVoteMessage
 from core.data.block_of_beings import BlockListOfBeings
+from core.data.block_of_garbage import BlockOfGarbage
+from core.data.block_of_times import BlockOfTimes
 from core.utils.serialization import SerializationAssetOfBeings, SerializationVoteMessage, \
-    SerializationLongTermVoteMessage
+    SerializationLongTermVoteMessage, SerializationAssetOfTimes, SerializationAssetOfGarbage
 
 logger = logging.getLogger("main")
 
@@ -61,6 +63,22 @@ class DB:
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
             create table times_block_queue(
+            id INTEGER PRIMARY KEY,
+            election_period INTEGER NOT NULL,
+            beings_block_id TEXT NOT NULL,
+            votes FLOAT NOT NULL,
+            vote_list BLOB NOT NULL,
+            status INTEGER NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
+        # 标记中的垃圾区块信息
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'garbage_block_queue'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table garbage_block_queue(
             id INTEGER PRIMARY KEY,
             election_period INTEGER NOT NULL,
             beings_block_id TEXT NOT NULL,
@@ -145,12 +163,13 @@ class DB:
         data = cursor.fetchone()
         return data[0]
 
-    def getSimpleUserVoteByUserPk(self, user_pk):
+    def getSimpleUserVoteByUserPk(self, user_pk, election_period):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time from simple_user_vote
-        where user_pk = ?
-        """, (user_pk,))
+        select id, election_period, user_pk, total_vote, used_vote, update_time, create_time 
+        from simple_user_vote
+        where user_pk = ? and election_period = ?
+        """, (user_pk, election_period))
         res = cursor.fetchone()
         if res is not None:
             data = {
@@ -166,7 +185,7 @@ class DB:
         else:
             return None
 
-    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote, election_period):
         cursor = self.__DB.cursor()
         cursor.execute("""
         select used_vote from simple_user_vote
@@ -175,14 +194,13 @@ class DB:
         res = cursor.fetchone()
         if res is not None:
             original_used_vote = round(res[0], 1)
-            print(original_used_vote)
             cursor.execute("""
             update simple_user_vote 
             set used_vote = ?
             where user_pk = ?
             """, (round(used_vote, 1) + original_used_vote, user_pk))
             self.__DB.commit()
-            return self.getSimpleUserVoteByUserPk(user_pk)
+            return self.getSimpleUserVoteByUserPk(user_pk, election_period)
         else:
             return None
 
@@ -387,8 +405,8 @@ class SDK:
     def getApplicationFormCount(self):
         return self.db.getWaitingApplicationFormCountToSDK()
 
-    def addUsedVoteOfSimpleUser(self, user_pk, used_vote):
-        self.db.addUsedVoteOfSimpleUser(user_pk, used_vote)
+    def addUsedVoteOfSimpleUser(self, user_pk, used_vote, election_period):
+        self.db.addUsedVoteOfSimpleUser(user_pk, used_vote, election_period)
 
     def isExitTimesBlockQueueByBlockId(self, beings_block_id):
         return self.db.isExitTimesBlockQueueByBlockId(beings_block_id)
@@ -434,7 +452,7 @@ class ChainAsset:
         file = self.file_path + "beings_" + str(epoch) + ".chain"
         return os.path.exists(file)
 
-    # 保存区块
+    # 保存众生区块
     def saveBlockOfBeings(self, block_list_of_beings: BlockListOfBeings) -> bool:
         if len(block_list_of_beings.list) == 0:
             return True
@@ -448,7 +466,7 @@ class ChainAsset:
         else:
             return False
 
-    # 批量期次保存区块
+    # 批量期次保存众生区块
     def saveBatchBlockOfBeings(self, block_list_of_beings: BlockListOfBeings) -> bool:
         epoch_block_list_of_beings = {}
         for block in block_list_of_beings.list:
@@ -462,3 +480,41 @@ class ChainAsset:
         for block_list in epoch_block_list_of_beings.values():
             is_success = self.saveBlockOfBeings(block_list) and is_success
         return is_success
+
+    # 通过election_period检测时代区块是否存在
+    def timesIsExitByElectionPeriod(self, epoch) -> bool:
+        file = self.file_path + "times_" + str(epoch) + ".chain"
+        return os.path.exists(file)
+
+    # 保存时代区块
+    def saveBlockOfTimes(self, block_list_of_times: list[BlockOfTimes]) -> bool:
+        if len(block_list_of_times) == 0:
+            return True
+        election_period = block_list_of_times[0].electionPeriod
+        file_name = "times_" + str(election_period) + ".chain"
+        if not self.timesIsExitByElectionPeriod(election_period):
+            with open(self.file_path + file_name, "wb+") as fp:
+                content = SerializationAssetOfTimes.serialization(block_list_of_times)
+                fp.write(content)
+        else:
+            return False
+
+    # 通过election_period检测垃圾区块是否存在
+    def garbageIsExitByElectionPeriod(self, epoch) -> bool:
+        file = self.file_path + "garbage_" + str(epoch) + ".chain"
+        return os.path.exists(file)
+
+    # 保存垃圾区块
+    def saveBlockOfGarbage(self, block_list_of_garbage: list[BlockOfGarbage]) -> bool:
+        if len(block_list_of_garbage) == 0:
+            return True
+        election_period = block_list_of_garbage[0].electionPeriod
+        file_name = "garbage_" + str(election_period) + ".chain"
+        if not self.garbageIsExitByElectionPeriod(election_period):
+            with open(self.file_path + file_name, "wb+") as fp:
+                content = SerializationAssetOfGarbage.serialization(block_list_of_garbage)
+                fp.write(content)
+        else:
+            return False
+
+

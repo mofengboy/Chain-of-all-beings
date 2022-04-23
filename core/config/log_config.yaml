@@ -42,10 +42,19 @@ handlers:
     maxBytes: 3000000
     backupCount: 20
     encoding: utf8
+  ExceptionFile:
+    class: logging.handlers.RotatingFileHandler
+    level: CRITICAL
+    formatter: simple
+    filename: ./log/exception.log
+    maxBytes: 3000000
+    backupCount: 20
+    encoding: utf8
+
 loggers:
   main:
     level: DEBUG
-    handlers: [ console, debugFile, infoFile, errorFile,warningFile ]
+    handlers: [ console, debugFile, infoFile, errorFile,warningFile ,ExceptionFile ]
 #root:
 #  level: DEBUG
 #  handlers: [ console ]
