@@ -3,7 +3,7 @@ import requests
 
 from core.data.network_message import NetworkMessage, NetworkMessageType
 from core.network.net import Client
-from core.utils.serialization import SerializationAssetOfBeings, SerializationNetworkMessage
+from core.utils.serialization import SerializationAssetOfBeings, SerializationNetworkMessage, SerializationAssetOfTimes
 
 
 class RemoteChainAsset:
@@ -46,7 +46,39 @@ class RemoteChainAsset:
             logging.warning(err)
             return "500"
 
+    # 获取其他主节点的时代区块
+    @staticmethod
+    def getChainOfTimes(url, election_period: int):
+        try:
+            r = requests.get(url + "/static/times_" + str(election_period) + ".chain", timeout=1)
+            status_code = r.json()["data"]
+            if status_code == "404":
+                return "404"
+            if r.headers.get('content-type') == "application/octet-stream":
+                return SerializationAssetOfTimes.deserialization(r.content)
+            else:
+                return "500"
+        except Exception as err:
+            logging.warning(err)
+            return "500"
+
+    # 获取其他主节点的垃圾区块
+    @staticmethod
+    def getChainOfGarbage(url, election_period: int):
+        try:
+            r = requests.get(url + "/static/garbage_" + str(election_period) + ".chain", timeout=1)
+            status_code = r.json()["data"]
+            if status_code == "404":
+                return "404"
+            if r.headers.get('content-type') == "application/octet-stream":
+                return SerializationAssetOfTimes.deserialization(r.content)
+            else:
+                return "500"
+        except Exception as err:
+            logging.warning(err)
+            return "500"
+
 
 if __name__ == "__main__":
-    a = RemoteChainAsset().getEpochListOfBeingsChain(url="https://server.beings.icu", offset=0, count=8)
+    a = RemoteChainAsset().getChainOfTimes(url="https://server.beings.icu", election_period=10)
     print(a)

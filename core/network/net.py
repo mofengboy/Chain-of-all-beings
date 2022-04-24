@@ -633,7 +633,7 @@ class SUB(threading.Thread):
 # 监听接受消息
 class Server(threading.Thread):
     def __init__(self, user: User, pub: PUB, main_node: MainNode, storage_of_temp: StorageOfTemp,
-                 node_manager: NodeManager, vote_count: VoteCount, getEpoch, getElectionPeriod, current_main_node):
+                 node_manager: NodeManager, vote_count: VoteCount, getEpoch, getElectionPeriod):
         super().__init__()
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
@@ -647,7 +647,6 @@ class Server(threading.Thread):
         self.voteCount = vote_count
         self.getEpoch = getEpoch
         self.getElectionPeriod = getElectionPeriod
-        self.currentMainNode = current_main_node
         self.user = user
         logger.info("服务端初始化完成")
 
@@ -710,6 +709,7 @@ class Server(threading.Thread):
                     self.nodeManager.replyApplyJoin(reply_application_form)
                     self.socket.send(b'1')
                     continue
+
             # 其他消息类型
             except Exception as err:
                 # 非规定数据结构

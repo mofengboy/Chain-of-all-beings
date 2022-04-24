@@ -51,6 +51,8 @@ def run(sk_string, pk_string, server_url):
     # logger.info("开始同步")
     # while not app.getCurrentEpochByOtherMainNode():
     #     app.synchronizedBlockOfBeings()
+    #     app.synchronizedBlockOfTimes()
+    #     app.synchronizedBlockOfGarbage()
     # logger.info("同步完成")
 
     # 检查主节点列表，即此时只有读取权限，没有写入权限

@@ -228,7 +228,7 @@ class APP:
                 time.sleep(1)
                 logger.warning(err)
 
-    # 同步区块
+    # 同步众生区块
     def synchronizedBlockOfBeings(self):
         server_url_list = []
         for main_node in self.mainNode.mainNodeList.getNodeList():
@@ -275,7 +275,67 @@ class APP:
                         break
                     start_epoch = end_epoch
                 except Exception as err:
-                    logger.warning("区块同步获取失败，远程主节点url:" + server_url)
+                    logger.warning("众生区块同步获取失败，远程主节点url:" + server_url)
+                    logger.warning(err)
+                    time.sleep(1)
+
+    # 同步时代区块
+    def synchronizedBlockOfTimes(self):
+        server_url_list = []
+        for main_node in self.mainNode.mainNodeList.getNodeList():
+            server_url_list.append(main_node["node_info"]["server_url"])
+        logger.info("时代区块开始同步")
+        if self.getEpoch() > 0:
+            start_election_period = 0
+            while True:
+                server_url = random.choice(server_url_list)
+                try:
+                    res = self.remoteChainAsset.getChainOfTimes(url=server_url, election_period=start_election_period)
+                    if res != "500":
+                        if res == "404":
+                            start_election_period += 1
+                        else:
+                            self.storageOfGalaxy.addBatchBlockOfGalaxy(block_list_of_galaxy=res)
+                            self.chainAsset.saveBlockOfTimes(res)
+                            start_election_period += 1
+                    else:
+                        logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
+                        time.sleep(1)
+                    if start_election_period >= self.getElectionPeriod():
+                        logger.info("时代区块同步完成")
+                        break
+                except Exception as err:
+                    logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
+                    logger.warning(err)
+                    time.sleep(1)
+
+    # 同步垃圾区块
+    def synchronizedBlockOfGarbage(self):
+        server_url_list = []
+        for main_node in self.mainNode.mainNodeList.getNodeList():
+            server_url_list.append(main_node["node_info"]["server_url"])
+        logger.info("时代区块开始同步")
+        if self.getEpoch() > 0:
+            start_election_period = 0
+            while True:
+                server_url = random.choice(server_url_list)
+                try:
+                    res = self.remoteChainAsset.getChainOfGarbage(url=server_url, election_period=start_election_period)
+                    if res != "500":
+                        if res == "404":
+                            start_election_period += 1
+                        else:
+                            self.storageOfGarbage.addBatchBlockOfGarbage(block_list_of_garbage=res)
+                            self.chainAsset.saveBlockOfGarbage(res)
+                            start_election_period += 1
+                    else:
+                        logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
+                        time.sleep(1)
+                    if start_election_period >= self.getElectionPeriod():
+                        logger.info("时代区块同步完成")
+                        break
+                except Exception as err:
+                    logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
                     logger.warning(err)
                     time.sleep(1)
 
@@ -409,6 +469,45 @@ class APP:
     # 当agree_count的值达到一定标准时，立即广播节点加入确认消息
     # 当超过规定时间还未收到确认消息时，删除该申请信息
     def checkNewNodeJoin(self):
+        # 获取node_join表中所有is_audit=0的申请表
+        for node_id in self.storageOfTemp.getNodeIdListOfWaitingAuditApplicationForm():
+            # 检测是否超过有效时间，若超过删除该申请书
+            if not self.nodeManager.isTimeReplyApplicationForm(node_id):
+                logger.info("该申请书已经超过有效时间，申请书新节点ID为：" + node_id)
+                continue
+            # 检测是否达到成为新节点的条件
+            res = self.nodeManager.isSuccessReplyApplicationForm(node_id)
+            if res[0]:
+                list_of_serial_reply_application_form = res[1]
+                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
+                serial_application_form = SerializationApplicationForm.serialization(application_form)
+                # 全网广播节点加入确认消息
+                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
+                                     message=[serial_application_form, list_of_serial_reply_application_form])
+                # 将该节点加入主节点列表
+                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
+                node_info = NodeInfo(node_id=application_form.newNodeInfo["node_id"],
+                                     user_pk=application_form.newNodeInfo["user_pk"],
+                                     node_ip=application_form.newNodeInfo["node_ip"],
+                                     create_time=application_form.newNodeInfo["create_time"],
+                                     server_url=application_form.newNodeInfo["server_url"])
+                node_info.setNodeSignature(application_form.newNodeSignature)
+                # 检测主节点列表中是否已经有该节点
+                if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
+                    self.mainNode.mainNodeList.addMainNode(node_info=node_info)
+                    logger.info("新节点已加入，节点信息为：")
+                    logger.info(node_info.getInfo())
+                    # 将该申请书设置为已经完成申请
+                    self.storageOfTemp.finishApplicationFormByNodeId(node_id)
+                    # 重新计算订阅列表，重新创建32个订阅链接
+                    self.reSubscribe()
+                else:
+                    logger.warning("节点已经存在，节点ID为：" + node_info.nodeId)
+
+    # 通过检测数据库中的node_delete表
+    # 当agree_count的值达到一定标准时，立即广播删除节点的消息
+    # 当超过规定时间还未收到确认消息时，删除该申请信息
+    def checkNodeDelete(self):
         # 获取node_join表中所有is_audit=0的申请表
         for node_id in self.storageOfTemp.getNodeIdListOfWaitingAuditApplicationForm():
             # 检测是否超过有效时间，若超过删除该申请书
