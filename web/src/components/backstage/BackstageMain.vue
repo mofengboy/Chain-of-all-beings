@@ -23,8 +23,10 @@
         </el-sub-menu>
         <el-sub-menu index="5">
           <template #title>节点管理</template>
-          <el-menu-item index="5-1">申请书列表(本节点)</el-menu-item>
-          <el-menu-item index="5-2">申请书列表(其他节点)</el-menu-item>
+          <el-menu-item index="5-1">申请加入主节点(本节点)</el-menu-item>
+          <el-menu-item index="5-2">申请加入主节点(其他节点)</el-menu-item>
+          <el-menu-item index="5-3">申请删除主节点(本节点)</el-menu-item>
+          <el-menu-item index="5-4">申请删除主节点(其他节点)</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="6">
           <template #title>投票管理</template>
@@ -42,6 +44,8 @@
       <GarbageBlockList v-if="menu==='4-2'"></GarbageBlockList>
       <MainNodeApplicationList v-if="menu==='5-1'"></MainNodeApplicationList>
       <OtherNodeApplicationList v-if="menu==='5-2'"></OtherNodeApplicationList>
+      <MainNodeActiveDelete v-if="menu==='5-3'"></MainNodeActiveDelete>
+      <OtherNodeActiveDeleteList v-if="menu==='5-4'"></OtherNodeActiveDeleteList>
       <SimpleUserVote v-if="menu==='6-1'"></SimpleUserVote>
       <WebConfig v-if="menu==='7'"></WebConfig>
     </div>
@@ -59,6 +63,8 @@ import TimesBlockList from "@/components/backstage/TimesBlockList";
 import SimpleUserVote from "@/components/backstage/SimpleUserVote";
 import GarbageBlockMark from "@/components/backstage/GarbageBlockMark";
 import GarbageBlockList from "@/components/backstage/GarbageBlockList";
+import MainNodeActiveDelete from "@/components/backstage/MainNodeActiveDelete";
+import OtherNodeActiveDeleteList from "@/components/backstage/OtherNodeActiveDeleteList";
 
 export default {
   name: "BackstageMain",
@@ -68,7 +74,7 @@ export default {
     SimpleUserVote,
     TimesBlockList,
     WebConfig, OtherNodeApplicationList, MainNodeApplicationList, BeingsAudit, BeingsWaitingRelease,
-    TimeBlockRecommend
+    TimeBlockRecommend, MainNodeActiveDelete, OtherNodeActiveDeleteList
   },
   created() {
     this.verifyToken()

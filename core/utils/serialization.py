@@ -6,7 +6,8 @@ from core.data.block_of_beings import BlockOfBeings, BlockListOfBeings
 from core.data.block_of_garbage import BlockOfGarbage
 from core.data.block_of_times import BlockOfTimes
 from core.consensus.block_generate import NewBlockOfBeingsByExist, NewBlockOfTimesByExist, NewBlockOfGarbageByExist
-from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage, \
+    ApplicationFormActiveDelete, ReplyApplicationFormActiveDelete
 from core.data.network_message import NetworkMessage
 from core.data.node_info import NodeInfo
 
@@ -112,6 +113,33 @@ class SerializationApplicationForm:
         return application_form
 
 
+# 主动删除申请书对象序列化与反序列化
+class SerializationApplicationFormActiveDelete:
+    # 序列化
+    @staticmethod
+    def serialization(application_form_active_delete: ApplicationFormActiveDelete):
+        data = {
+            "del_node_id": application_form_active_delete.delNodeId,
+            "application": application_form_active_delete.application,
+            "apply_main_node": application_form_active_delete.applyMainNode
+        }
+        return data
+
+    # 反序列化
+    @staticmethod
+    def deserialization(application_form_active_delete_byte: bytes) -> ApplicationFormActiveDelete:
+        application_form_active_delete_dict = literal_eval(bytes(application_form_active_delete_byte).decode("utf-8"))
+        del_node_id = application_form_active_delete_dict["del_node_id"]
+        application = application_form_active_delete_dict["application"]
+        apply_main_node = application_form_active_delete_dict["apply_main_node"]
+        application_form_active_delete = ApplicationFormActiveDelete(del_node_id=del_node_id,
+                                                                     start_time=application["start_time"],
+                                                                     content=application["content"])
+        application_form_active_delete.setMainNodeSignature(apply_main_node["signature"])
+        application_form_active_delete.setMainNodeUserPk(apply_main_node["user_pk"])
+        return application_form_active_delete
+
+
 # 申请书回复序列化与反序列化
 class SerializationReplyApplicationForm:
     # 序列化
@@ -141,6 +169,40 @@ class SerializationReplyApplicationForm:
         reply_application_form.setSignature(signature)
         reply_application_form.setUserPk(user_pk)
         return reply_application_form
+
+
+# 申请书回复序列化与反序列化
+class SerializationReplyApplicationFormActiveDelete:
+    # 序列化
+    @staticmethod
+    def serialization(reply_application_form_active_delete: ReplyApplicationFormActiveDelete):
+        return {
+            "del_node_id": reply_application_form_active_delete.delNodeId,
+            "start_time": reply_application_form_active_delete.startTime,
+            "is_agree": reply_application_form_active_delete.isAgree,
+            "apply_user_pk": reply_application_form_active_delete.applyUserPk,
+            "signature": reply_application_form_active_delete.signature,
+            "user_pk": reply_application_form_active_delete.userPk
+        }
+
+    # 反序列化
+    @staticmethod
+    def deserialization(reply_application_form_active_delete_byte: bytes) -> ReplyApplicationFormActiveDelete:
+        reply_application_form_active_delete_dict = literal_eval(
+            bytes(reply_application_form_active_delete_byte).decode("utf-8"))
+        del_node_id = reply_application_form_active_delete_dict["del_node_id"]
+        start_time = reply_application_form_active_delete_dict["start_time"]
+        is_agree = reply_application_form_active_delete_dict["is_agree"]
+        apply_user_pk = reply_application_form_active_delete_dict["apply_user_pk"]
+        signature = reply_application_form_active_delete_dict["signature"]
+        user_pk = reply_application_form_active_delete_dict["user_pk"]
+        reply_application_form_active_delete = ReplyApplicationFormActiveDelete(del_node_id=del_node_id,
+                                                                                start_time=start_time,
+                                                                                is_agree=is_agree,
+                                                                                apply_user_pk=apply_user_pk)
+        reply_application_form_active_delete.setSignature(signature)
+        reply_application_form_active_delete.setUserPk(user_pk)
+        return reply_application_form_active_delete
 
 
 class SerializationNetworkMessage:

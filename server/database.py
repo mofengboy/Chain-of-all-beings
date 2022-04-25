@@ -49,6 +49,22 @@ class DB:
             """)
             self.__DB.commit()
 
+        # 主动提交删除某节点的申请书
+        cursor.execute("""select count(*) from sqlite_master 
+        where type = 'table' and name = 'application_form_active_delete'""")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table application_form_active_delete(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            application_content TEXT NOT NULL,
+            is_review INTEGER NOT NULL,
+            remarks TEXT NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
         # 推荐中的众生区块信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'times_block_queue'")
         if cursor.fetchone()[0] == 0:
@@ -237,6 +253,7 @@ class DB:
         """, (is_review, db_id))
         self.__DB.commit()
 
+    # ############################# 申请成为主节点的申请书数据操作
     def insertApplicationForm(self, node_id, user_pk, node_ip, server_url, node_create_time, node_signature,
                               application, application_signature, remarks):
         cursor = self.__DB.cursor()
@@ -251,7 +268,8 @@ class DB:
     def getApplicationFormByOffset(self, offset, count):
         cursor = self.__DB.cursor()
         cursor.execute("""
-        select id,create_time from application_form where is_review = 0 and id > ? limit ?
+        select id,create_time from application_form 
+        where is_review = 0 and id > ? limit ?
         """, (offset, count))
         data_list = cursor.fetchall()
         id_list = []
@@ -293,6 +311,63 @@ class DB:
         where id = ?
         """, (is_review, db_id))
         self.__DB.commit()
+
+    # ############################# 主动申请删除某主节点的申请书数据操作
+    def getApplicationFormActiveDeleteOfBroadcastByOffset(self, offset, count):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id,create_time 
+        from application_form_active_delete 
+        where is_review = 1 and id > ? limit ?
+        """, (offset, count))
+        data_list = cursor.fetchall()
+        id_list = []
+        for data in data_list:
+            id_list.append({
+                "db_id": data[0],
+                "create_time": data[1]
+            })
+        return id_list
+
+    def insertApplicationFormActiveDelete(self, node_id, application_content, remarks):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        insert into application_form_active_delete(node_id,application_content,is_review, remarks,create_time) 
+        VALUES (?,?,?,?,?)
+        """, (node_id, application_content, 0, remarks, time.time()))
+        self.__DB.commit()
+
+    def getApplicationFormActiveDeleteByOffset(self, offset, count):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id,create_time from application_form_active_delete 
+        where id > ? limit ?
+        """, (offset, count))
+        data_list = cursor.fetchall()
+        id_list = []
+        for data in data_list:
+            id_list.append({
+                "db_id": data[0],
+                "create_time": data[1]
+            })
+        return id_list
+
+    def getApplicationFormActiveDeleteByDBId(self, db_id):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, node_id, application_content, is_review,remarks, create_time 
+        from application_form_active_delete where id = ?
+        """, (db_id,))
+        res = cursor.fetchone()
+        application_form_dict = {
+            "db_id": res[0],
+            "node_id": res[1],
+            "application_content": res[2],
+            "is_review": res[3],
+            "remarks": res[4],
+            "create_time": res[5]
+        }
+        return application_form_dict
 
     def getIndexNotice(self):
         cursor = self.__backstageDB.cursor()

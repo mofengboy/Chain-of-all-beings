@@ -3,3 +3,5 @@ VotesOfTimesBlockGenerate = 4.0
 VotesOfGarbageBlockGenerate = 4.0
 # 长期票有效时间为128个选举周期
 LongTermVoteValidityPeriod = 128
+# 规定的节点申请或删除审核时间（大约五天时间）
+AUDIT_TIME = 432000000  # 13位时间戳

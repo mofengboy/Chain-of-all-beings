@@ -1,7 +1,8 @@
 <template>
   <div>
-    <p class="application-title">来自本节点的申请书</p>
-    <el-divider/>
+    <div>
+      <p class="application-title">本节点已经广播的申请书列表</p>
+      <el-divider/>
       <el-table :data="tableData" style="width: 100%">
         <el-table-column type="expand">
           <template #default="props">
@@ -9,26 +10,8 @@
               <el-form-item label="节点ID">
                 <el-input v-model="props.row.nodeID" autosize readonly type="textarea"/>
               </el-form-item>
-              <el-form-item label="节点用户公钥">
-                <el-input v-model="props.row.userPK" autosize readonly type="textarea"/>
-              </el-form-item>
-              <el-form-item label="节点IP">
-                <el-input v-model="props.row.nodeIP" autosize readonly type="textarea"/>
-              </el-form-item>
-              <el-form-item label="服务网址">
-                <el-input v-model="props.row.serverUrl" autosize readonly type="textarea"/>
-              </el-form-item>
-              <el-form-item label="节点创建时间">
-                <el-input v-model="props.row.nodeCreateTime" autosize readonly type="textarea"/>
-              </el-form-item>
-              <el-form-item label="节点签名">
-                <el-input v-model="props.row.nodeSignature" autosize readonly type="textarea"/>
-              </el-form-item>
               <el-form-item label="申请书预览">
                 <Markdown class="markdown" :source="props.row.application"></Markdown>
-              </el-form-item>
-              <el-form-item label="申请书签名">
-                <el-input v-model="props.row.applicationSignature" autosize readonly type="textarea"/>
               </el-form-item>
               <el-form-item label="备注">
                 <Markdown class="markdown" :source="props.row.remarks"></Markdown>
@@ -41,18 +24,43 @@
         </el-table-column>
         <el-table-column label="ID" prop="id"/>
         <el-table-column label="申请时间" prop="createTime"/>
-        <el-table-column align="right">
-          <template #default="scope">
-            <el-button size="small" type="primary" @click="handlePass(scope.row.id,1)">通过</el-button>
-            <el-button size="small" type="danger" @click="handlePass(scope.row.id,2)">拒绝</el-button>
-          </template>
-        </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfMainNodeApplication">获取更多
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="addActiveDelete">获取更多
         </el-button>
       </div>
     </div>
+    <el-divider/>
+    <div>
+      <p class="application-title">主动申请删除某主节点</p>
+      <el-form style="margin-top: 10px" label-position="right" label-width="70px" size="default">
+        <div>
+          <el-form-item label="节点ID">
+            <el-input v-model="nodeId" :autosize="{minRows: 1}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="申请书">
+            <el-input v-model="application" :autosize="{minRows: 2}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="申请书预览">
+            <Markdown class="markdown" :source="application"></Markdown>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="remarks" :autosize="{minRows: 2}" type="textarea">
+            </el-input>
+          </el-form-item>
+          <el-form-item label="备注预览">
+            <Markdown class="markdown" :source="remarks"></Markdown>
+          </el-form-item>
+        </div>
+      </el-form>
+      <div>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="addActiveDelete">提交申请
+        </el-button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -71,7 +79,11 @@ export default {
     return {
       tableData: [],
       maxID: 0,
-      token: this.getToken()
+      isMainNode: true,
+      token: this.getToken(),
+      nodeId: "",
+      application: "",
+      remarks: ""
     }
   }, methods: {
     getToken: function () {
@@ -87,7 +99,7 @@ export default {
       })
       this.axios({
         method: "post",
-        url: "/backstage/main_node/new_apply_list/get",
+        url: "/backstage/main_node/active_delete_list/get",
         data: reqData,
         headers: {"content-type": "application/json"}
       }).then((res) => {
@@ -100,13 +112,7 @@ export default {
                   _this.tableData.push({
                     id: data[i]["db_id"],
                     nodeID: detail["node_id"],
-                    userPK: detail["user_pk"],
-                    nodeIP: detail["node_ip"],
-                    serverUrl: detail["server_url"],
-                    nodeCreateTime: _this.$dayjs.unix(parseInt((detail["node_create_time"]).toString().substring(0, 10))).format(),
-                    nodeSignature: detail["node_signature"],
-                    application: Buffer.from(detail["application"], "base64").toString("utf-8"),
-                    applicationSignature: detail["application_signature"],
+                    application: Buffer.from(detail["application_content"], "base64").toString("utf-8"),
                     remarks: Buffer.from(detail["remarks"], "base64").toString("utf-8"),
                     createTime: _this.$dayjs.unix(detail["create_time"]).format(),
                   })
@@ -129,7 +135,7 @@ export default {
       const _this = this
       return this.axios({
         method: "post",
-        url: "/backstage/main_node/new_apply/get",
+        url: "/backstage/main_node/active_delete/get",
         data: JSON.stringify({
           db_id: db_id,
           token: _this.token
@@ -147,40 +153,35 @@ export default {
         }
       })
     },
-    handlePass: function (db_id, review) {
+    addActiveDelete: function () {
       const _this = this
       this.axios({
         method: "post",
-        url: "/backstage/main_node/new_apply/review",
+        url: "/backstage/main_node/active_delete/add",
         data: JSON.stringify({
-          db_id: db_id,
           token: _this.token,
-          is_review: review
+          node_id: _this.nodeId,
+          application_content: _this.application,
+          remarks: _this.remarks
         }),
         headers: {"content-type": "application/json"}
       }).then((res) => {
-        const data = res.data
-        if (data["is_success"]) {
+        if (res.data["is_success"]) {
           ElNotification({
             title: 'Success',
-            message: data["data"],
+            message: res.data["data"],
             type: 'success',
           })
-          for (let i = 0; i < _this.tableData.length; i++) {
-            if (_this.tableData[i].id === db_id) {
-              _this.tableData.splice(i, 1)
-              break
-            }
-          }
         } else {
           ElNotification({
             title: 'Error',
-            message: data["data"],
-            type: 'success',
+            message: res.data["data"],
+            type: 'error',
           })
         }
       })
-    },
+
+    }
   }
 }
 </script>

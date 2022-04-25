@@ -37,8 +37,13 @@ class SubscribeTopics:
 
     # 主动申请删除节点订阅主题
     @staticmethod
-    def getNodeTopicOfProactiveApplyDelete():
-        return b"node apply delete "
+    def getNodeTopicOfActiveApplyDelete():
+        return b"node apply active delete "
+
+    # 确认删除主动申请删除节点订阅主题
+    @staticmethod
+    def getNodeTopicOfActiveConfirmDelete():
+        return b"node apply active confirm delete "
 
     # 确认删除节点订阅主题
     @staticmethod
@@ -94,6 +99,8 @@ class NetworkMessageType:
     No_Data_Recovery = 17
     # 数据恢复
     Data_Recovery = 18
+    # 主动删除节点消息的回复
+    ReplyNodeActiveDeleteApplication = 19
 
 
 # 网络消息格式

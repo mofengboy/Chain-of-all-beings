@@ -147,6 +147,62 @@ class Sqlite(ABC):
             """)
             self.tempConn.commit()
 
+        # 主节点主动申请删除信息（当前主节点申请）
+        # is_audit 0代表待广播 1代表已经广播 3表示以及申请完成，4超过规定时间未达到要求
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_active_delete'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_active_delete(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            application_content TEXT NOT NULL,
+            application_time TEXT NOT NULL,
+            agree_count INTEGER NOT NULL,
+            is_audit INTEGER NOT NULL,
+            main_node_signature TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储接受到的回复同意消息（主动申请删除的）
+        # status 0 表示待广播 1表示广播 2 表示取消广播
+        cursor.execute("""select count(*) from sqlite_master 
+        where type = 'table' and name = 'node_active_delete_reply_agree'""")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_active_delete_reply_agree(
+            id INTEGER PRIMARY KEY,
+            del_node_id TEXT NOT NULL,
+            start_time INTEGER NOT NULL,
+            reply_application_form BLOB NOT NULL,
+            reply_node_user_pk TEXT NOT NULL,
+            reply_node_signature TEXT NOT NULL,
+            status INTEGER NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
+        # 存储待审核的主节点删除信息（其他主节点发送的）
+        # is_audit 0代表待回复 1代表已经回复同意 2代表已回复拒绝 3代表已经广播同意 4代表已经广播拒绝
+        cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_delete_other_active'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table node_delete_other_active(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            application_content TEXT NOT NULL,
+            application_time TEXT NOT NULL,
+            is_audit INTEGER NOT NULL,
+            main_node_signature TEXT NOT NULL,
+            main_node_user_pk TEXT NOT NULL,
+            create_time INTEGER NOT NULL 
+            )
+            """)
+            self.tempConn.commit()
+
         # 存储待审核的节点删除信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'node_delete'")
         if cursor.fetchone()[0] == 0:

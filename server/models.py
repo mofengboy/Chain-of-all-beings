@@ -278,6 +278,36 @@ class MainNodeManager:
     def reviewOtherNodeApplicationFormByDBId(self, db_id, is_audit):
         self.DBOfTemp.auditWaitingApplicationForm(db_id, is_audit)
 
+    # 获取该主节点已经广播的申请表列表id（主动删除节点）
+    def getApplicationActiveDeleteListOfBroadcast(self, offset, count):
+        id_list = self.db.getApplicationFormActiveDeleteOfBroadcastByOffset(offset, count)
+        return id_list
+
+    # 获取该主节点已经广播的申请表(主动删除节点）
+    def getApplicationFormActiveDeleteByDBId(self, db_id):
+        application_form_active_delete_dict = self.db.getApplicationFormActiveDeleteByDBId(db_id)
+        return application_form_active_delete_dict
+
+    # 增加申请表列表(主动删除节点)
+    def addApplicationFormActiveDelete(self, node_id, application_content, remarks) -> bool:
+        self.db.insertApplicationFormActiveDelete(node_id=node_id, application_content=application_content,
+                                                  remarks=remarks)
+        return True
+
+    # 获取从其他主节点接受到的等待审核的申请表列表id(主动删除节点)
+    def getApplicationActiveDeleteOfOtherMainNode(self, offset, count):
+        id_list = self.DBOfTemp.getListOfWaitingApplicationFormActiveDelete(offset, count)
+        return id_list
+
+    # 获取从其他主节点接受到的等待审核的申请表(主动删除节点)
+    def getOtherNodeApplicationFormActiveDeleteByDBId(self, db_id):
+        application_form = self.DBOfTemp.getWaitingApplicationFormActiveDelete(db_id)
+        return application_form
+
+    # 审核从其他主节点接受到的等待审核的申请表(主动删除节点)
+    def reviewOtherNodeApplicationFormActiveDeleteByDBId(self, db_id, is_audit):
+        self.DBOfTemp.auditWaitingApplicationFormActiveDelete(db_id, is_audit)
+
     def getEpochAndElectionPeriod(self):
         epoch = self.DBOfTemp.getEpoch()
         electionPeriodValue = self.DBOfTemp.getElectionPeriodValue()

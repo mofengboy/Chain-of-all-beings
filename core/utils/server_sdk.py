@@ -58,6 +58,22 @@ class DB:
             """)
             self.__DB.commit()
 
+        # 主动提交删除某节点的申请书
+        cursor.execute("""select count(*) from sqlite_master 
+        where type = 'table' and name = 'application_form_active_delete'""")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            create table application_form_active_delete(
+            id INTEGER PRIMARY KEY,
+            node_id TEXT NOT NULL,
+            application_content TEXT NOT NULL,
+            is_review INTEGER NOT NULL,
+            remarks TEXT NOT NULL,
+            create_time TEXT NOT NULL
+            )
+            """)
+            self.__DB.commit()
+
         # 推荐中的众生区块信息
         cursor.execute("select count(*) from sqlite_master where type = 'table' and name = 'times_block_queue'")
         if cursor.fetchone()[0] == 0:
@@ -149,6 +165,30 @@ class DB:
             })
             cursor.execute("""
             update application_form set is_review = 3
+            where id = ?
+            """, (data[0],))
+        self.__DB.commit()
+        return application_form_list
+
+    def getWaitingApplicationFormActiveDeleteToSDK(self):
+        cursor = self.__DB.cursor()
+        cursor.execute("""
+        select id, node_id, application_content, is_review, create_time
+        from application_form_active_delete 
+        where is_review = 0 limit 2
+        """)
+        data_list = cursor.fetchall()
+        application_form_list = []
+        for data in data_list:
+            application_form_list.append({
+                "db_id": data[0],
+                "node_id": data[1],
+                "application_content": data[2],
+                "is_review": data[3],
+                "create_time": data[4]
+            })
+            cursor.execute("""
+            update application_form_active_delete set is_review = 1
             where id = ?
             """, (data[0],))
         self.__DB.commit()
@@ -402,6 +442,10 @@ class SDK:
             })
         return application_form_list
 
+    def getApplicationFormActiveDelete(self):
+        data_list = self.db.getWaitingApplicationFormActiveDeleteToSDK()
+        return data_list
+
     def getApplicationFormCount(self):
         return self.db.getWaitingApplicationFormCountToSDK()
 
@@ -516,5 +560,3 @@ class ChainAsset:
                 fp.write(content)
         else:
             return False
-
-

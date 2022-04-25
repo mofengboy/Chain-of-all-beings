@@ -20,7 +20,7 @@ from core.utils.server_sdk import SDK
 from core.utils.system_time import STime
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, SerializationNetworkMessage, \
     SerializationReplyApplicationForm, SerializationVoteMessage, SerializationTimes, SerializationLongTermVoteMessage, \
-    SerializationGarbage
+    SerializationGarbage, SerializationApplicationFormActiveDelete, SerializationReplyApplicationFormActiveDelete
 from core.data.network_message import SubscribeTopics, NetworkMessage, NetworkMessageType
 from core.data.block_of_beings import BlockListOfBeings, EmptyBlock
 from core.data.node_info import MainNodeList, NodeInfo
@@ -87,6 +87,7 @@ class Client:
         socket.send(data)
         message = socket.recv()
         socket.close()
+        logger.info("消息发送完成，对方公钥为" + user_pk)
         logger.info("消息发送完成，对方ip为" + ip)
         return message
 
@@ -146,7 +147,7 @@ class SUB(threading.Thread):
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyDelete())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getBlockTopicOfTimes())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfDelete())
-        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfProactiveApplyDelete())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfActiveApplyDelete())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getVoteMessage())
         self.stopFlag = True
         logger.info("订阅者初始化完成，订阅ip为" + ip)
@@ -327,6 +328,7 @@ class SUB(threading.Thread):
                                              message=[serial_vote_list, serial_block_of_garbage])
                 except Exception as err:
                     logger.exception(err)
+
                 # 新节点申请加入 消息
                 # 保存到暂存区（以便审核后回复）广播
                 try:
@@ -521,6 +523,80 @@ class SUB(threading.Thread):
                 except Exception as err:
                     logger.exception(err)
 
+                # 主动申请删除主节点的消息
+                # 保存到暂存区（以便审核后回复）广播
+                try:
+                    if message[
+                       0:len(
+                           SubscribeTopics.getNodeTopicOfActiveApplyDelete())] == SubscribeTopics.getNodeTopicOfActiveApplyDelete():
+                        serial_application_form_active_delete = literal_eval(
+                            bytes(message[len(SubscribeTopics.getNodeTopicOfActiveApplyDelete()):]).decode(
+                                "utf-8"))
+                        application_form_active_delete = SerializationApplicationFormActiveDelete.deserialization(
+                            str(serial_application_form_active_delete).encode("utf-8"))
+                        # 检测是当前主节点申请的
+                        if self.user.getUserPKString() == application_form_active_delete.applyMainNode["user_pk"]:
+                            logger.info("该申请书为当前节点主动申请，申请删除的节点ID为：" + application_form_active_delete.delNodeId)
+                            continue
+                        # 检测是否已经存在
+                        if self.storageOfTemp.isApplicationFormActiveDelete(
+                                del_node_id=application_form_active_delete.delNodeId,
+                                application_start_time=application_form_active_delete.application["start_time"],
+                                apply_user_pk=application_form_active_delete.applyMainNode["user_pk"]):
+                            logger.info("申请书已存在")
+                            logger.info(application_form_active_delete.getInfo())
+                            continue
+                        # 验证申请书新节点信息和签名
+                        if not CipherSuites.verify(pk=application_form_active_delete.applyMainNode["user_pk"],
+                                                   signature=application_form_active_delete.applyMainNode["signature"],
+                                                   message=str(application_form_active_delete.getInfo()).encode(
+                                                       "utf-8")):
+                            logger.info("申请书签名不匹配")
+                            logger.info(application_form_active_delete.applyMainNode)
+                            continue
+                        # 保存
+                        self.storageOfTemp.insertApplicationFormActiveDeleteOfOther(application_form_active_delete)
+                        logger.info("已保存申请书信息")
+                        logger.info(application_form_active_delete.getInfo())
+                        # 广播
+                        self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveApplyDelete(),
+                                             message=serial_application_form_active_delete)
+                except Exception as err:
+                    logger.exception(err)
+
+                # 主动删除节点确认消息
+                try:
+                    if message[
+                       0:len(
+                           SubscribeTopics.getNodeTopicOfActiveConfirmDelete())] == SubscribeTopics.getNodeTopicOfActiveConfirmDelete():
+                        serial_application_form_active_delete, list_of_serial_reply_application_form_active_delete = \
+                            literal_eval(
+                                bytes(message[len(SubscribeTopics.getNodeTopicOfActiveConfirmDelete()):]).decode(
+                                    "utf-8"))
+                        list_of_reply_application_form_active_delete = []
+                        application_form_active_delete = SerializationApplicationFormActiveDelete.deserialization(
+                            str(serial_application_form_active_delete).encode("utf-8"))
+
+                        for serial_reply_application_form_active_delete in list_of_serial_reply_application_form_active_delete:
+                            reply_application_form = SerializationReplyApplicationFormActiveDelete.deserialization(
+                                str(serial_reply_application_form_active_delete).encode("utf-8"))
+                            list_of_reply_application_form_active_delete.append(reply_application_form)
+
+                        # 验证所有同意节点的时间和签名
+                        if self.nodeManager.verifyAgreeInfoOfActiveDelete(
+                                application_form_active_delete=application_form_active_delete,
+                                reply_application_form_active_delete_list=list_of_reply_application_form_active_delete):
+                            # 删除主节点
+                            self.mainNode.mainNodeList.delMainNodeById(node_id=application_form_active_delete.delNodeId)
+                            # 重新订阅
+                            self.reSubscribe()
+                            # 全网广播节点加入确认消息
+                            self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveConfirmDelete(),
+                                                 message=[serial_application_form_active_delete,
+                                                          list_of_serial_reply_application_form_active_delete])
+                except Exception as err:
+                    logger.exception(err)
+
                 # 短期票投票消息
                 try:
                     if message[0:len(SubscribeTopics.getVoteMessage())] == SubscribeTopics.getVoteMessage():
@@ -701,7 +777,6 @@ class Server(threading.Thread):
                     logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
                     self.socket.send(b'0')
                     continue
-
                 # 新节点申请加入消息
                 if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
                     reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
@@ -709,7 +784,15 @@ class Server(threading.Thread):
                     self.nodeManager.replyApplyJoin(reply_application_form)
                     self.socket.send(b'1')
                     continue
-
+                # 主动申请删除节点的消息
+                if mess_type == NetworkMessageType.ReplyNodeActiveDeleteApplication:
+                    reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.deserialization(
+                        network_message.message)
+                    # 处理回复消息
+                    self.nodeManager.replyNodeActiveDelete(
+                        reply_application_form_active_delete=reply_application_form_active_delete)
+                    self.socket.send(b'1')
+                    continue
             # 其他消息类型
             except Exception as err:
                 # 非规定数据结构

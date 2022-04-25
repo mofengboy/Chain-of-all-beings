@@ -195,6 +195,38 @@ class ApplicationForm:
         self.mainNode["user_pk"] = main_node_user_pk
 
 
+# 主动申请删除主节点申请书
+class ApplicationFormActiveDelete:
+    def __init__(self, del_node_id, start_time, content):
+        self.delNodeId = del_node_id
+        self.application = {
+            "content": content,
+            "start_time": start_time,
+        }
+        self.applyMainNode = {
+            "signature": None,
+            "user_pk": None
+        }
+
+    def getInfo(self):
+        return {
+            "del_node_id": self.delNodeId,
+            "application": self.application
+        }
+
+    def setMainNodeSignature(self, main_node_signature):
+        self.applyMainNode["application_signature"] = main_node_signature
+
+    def setMainNodeUserPk(self, main_node_user_pk):
+        self.applyMainNode["user_pk"] = main_node_user_pk
+
+    def getMainNodeSignature(self):
+        return self.applyMainNode["application_signature"]
+
+    def getMainNodeUserPk(self, ):
+        return self.applyMainNode["user_pk"]
+
+
 # 申请书回复
 class ReplyApplicationForm:
     def __init__(self, new_node_id, new_node_user_pk, start_time: int, is_agree: int):
@@ -211,6 +243,32 @@ class ReplyApplicationForm:
             "new_node_user_pk": self.newNodeUserPk,
             "new_node_create_time": self.startTime,
             "is_agree": self.isAgree
+        }
+
+    def setSignature(self, signature):
+        self.signature = signature
+
+    def setUserPk(self, user_pk):
+        self.userPk = user_pk
+
+
+# 申请书回复
+class ReplyApplicationFormActiveDelete:
+    def __init__(self, del_node_id, start_time, is_agree: int, apply_user_pk):
+        self.delNodeId = del_node_id
+        self.startTime = start_time
+        self.applyUserPk = apply_user_pk
+        # 1同意 2拒绝
+        self.isAgree = is_agree
+        self.signature = None
+        self.userPk = None
+
+    def getInfo(self):
+        return {
+            "del_node_id": self.delNodeId,
+            "start_time": self.startTime,
+            "is_agree": self.isAgree,
+            "apply_user_pk": self.applyUserPk
         }
 
     def setSignature(self, signature):

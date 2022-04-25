@@ -3,8 +3,10 @@ from ast import literal_eval
 from core.config.cycle_Info import ElectionPeriodValue
 from core.data.vote_info import WaitVote
 from core.storage.sqlite import Sqlite
+from core.utils.serialization import SerializationReplyApplicationFormActiveDelete
 from core.utils.system_time import STime
-from core.consensus.data import ApplicationForm, ReplyApplicationForm
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, ApplicationFormActiveDelete, \
+    ReplyApplicationFormActiveDelete
 from core.data.node_info import NodeInfo
 
 
@@ -126,6 +128,64 @@ class StorageOfTemp(Sqlite):
         self.tempConn.commit()
         return application_form_list
 
+    # 将从其他主节点接受到的新节点申请表加入数据库
+    def insertApplicationFormActiveDeleteOfOther(self, application_form_active_delete: ApplicationFormActiveDelete):
+        del_node_id = application_form_active_delete.delNodeId
+        application_content = application_form_active_delete.application["content"]
+        application_time = application_form_active_delete.application["start_time"]
+        main_node_user_pk = application_form_active_delete.applyMainNode["user_pk"]
+        main_node_signature = application_form_active_delete.applyMainNode["signature"]
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into node_delete_other_active(node_id, application_content, application_time, is_audit, 
+        main_node_signature, main_node_user_pk, create_time)
+        values (?,?,?,?,?,?,?)
+        """, (del_node_id, application_content, application_time, 0, main_node_signature, main_node_user_pk,
+              STime.getTimestamp()))
+        self.tempConn.commit()
+
+    # 检测该节点申请表是否存在
+    def isApplicationFormActiveDelete(self, del_node_id, application_start_time, apply_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select count(*) from node_delete_other_active
+        where node_id = ? and application_time = ? and main_node_user_pk = ?
+        """, (del_node_id, application_start_time, apply_user_pk))
+        res = cursor.fetchone()
+        if res[0] > 0:
+            return True
+        else:
+            return False
+
+    # 获取已经完成审核的申请表（同意或拒绝）
+    def getFinishApplicationFormActiveDelete(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, node_id, application_content, application_time, is_audit, main_node_signature, 
+        main_node_user_pk, create_time
+        from node_delete_other_active 
+        where is_audit = 1 or is_audit = 2 limit 1
+        """)
+        res = cursor.fetchone()
+        if res is not None:
+            application_form_active_delete = {
+                "del_node_id": res[1],
+                "application_content": res[2],
+                "application_time": res[3],
+                "is_audit": res[4],
+                "main_node_signature": res[5],
+                "main_node_user_pk": res[6],
+            }
+            cursor.execute("""
+            update node_delete_other_active 
+            set is_audit = ?
+            where id = ?
+            """, (res[0] + 2, res[0]))
+            self.tempConn.commit()
+            return application_form_active_delete
+        else:
+            return None
+
     # 查询接受到的待审核的新节点数量
     def getCountOfNodeApply(self):
         cursor = self.tempConn.cursor()
@@ -152,7 +212,7 @@ class StorageOfTemp(Sqlite):
               main_node_user_pk, STime.getTimestamp()))
         self.tempConn.commit()
 
-    # 增加对该节点的同意数量
+    # 增加申请成为主节点的同意数量
     def addAgreeCount(self, new_node_id, count):
         cursor = self.tempConn.cursor()
         cursor.execute("""
@@ -167,13 +227,68 @@ class StorageOfTemp(Sqlite):
         """, (total_count, new_node_id))
         self.tempConn.commit()
 
-    # 设置该节点的同意数量
+    # 设置申请成为主节点的同意数量
     def setAgreeCount(self, new_node_id, count):
         cursor = self.tempConn.cursor()
         cursor.execute("""
         update node_join set agree_count = ?
         where node_id = ? and is_audit = 0
         """, (count, new_node_id))
+        self.tempConn.commit()
+
+    # 增加申请成为主节点的同意数量
+    def addAgreeCountOfActiveDelete(self, del_node_id, add_count):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select agree_count from node_active_delete
+        where  node_id = ? and is_audit = 0
+        """, (del_node_id,))
+        res = cursor.fetchone()
+        total_count = res[0] + add_count
+        cursor.execute("""
+        update node_active_delete 
+        set agree_count = ?
+        where node_id = ? and is_audit = 0
+        """, (total_count, del_node_id))
+        self.tempConn.commit()
+
+    # 设置申请成为主节点的同意数量
+    def setAgreeCountOfActiveDelete(self, del_node_id, count):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update node_active_delete 
+        set agree_count = ?
+        where node_id = ? and is_audit = 0
+        """, (count, del_node_id))
+        self.tempConn.commit()
+
+    # 准备接受其他主节点的意见
+    # is_audit = 0表示正在申请阶段，=1表示申请通过，=2表示申请失败或者已经过期
+    def insertApplicationFormActiveDelete(self, node_id, application_content, application_time, main_node_signature,
+                                          main_node_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into node_active_delete(node_id, application_content, application_time, agree_count, is_audit, 
+        main_node_signature, main_node_user_pk, create_time)
+        values (?,?,?,?,?,?,?,?)
+        """, (node_id, application_content, application_time, 1, 0, main_node_signature, main_node_user_pk,
+              STime.getTimestamp()))
+        self.tempConn.commit()
+
+    # 增加对该节点的同意数量
+    def addAgreeCountOfNodeActiveDelete(self, del_node_id, count):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select agree_count 
+        from node_active_delete
+        where  node_id = ? and is_audit = 0
+        """, (del_node_id,))
+        res = cursor.fetchone()
+        total_count = res[0] + count
+        cursor.execute("""
+        update node_active_delete set agree_count = ?
+        where node_id = ? and is_audit = 0
+        """, (total_count, del_node_id))
         self.tempConn.commit()
 
     # 获取正在申请阶段申请表ID
@@ -235,6 +350,67 @@ class StorageOfTemp(Sqlite):
         res = cursor.fetchone()
         return res[0]
 
+    # 获取正在申请阶段的申请表ID
+    def getNodeIdListOfApplicationFormActiveDeleteInProgress(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select node_id from node_active_delete
+        where is_audit = 0
+        """)
+        node_id_list = []
+        res = cursor.fetchall()
+        for data in res:
+            node_id_list.append(data[0])
+        return node_id_list
+
+    # 获取申请表(主动申请删除节点）
+    def getApplicationFormActiveDeleteByNodeId(self, del_node_id, is_audit) -> ApplicationFormActiveDelete:
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select node_id, application_content, application_time, agree_count, is_audit, main_node_signature, 
+        main_node_user_pk, create_time
+        from node_active_delete
+        where node_id = ? and is_audit = ?
+        """, (del_node_id, is_audit))
+        res = cursor.fetchone()
+        if res is not None:
+            application_form_active_delete = ApplicationFormActiveDelete(del_node_id=res[0], start_time=res[2],
+                                                                         content=res[1])
+            application_form_active_delete.setMainNodeSignature(res[5])
+            application_form_active_delete.setMainNodeUserPk(res[6])
+        else:
+            return None
+        return application_form_active_delete
+
+    # 删除申请书，将is_audit置为2(主动申请删除节点）
+    def delApplicationFormActiveDeleteByNodeId(self, del_node_id, is_audit):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update node_active_delete set is_audit = 2
+        where node_id = ? and is_audit = ?
+        """, (del_node_id, is_audit))
+        self.tempConn.commit()
+
+    # 申请完成，将is_audit置为1(主动申请删除节点）
+    def finishApplicationFormActiveDeleteByNodeId(self, del_node_id, is_audit):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update node_active_delete set is_audit = 1
+        where node_id = ? and is_audit = ?
+        """, (del_node_id, is_audit))
+        self.tempConn.commit()
+
+    # 获取申请书的同意数量(主动申请删除节点）
+    def getAgreeCountOfActiveDeleteByNodeId(self, del_node_id, is_audit):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select agree_count 
+        from node_active_delete
+        where node_id = ? and is_audit = ?
+        """, (del_node_id, is_audit))
+        res = cursor.fetchone()
+        return res[0]
+
     # 插入其他节点的同意消息
     def insertApplicationFormReply(self, reply_application_form: ReplyApplicationForm):
         new_node_id = reply_application_form.newNodeId
@@ -286,6 +462,54 @@ class StorageOfTemp(Sqlite):
             reply_application_form.setUserPk(data[2])
             reply_application_form_list.append(reply_application_form)
         return reply_application_form_list
+
+    # 插入其他节点的同意消息(主动申请删除节点)
+    def insertApplicationFormActiveDeleteReply(self,
+                                               reply_application_form_active_delete: ReplyApplicationFormActiveDelete):
+        del_node_id = reply_application_form_active_delete.delNodeId,
+        start_time = reply_application_form_active_delete.startTime,
+        apply_user_pk = reply_application_form_active_delete.applyUserPk,
+        signature = reply_application_form_active_delete.signature,
+        user_pk = reply_application_form_active_delete.userPk
+        serial_reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.serialization(
+            reply_application_form_active_delete)
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        insert into node_active_delete_reply_agree(del_node_id, start_time, reply_application_form, reply_node_user_pk, 
+        reply_node_signature, status, create_time)
+        values (?,?,?,?,?,?,?)
+        """, (del_node_id, start_time, serial_reply_application_form_active_delete, user_pk, signature, 0,
+              STime.getTimestamp()))
+        self.tempConn.commit()
+
+    # 查询该回复消息是否存在
+    def isApplicationFormActiveDeleteReply(self, del_node_id, start_time, reply_node_user_pk):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select count(id) from node_active_delete_reply_agree
+        where del_node_id = ? and start_time = ? and reply_node_user_pk = ?
+        """, (del_node_id, start_time, reply_node_user_pk))
+        res = cursor.fetchone()
+        if res[0] > 0:
+            return True
+        else:
+            return False
+
+    # 获取与节点ID和节点申请开始时间同时匹配的申请书回复表
+    def getListOfReplyApplicationActiveDelete(self, del_node_id, start_time) -> list[ReplyApplicationFormActiveDelete]:
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select reply_application_form
+        from node_active_delete_reply_agree
+        where del_node_id = ? and start_time = ?
+        """, (del_node_id, start_time))
+        res = cursor.fetchall()
+        reply_application_form_active_delete_list = []
+        for data in res:
+            reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.deserialization(
+                str(data[0]).encode("utf-8"))
+            reply_application_form_active_delete_list.append(reply_application_form_active_delete)
+        return reply_application_form_active_delete_list
 
     # 审核新节点请求
     def auditNodeOfApplication(self, db_id, is_audit, application, start_time=None, main_node_signature=None,

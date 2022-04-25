@@ -72,6 +72,67 @@ class DBOfTemp:
         """, (is_audit, db_id))
         self.tempConn.commit()
 
+    # 查询接受到的待审核的新节点数量
+    def getCountOfNodeActiveDelete(self):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select count(id) 
+        from node_delete_other_active 
+        where is_audit = 0
+        """)
+        res = cursor.fetchone()
+        data_count = res[0]
+        return data_count
+
+    # 获取从其他主节点接受到的等待审核的申请表列表id
+    def getListOfWaitingApplicationFormActiveDelete(self, offset, count):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, create_time 
+        from node_delete_other_active
+        where is_audit = 0 and id >= ? limit ?
+        """, (offset, count))
+        res = cursor.fetchall()
+        id_list = []
+        for data in res:
+            id_list.append({
+                "id": data[0],
+                "create_time": data[1]
+            })
+        return id_list
+
+    # 获取从其他主节点接受到的等待审核的申请表
+    def getWaitingApplicationFormActiveDelete(self, db_id):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        select id, node_id, application_content, application_time, is_audit, main_node_signature, 
+        main_node_user_pk, create_time
+        from node_delete_other_active
+        where id = ?
+        """, (db_id,))
+        res = cursor.fetchone()
+        application_form_active_delete = {
+            "id": res[0],
+            "node_id": res[1],
+            "application_content": res[2],
+            "application_time": res[3],
+            "is_audit": res[4],
+            "main_node_signature": res[5],
+            "main_node_user_pk": res[6],
+            "create_time": res[7],
+        }
+        return application_form_active_delete
+
+    # 审核从其他主节点接受到的等待审核的申请表
+    def auditWaitingApplicationFormActiveDelete(self, db_id, is_audit):
+        cursor = self.tempConn.cursor()
+        cursor.execute("""
+        update node_delete_other_active 
+        set is_audit = ?
+        where id = ?
+        """, (is_audit, db_id))
+        self.tempConn.commit()
+
     def getEpoch(self):
         cursor = self.tempConn.cursor()
         cursor.execute("""

@@ -18,7 +18,8 @@ from core.network.net import PUB, SUB, Server, Client
 from core.consensus.node_management import NodeManager
 from core.consensus.block_generate import CurrentMainNode, NewBlockOfBeings, NewBlockOfTimes, NewBlockOfGarbage
 from core.consensus.vote_compute import VoteCount
-from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage
+from core.consensus.data import ApplicationForm, ReplyApplicationForm, VoteMessage, LongTermVoteMessage, \
+    ApplicationFormActiveDelete, ReplyApplicationFormActiveDelete
 from core.consensus.data import NodeDelApplicationForm
 from core.consensus.block_verify import BlockVerify
 from core.storage.storage_of_beings import StorageOfBeings
@@ -28,7 +29,8 @@ from core.utils.ciphersuites import CipherSuites
 from core.utils.server_sdk import SDK, ChainAsset
 from core.utils.serialization import SerializationBeings, SerializationApplicationForm, \
     SerializationReplyApplicationForm, SerializationNetworkMessage, SerializationVoteMessage, SerializationTimes, \
-    SerializationLongTermVoteMessage, SerializationGarbage
+    SerializationLongTermVoteMessage, SerializationGarbage, SerializationApplicationFormActiveDelete, \
+    SerializationReplyApplicationFormActiveDelete
 from core.utils.network_request import MainNodeIp
 from core.utils.system_time import STime
 from core.utils.download import RemoteChainAsset
@@ -61,8 +63,7 @@ class APP:
         self.client = Client(main_node_list=self.mainNode.mainNodeList)  # 客户端
         self.server = Server(user=self.user, node_manager=self.nodeManager, pub=self.pub, main_node=self.mainNode,
                              storage_of_temp=self.storageOfTemp, vote_count=self.voteCount, getEpoch=self.getEpoch,
-                             getElectionPeriod=self.getElectionPeriod,
-                             current_main_node=self.mainNode.currentMainNode)  # 服务端
+                             getElectionPeriod=self.getElectionPeriod)  # 服务端
         self.server.start()
         # 后端sdk
         self.webServerSDK = SDK()
@@ -114,21 +115,39 @@ class APP:
                         # 检测有无已经审核通过的，提交在本节点的申请书
                         logger.info("检测有无已经审核通过的，提交在本节点的申请书")
                         self_out.applyNewNodeJoin()
+
                         # 检测有无已经审核通过的，从其他主节点接受到的申请书
                         logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书")
                         self_out.replyNewNodeJoin()
+
                         # 检测是否有投票完成确认加入或被拒绝加入主节点的申请书
                         logger.info("检测是否有投票完成确认加入或被拒绝加入主节点的申请书")
                         self_out.checkNewNodeJoin()
+
+                        # 检测有无已经审核通过的，提交在本节点的申请书(主动删除节点)
+                        logger.info("检测有无待广播的该主节点提交的申请书（主动删除节点）")
+                        self_out.applyNodeDelete()
+
+                        # 检测有无已经审核通过的，从其他主节点接受到的申请书(主动删除节点)
+                        logger.info("检测有无已经审核通过的，从其他主节点接受到的申请书(主动删除节点)")
+                        self_out.replyNodeActiveDelete()
+
+                        # 检测是否有投票完成,同意删除节点或不同意删除
+                        logger.info("检测是否有投票完成,同意删除节点或不同意删除")
+                        self_out.checkNodActiveDelete()
+
                         logger.info("检测是否有待广播的短期票投票消息")
                         # 检测是否有待广播的短期票投票消息
                         self_out.broadcastVotingInfo()
+
                         # 检测是否有待广播的长期票消息
                         logger.info("检测是否有待广播的长期票消息")
                         self_out.broadcastLongTermVotingInfo()
+
                         # 检测是否有待生成的时代区块
                         logger.info("检测是否有待生成的时代区块")
                         self_out.checkAndGenerateBlockOfTimes()
+
                         # 检测是否有待生成的垃圾区块
                         logger.info("检测是否有待生成的垃圾区块")
                         self_out.checkAndGenerateBlockOfGarbage()
@@ -417,6 +436,36 @@ class APP:
             self.client.sendMessageByMainNodeUserPk(user_pk=info["main_node_user_pk"],
                                                     data=str(serial_network_message).encode("utf-8"))
 
+    # 通过检测数据库中的node_delete_other_active表，当存在is_audit=1或2时,即有消息要回复
+    # 回复主节点删除申请
+    def replyNodeActiveDelete(self):
+        application_form_active_delete = self.storageOfTemp.getFinishApplicationFormActiveDelete()
+        del_node_id = application_form_active_delete["del_node_id"]
+        application_content = application_form_active_delete["application_content"]
+        application_time = application_form_active_delete["application_time"]
+        is_audit = application_form_active_delete["is_audit"]
+        main_node_user_pk = application_form_active_delete["main_node_user_pk"]
+        main_node_signature = application_form_active_delete["main_node_signature"]
+
+        reply_application_form_active_delete = ReplyApplicationFormActiveDelete(del_node_id=del_node_id,
+                                                                                start_time=application_time,
+                                                                                is_agree=is_audit,
+                                                                                apply_user_pk=main_node_user_pk)
+        reply_signature = self.user.sign(str(reply_application_form_active_delete.getInfo()).encode("utf-8"))
+        reply_application_form_active_delete.setSignature(reply_signature)
+        reply_application_form_active_delete.setUserPk(self.user.getUserPKString())
+        serial_reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.serialization(
+            reply_application_form_active_delete)
+        # 消息签名
+        network_message = NetworkMessage(mess_type=NetworkMessageType.ReplyNodeActiveDeleteApplication,
+                                         message=serial_reply_application_form_active_delete)
+        network_message.setClientInfo(user_pk=self.user.getUserPKString())
+        client_signature = self.user.sign(network_message.getClientAndMessageDigest())
+        network_message.setSignature(client_signature)
+        serial_network_message = SerializationNetworkMessage.serialization(network_message)
+        self.client.sendMessageByMainNodeUserPk(user_pk=main_node_user_pk,
+                                                data=str(serial_network_message).encode("utf-8"))
+
     # 向全网广播新节点申请请求
     # 此时，当前主节点已经审核通过
     def applyNewNodeJoin(self):
@@ -465,6 +514,40 @@ class APP:
             # 全网广播
             self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfApplyJoin(), message=serial_application_form)
 
+    # 向全网广播主动删除节点申请请求
+    def applyNodeDelete(self):
+        # 调用SDK读取，待广播的主动删除某主节点的申请书
+        application_form_active_delete_dict_list = self.webServerSDK.getApplicationFormActiveDelete()
+        for application_form_active_delete_dict in application_form_active_delete_dict_list:
+            node_id = application_form_active_delete_dict["node_id"]
+            application_content = application_form_active_delete_dict["application_content"]
+            application_time = STime.getTimestamp()
+            application_form_active_delete = ApplicationFormActiveDelete(del_node_id=node_id,
+                                                                         start_time=application_time,
+                                                                         content=application_content)
+            signature = self.user.sign(str(application_form_active_delete.getInfo()).encode("utf-8"))
+            application_form_active_delete.setMainNodeSignature(signature)
+            application_form_active_delete.setMainNodeUserPk(self.user.getUserPKString())
+            # 验证申请书和签名
+            if not CipherSuites.verify(pk=application_form_active_delete.getMainNodeUserPk(),
+                                       signature=application_form_active_delete.getMainNodeSignature(),
+                                       message=str(application_form_active_delete.getInfo()).encode("utf-8")):
+                # 申请书与新节点签名不匹配
+                logger.warning("申请书签名不匹配")
+                continue
+            # 增加当前主节点签名
+            #  添加数据库数据，准备接受其他主节点的意见
+            self.storageOfTemp.insertApplicationFormActiveDelete(node_id=node_id,
+                                                                 application_content=application_content,
+                                                                 application_time=application_time,
+                                                                 main_node_signature=signature,
+                                                                 main_node_user_pk=self.user.getUserPKString())
+            serial_application_form_active_delete = SerializationApplicationFormActiveDelete.serialization(
+                application_form_active_delete)
+            # 广播
+            self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveApplyDelete(),
+                                 message=serial_application_form_active_delete)
+
     # 通过检测数据库中的node_join表
     # 当agree_count的值达到一定标准时，立即广播节点加入确认消息
     # 当超过规定时间还未收到确认消息时，删除该申请信息
@@ -504,44 +587,32 @@ class APP:
                 else:
                     logger.warning("节点已经存在，节点ID为：" + node_info.nodeId)
 
-    # 通过检测数据库中的node_delete表
-    # 当agree_count的值达到一定标准时，立即广播删除节点的消息
+    # 当agree_count的值达到一定标准时，立即广播消息
     # 当超过规定时间还未收到确认消息时，删除该申请信息
-    def checkNodeDelete(self):
-        # 获取node_join表中所有is_audit=0的申请表
-        for node_id in self.storageOfTemp.getNodeIdListOfWaitingAuditApplicationForm():
+    def checkNodActiveDelete(self):
+        # 获取node_active_delete表中所有is_audit=0的申请表
+        for node_id in self.storageOfTemp.getNodeIdListOfApplicationFormActiveDeleteInProgress():
             # 检测是否超过有效时间，若超过删除该申请书
-            if not self.nodeManager.isTimeReplyApplicationForm(node_id):
-                logger.info("该申请书已经超过有效时间，申请书新节点ID为：" + node_id)
+            if not self.nodeManager.isTimeReplyApplicationFormActiveDelete(node_id):
+                logger.info("该申请书已经超过有效时间,申请删除的节点ID为：" + node_id)
                 continue
             # 检测是否达到成为新节点的条件
-            res = self.nodeManager.isSuccessReplyApplicationForm(node_id)
+            res = self.nodeManager.isSuccessReplyApplicationFormActiveDelete(node_id)
             if res[0]:
-                list_of_serial_reply_application_form = res[1]
-                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
-                serial_application_form = SerializationApplicationForm.serialization(application_form)
+                list_of_serial_reply_application_form_active_delete = res[1]
+                application_form_active_delete = self.storageOfTemp.getApplicationFormActiveDeleteByNodeId(
+                    del_node_id=node_id,
+                    is_audit=0)
+                serial_application_form_active_delete = SerializationApplicationFormActiveDelete.serialization(
+                    application_form_active_delete)
+                # 删除主节点
+                self.mainNode.mainNodeList.delMainNodeById(node_id=application_form_active_delete.delNodeId)
+                # 重新订阅
+                self.reSubscribe()
                 # 全网广播节点加入确认消息
-                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfJoin(),
-                                     message=[serial_application_form, list_of_serial_reply_application_form])
-                # 将该节点加入主节点列表
-                application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id=node_id)
-                node_info = NodeInfo(node_id=application_form.newNodeInfo["node_id"],
-                                     user_pk=application_form.newNodeInfo["user_pk"],
-                                     node_ip=application_form.newNodeInfo["node_ip"],
-                                     create_time=application_form.newNodeInfo["create_time"],
-                                     server_url=application_form.newNodeInfo["server_url"])
-                node_info.setNodeSignature(application_form.newNodeSignature)
-                # 检测主节点列表中是否已经有该节点
-                if not self.mainNode.mainNodeList.userPKisExit(user_pk=node_info.userPk):
-                    self.mainNode.mainNodeList.addMainNode(node_info=node_info)
-                    logger.info("新节点已加入，节点信息为：")
-                    logger.info(node_info.getInfo())
-                    # 将该申请书设置为已经完成申请
-                    self.storageOfTemp.finishApplicationFormByNodeId(node_id)
-                    # 重新计算订阅列表，重新创建32个订阅链接
-                    self.reSubscribe()
-                else:
-                    logger.warning("节点已经存在，节点ID为：" + node_info.nodeId)
+                self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveConfirmDelete(),
+                                     message=[serial_application_form_active_delete,
+                                              list_of_serial_reply_application_form_active_delete])
 
     # 众生区块生成周期
     # 0-30S

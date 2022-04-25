@@ -421,6 +421,40 @@ def getNewApplyList():
         return http_message.getJson()
 
 
+@backstage.route("/backstage/main_node/active_delete_list/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getActiveDeleteList():
+    """获取该主节点申请的已经广播的申请书列表（主动删除节点）
+    Content-Type: application/json
+    {
+      "token":"",
+      "offset":int,
+      "count": int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": [{'db_id': 1, 'crate_time': '16453453280.98137'}]
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        count = info["count"]
+        offset = info["offset"]
+        res = mainNodeManager.getApplicationActiveDeleteListOfBroadcast(offset, count)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @backstage.route("/backstage/main_node/other_apply_list/get", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def getOtherApplyList():
@@ -447,6 +481,40 @@ def getOtherApplyList():
         count = info["count"]
         offset = info["offset"]
         res = mainNodeManager.getApplicationOfOtherMainNode(offset, count)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@backstage.route("/backstage/main_node/other_active_delete_list/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getOtherActiveDeleteList():
+    """获取其他主节点提交的申请书列表（主动删除）
+    Content-Type: application/json
+    {
+      "token":"",
+      "offset":int,
+      "count": int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": [{'db_id': 1, 'crate_time': '16453453280.98137'}]
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        count = info["count"]
+        offset = info["offset"]
+        res = mainNodeManager.getApplicationActiveDeleteOfOtherMainNode(offset, count)
         http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
     except Exception as err:
@@ -486,6 +554,76 @@ def getNewApply():
         return http_message.getJson()
 
 
+@backstage.route("/backstage/main_node/active_delete/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getActiveDelete():
+    """获取该主节点申请的已经广播的申请书（主动删除节点）
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {'db_id': 1, 'crate_time': '16453453280.98137'....}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        res = mainNodeManager.getApplicationFormActiveDeleteByDBId(db_id)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@backstage.route("/backstage/main_node/active_delete/add", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def addActiveDelete():
+    """主动申请删除谋主节点
+    Content-Type: application/json
+    {
+      "token":"",
+      "node_id":"",
+      "application_content":"",
+      "remarks":""
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {'db_id': 1, 'crate_time': '16453453280.98137'....}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        node_id = info["node_id"]
+        application_content = info["application_content"]
+        remarks = info["remarks"]
+        res = mainNodeManager.addApplicationFormActiveDelete(node_id, application_content, remarks)
+        if res:
+            http_message = HttpMessage(is_success=True, data="增加成功")
+            return http_message.getJson()
+        else:
+            http_message = HttpMessage(is_success=False, data="增加失败")
+            return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @backstage.route("/backstage/main_node/other_apply/get", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def getOtherApply():
@@ -509,6 +647,37 @@ def getOtherApply():
             return http_message.getJson()
         db_id = info["db_id"]
         res = mainNodeManager.getOtherNodeApplicationFormByDBId(db_id)
+        http_message = HttpMessage(is_success=True, data=res)
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@backstage.route("/backstage/main_node/other_active_delete/get", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def getOtherActiveDelete():
+    """获取其他主节点申请的已经广播的申请书（主动删除节点）
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": {'db_id': 1, 'crate_time': '16453453280.98137'....}
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        res = mainNodeManager.getOtherNodeApplicationFormActiveDeleteByDBId(db_id)
         http_message = HttpMessage(is_success=True, data=res)
         return http_message.getJson()
     except Exception as err:
@@ -575,6 +744,39 @@ def reviewOtherApply():
         db_id = info["db_id"]
         review = info["review"]
         mainNodeManager.reviewOtherNodeApplicationFormByDBId(db_id, review)
+        http_message = HttpMessage(is_success=True, data="审核完成")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
+@backstage.route("/backstage/main_node/other_active_delete/review", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def reviewOtherActiveDelete():
+    """审核通过其他主节点的申请书（主动删除）
+    Content-Type: application/json
+    {
+      "token":"",
+      "db_id":int,
+      "review":int,
+    }
+    返回 json
+    {
+    "is_success":bool,
+    "data": ”“
+    """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        db_id = info["db_id"]
+        review = info["review"]
+        mainNodeManager.reviewOtherNodeApplicationFormActiveDeleteByDBId(db_id, review)
         http_message = HttpMessage(is_success=True, data="审核完成")
         return http_message.getJson()
     except Exception as err:
