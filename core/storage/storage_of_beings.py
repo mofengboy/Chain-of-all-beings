@@ -27,7 +27,7 @@ class StorageOfBeings(Sqlite):
                      block.body)
                 )
             cursor.executemany("""
-                insert into beings (epoch,block_id,simple_user_pk,main_node_user_pk,header,body)
+                insert or ignore into beings (epoch,block_id,simple_user_pk,main_node_user_pk,header,body)
                 values (?,?,?,?,?,?);
                 """, data_list)
             self.blockConn.commit()

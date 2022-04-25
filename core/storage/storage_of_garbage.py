@@ -42,7 +42,7 @@ class StorageOfGarbage(Sqlite):
             )
         cursor = self.blockConn.cursor()
         cursor.execute("""
-        insert into garbage(election_period, block_id, user_pk, header, body, beings_block_id, beings_simple_user_pk, beings_main_node_user_pk) 
+        insert or ignore into garbage(election_period, block_id, user_pk, header, body, beings_block_id, beings_simple_user_pk, beings_main_node_user_pk) 
         VALUES (?,?,?,?,?,?,?,?)
         """, data_list)
         self.blockConn.commit()

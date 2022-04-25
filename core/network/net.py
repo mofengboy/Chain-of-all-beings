@@ -274,7 +274,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfTimes(),
                                              message=[serial_vote_list, serial_block_of_times])
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 收集其他节点产生的垃圾区块
                 try:
@@ -327,7 +327,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfGarbage(),
                                              message=[serial_vote_list, serial_block_of_garbage])
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 新节点申请加入 消息
                 # 保存到暂存区（以便审核后回复）广播
@@ -375,7 +375,7 @@ class SUB(threading.Thread):
                         logger.info("已保存申请书信息,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
                         continue
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 新节点确认加入主节点消息
                 try:
@@ -421,7 +421,7 @@ class SUB(threading.Thread):
                             else:
                                 logger.info("节点已经存在，节点ID为：" + new_node.nodeId)
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 申请删除主节点消息
                 # 被选中，但是没有产生区块
@@ -521,7 +521,7 @@ class SUB(threading.Thread):
                                                      message=node_del_application_form.getMessage())
                                 self.nodeDelApplicationFormList.append(node_del_application_form)
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 主动申请删除主节点的消息
                 # 保存到暂存区（以便审核后回复）广播
@@ -562,7 +562,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveApplyDelete(),
                                              message=serial_application_form_active_delete)
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 主动删除节点确认消息
                 try:
@@ -595,7 +595,7 @@ class SUB(threading.Thread):
                                                  message=[serial_application_form_active_delete,
                                                           list_of_serial_reply_application_form_active_delete])
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 短期票投票消息
                 try:
@@ -642,7 +642,7 @@ class SUB(threading.Thread):
                                              message=SerializationVoteMessage.serialization(vote_message=vote_message))
                         logger.debug("广播完成")
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
                 # 长期票投票消息
                 try:
@@ -700,7 +700,7 @@ class SUB(threading.Thread):
                                                  long_term_vote_message=long_term_vote_message))
                         logger.debug("长期票投票消息广播完成")
                 except Exception as err:
-                    logger.exception(err)
+                    logger.error(err, exc_info=True, stack_info=True)
 
             except Exception as err:
                 logger.warning(err)
@@ -796,5 +796,5 @@ class Server(threading.Thread):
             # 其他消息类型
             except Exception as err:
                 # 非规定数据结构
-                logger.exception(err)
+                logger.error(err, exc_info=True, stack_info=True)
                 self.socket.send(b'0')

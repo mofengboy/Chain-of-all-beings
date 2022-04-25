@@ -101,7 +101,7 @@ class APP:
                 logger.info("周期事件处理器启动完成")
                 while True:
                     try:
-                        if self_out.getEpoch() % ElectionPeriodValue == 0:
+                        if self_out.getEpoch() % ElectionPeriodValue == 0 and self_out.getEpoch() != 0:
                             logger.info("周期事件处理器暂停半小时")
                             time.sleep(60)
                         else:
@@ -440,6 +440,8 @@ class APP:
     # 回复主节点删除申请
     def replyNodeActiveDelete(self):
         application_form_active_delete = self.storageOfTemp.getFinishApplicationFormActiveDelete()
+        if application_form_active_delete is None:
+            return
         del_node_id = application_form_active_delete["del_node_id"]
         application_content = application_form_active_delete["application_content"]
         application_time = application_form_active_delete["application_time"]
@@ -666,7 +668,7 @@ class APP:
                         self.mainNode.currentBlockList.addBlock(block=new_block)
                     except Exception as err:
                         # 产生错误（如签名验证错误）后，发送不产生区块消息
-                        logger.error(err)
+                        logger.error(err, exc_info=True, stack_info=True)
                         # 广播无区块产生的消息
                         logger.info("当前节点不生成区块")
                         empty_block = EmptyBlock(user_pk=self.user.getUserPKString(), epoch=self.getEpoch())
