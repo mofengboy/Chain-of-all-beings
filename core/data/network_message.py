@@ -35,6 +35,11 @@ class SubscribeTopics:
     def getNodeTopicOfApplyDelete():
         return b"node apply delete "
 
+    # 确认删除节点订阅主题
+    @staticmethod
+    def getNodeTopicOfDelete():
+        return b"node delete "
+
     # 主动申请删除节点订阅主题
     @staticmethod
     def getNodeTopicOfActiveApplyDelete():
@@ -44,11 +49,6 @@ class SubscribeTopics:
     @staticmethod
     def getNodeTopicOfActiveConfirmDelete():
         return b"node apply active confirm delete "
-
-    # 确认删除节点订阅主题
-    @staticmethod
-    def getNodeTopicOfDelete():
-        return b"node delete "
 
     # 短期票投票消息广播主题
     @staticmethod

@@ -59,55 +59,58 @@ class Client:
         logger.info("客户端初始化完成")
 
     def sendMessageByNodeID(self, node_id, data: bytes):
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.setsockopt(zmq.RCVTIMEO, 5000)
-        ip = ""
-        for main_node in self.mainNodeList.getNodeList():
-            if main_node["node_info"]["node_id"] == node_id:
-                ip = main_node["node_info"]["node_ip"]
-        ip = "tcp://" + ip + ":23334"
-        socket.connect(ip)
-        socket.send(data)
-        message = socket.recv()
-        socket.close()
-        logger.info("消息发送完成，对方ip为" + ip)
-        return message
+        with zmq.Context() as context:
+            with context.socket(zmq.REQ) as socket:
+                socket.setsockopt(zmq.LINGER, 0)
+                socket.setsockopt(zmq.RCVTIMEO, 5000)
+                ip = ""
+                for main_node in self.mainNodeList.getNodeList():
+                    if main_node["node_info"]["node_id"] == node_id:
+                        ip = main_node["node_info"]["node_ip"]
+                ip = "tcp://" + ip + ":23334"
+                try:
+                    socket.connect(ip)
+                    socket.send(data)
+                    message = socket.recv()
+                    logger.info("消息发送完成，对方ip为" + ip)
+                    return message
+                except Exception as err:
+                    logger.error(err, stack_info=True)
+                    raise ValueError(err)
 
     def sendMessageByMainNodeUserPk(self, user_pk, data: bytes):
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.setsockopt(zmq.RCVTIMEO, 5000)
-        ip = ""
-        for main_node in self.mainNodeList.getNodeList():
-            if main_node["node_info"]["user_pk"] == user_pk:
-                ip = main_node["node_info"]["node_ip"]
-        ip = "tcp://" + ip + ":23334"
-        socket.connect(ip)
-        socket.send(data)
-        message = socket.recv()
-        socket.close()
-        logger.info("消息发送完成，对方公钥为" + user_pk)
-        logger.info("消息发送完成，对方ip为" + ip)
-        return message
+        with zmq.Context() as context:
+            with context.socket(zmq.REQ) as socket:
+                socket.setsockopt(zmq.LINGER, 0)
+                socket.setsockopt(zmq.RCVTIMEO, 5000)
+                ip = ""
+                for main_node in self.mainNodeList.getNodeList():
+                    if main_node["node_info"]["user_pk"] == user_pk:
+                        ip = main_node["node_info"]["node_ip"]
+                ip = "tcp://" + ip + ":23334"
+                try:
+                    socket.connect(ip)
+                    socket.send(data)
+                    message = socket.recv()
+                    logger.info("消息发送完成，对方公钥为" + user_pk)
+                    logger.info("消息发送完成，对方ip为" + ip)
+                    return message
+                except Exception as err:
+                    logger.error(err, stack_info=True)
+                    raise ValueError(err)
 
     @staticmethod
     def sendMessageByIP(ip, data: bytes):
-        context = zmq.Context.instance()
-        socket = context.socket(zmq.REQ)
-        socket.setsockopt(zmq.RCVTIMEO, 5000)
-        ip = "tcp://" + ip + ":23334"
-        try:
-            socket.connect(ip)
-            socket.send(data)
-            message = socket.recv()
-            socket.close()
-            logger.info("消息发送完成，对方ip为" + ip)
-            return message
-        except Exception as err:
-            socket.close()
-            logger.warning(err)
-            raise ValueError(err)
+        with zmq.Context() as context:
+            with context.socket(zmq.REQ) as socket:
+                socket.setsockopt(zmq.LINGER, 0)
+                socket.setsockopt(zmq.RCVTIMEO, 5000)
+                ip = "tcp://" + ip + ":23334"
+                socket.connect(ip)
+                socket.send(data)
+                message = socket.recv()
+                logger.info("消息发送完成，对方ip为" + ip)
+                return message
 
 
 # 订阅消息
@@ -142,13 +145,20 @@ class SUB(threading.Thread):
         ip = "tcp://" + ip + ":23333"
         self.socket.connect(ip)
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getBlockTopicOfBeings())
-        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfJoin())
-        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyJoin())
-        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyDelete())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getBlockTopicOfTimes())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfDelete())
+
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfJoin())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyJoin())
+
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfApplyDelete())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfDelete())
+
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfActiveConfirmDelete())
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getNodeTopicOfActiveApplyDelete())
+
         self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getVoteMessage())
+        self.socket.setsockopt(zmq.SUBSCRIBE, SubscribeTopics.getLongTermVoteMessage())
         self.stopFlag = True
         logger.info("订阅者初始化完成，订阅ip为" + ip)
 
@@ -223,7 +233,7 @@ class SUB(threading.Thread):
                             self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfBeings(), message=block_mess)
                             logger.info("已保存不产生区块消息，该消息用户公钥为：" + empty_block.userPk)
                 except Exception as err:
-                    logger.warning(err)
+                    logger.error(err, stack_info=True)
 
                 # 收集其他节点产生的时代区块
                 try:
@@ -274,7 +284,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfTimes(),
                                              message=[serial_vote_list, serial_block_of_times])
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 收集其他节点产生的垃圾区块
                 try:
@@ -327,7 +337,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getBlockTopicOfGarbage(),
                                              message=[serial_vote_list, serial_block_of_garbage])
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 新节点申请加入 消息
                 # 保存到暂存区（以便审核后回复）广播
@@ -375,7 +385,7 @@ class SUB(threading.Thread):
                         logger.info("已保存申请书信息,新节点用户公钥" + application_form.newNodeInfo["user_pk"])
                         continue
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 新节点确认加入主节点消息
                 try:
@@ -421,7 +431,7 @@ class SUB(threading.Thread):
                             else:
                                 logger.info("节点已经存在，节点ID为：" + new_node.nodeId)
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 申请删除主节点消息
                 # 被选中，但是没有产生区块
@@ -521,7 +531,7 @@ class SUB(threading.Thread):
                                                      message=node_del_application_form.getMessage())
                                 self.nodeDelApplicationFormList.append(node_del_application_form)
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 主动申请删除主节点的消息
                 # 保存到暂存区（以便审核后回复）广播
@@ -562,7 +572,7 @@ class SUB(threading.Thread):
                         self.pub.sendMessage(topic=SubscribeTopics.getNodeTopicOfActiveApplyDelete(),
                                              message=serial_application_form_active_delete)
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 主动删除节点确认消息
                 try:
@@ -595,7 +605,7 @@ class SUB(threading.Thread):
                                                  message=[serial_application_form_active_delete,
                                                           list_of_serial_reply_application_form_active_delete])
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 短期票投票消息
                 try:
@@ -642,7 +652,7 @@ class SUB(threading.Thread):
                                              message=SerializationVoteMessage.serialization(vote_message=vote_message))
                         logger.debug("广播完成")
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
                 # 长期票投票消息
                 try:
@@ -700,10 +710,10 @@ class SUB(threading.Thread):
                                                  long_term_vote_message=long_term_vote_message))
                         logger.debug("长期票投票消息广播完成")
                 except Exception as err:
-                    logger.error(err, exc_info=True, stack_info=True)
+                    logger.error(err, stack_info=True)
 
             except Exception as err:
-                logger.warning(err)
+                logger.error(err, stack_info=True)
 
 
 # 监听接受消息
@@ -711,9 +721,6 @@ class Server(threading.Thread):
     def __init__(self, user: User, pub: PUB, main_node: MainNode, storage_of_temp: StorageOfTemp,
                  node_manager: NodeManager, vote_count: VoteCount, getEpoch, getElectionPeriod):
         super().__init__()
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REP)
-        self.socket.bind("tcp://*:23334")
         self.stopFlag = True
         self.nodeManager = node_manager
         self.pub = pub
@@ -724,7 +731,83 @@ class Server(threading.Thread):
         self.getEpoch = getEpoch
         self.getElectionPeriod = getElectionPeriod
         self.user = user
+
+        self.workerUrl = "inproc://workers"  # 内部使用
+        self.context = zmq.Context(io_threads=50)
+        self.server = self.context.socket(zmq.XREP)
+        self.server.bind("tcp://*:23334")
+        self.workers = self.context.socket(zmq.XREQ)
+        self.workers.bind(self.workerUrl)
+        for i in range(0, 8):
+            threading.Thread(target=self.worker, args=(self.workerUrl, self.context, i)).start()
         logger.info("服务端初始化完成")
+
+    def worker(self, inner_url, context, thread_i):
+        sock = context.socket(zmq.REP)
+        sock.connect(inner_url)
+        while self.stopFlag:
+            #  Wait for next request from client
+            serial_network_message = sock.recv()
+            logger.info("服务端收到消息," + str(thread_i) + "号线程。")
+            logger.info(serial_network_message)
+            try:
+                network_message = SerializationNetworkMessage.deserialization(serial_network_message)
+                mess_type = network_message.messType
+                # #获取主节点列表的请求、当前Epoch请求、数据同步的请求不验证签名
+
+                # 获取主节点列表请求
+                if mess_type == NetworkMessageType.Get_Main_Node_List:
+                    node_list = self.mainNode.mainNodeList.getNodeList()
+                    sock.send((str(node_list).encode("utf-8")))
+                    continue
+
+                # 当前Epoch请求
+                if mess_type == NetworkMessageType.Get_Current_Epoch:
+                    sock.send(str(self.getEpoch()).encode("utf-8"))
+                    continue
+
+                # 检查发送方签名，核对对方是否为主节点
+                # 签名有效期为八秒
+                client_info = network_message.clientInfo
+                signature = network_message.signature
+                if (STime.getTimestamp() - client_info["send_time"]) > 8:
+                    # 超过有效时间
+                    logger.info("发送方签名时间超过有效时间，用户公钥：" + client_info["user_pk"])
+                    sock.send(b'0')
+                    continue
+                if not self.mainNode.mainNodeList.userPKisExit(user_pk=client_info["user_pk"]):
+                    # 发送方不是主节点
+                    logger.info("发送方不是主节点，用户公钥：" + client_info["user_pk"])
+                    sock.send(b'0')
+                    continue
+                certification_digest = network_message.getClientAndMessageDigest()
+                if not CipherSuites.verify(pk=client_info["user_pk"], signature=signature,
+                                           message=str(certification_digest).encode("utf-8")):
+                    # 签名验证失败
+                    logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
+                    sock.send(b'0')
+                    continue
+                # 新节点申请加入消息
+                if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
+                    reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
+                    # 处理回复消息
+                    self.nodeManager.replyApplyJoin(reply_application_form)
+                    sock.send(b'1')
+                    continue
+                # 主动申请删除节点的消息
+                if mess_type == NetworkMessageType.ReplyNodeActiveDeleteApplication:
+                    reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.deserialization(
+                        network_message.message)
+                    # 处理回复消息
+                    self.nodeManager.replyNodeActiveDelete(
+                        reply_application_form_active_delete=reply_application_form_active_delete)
+                    sock.send(b'1')
+                    continue
+            # 其他消息类型
+            except Exception as err:
+                # 非规定数据结构
+                logger.error(err, stack_info=True)
+                sock.send(b'0')
 
     def run(self):
         logger.info("服务端启动")
@@ -735,66 +818,4 @@ class Server(threading.Thread):
         logger.info("服务端关闭")
 
     def receive(self):
-        while self.stopFlag:
-            #  Wait for next request from client
-            serial_network_message = self.socket.recv()
-            logger.info("服务端收到消息")
-            logger.info(serial_network_message)
-            try:
-                network_message = SerializationNetworkMessage.deserialization(serial_network_message)
-                mess_type = network_message.messType
-                # #获取主节点列表的请求、当前Epoch请求、数据同步的请求不验证签名
-
-                # 获取主节点列表请求
-                if mess_type == NetworkMessageType.Get_Main_Node_List:
-                    node_list = self.mainNode.mainNodeList.getNodeList()
-                    self.socket.send((str(node_list).encode("utf-8")))
-                    continue
-
-                # 当前Epoch请求
-                if mess_type == NetworkMessageType.Get_Current_Epoch:
-                    self.socket.send(str(self.getEpoch()).encode("utf-8"))
-                    continue
-
-                # 检查发送方签名，核对对方是否为主节点
-                # 签名有效期为八秒
-                client_info = network_message.clientInfo
-                signature = network_message.signature
-                if (STime.getTimestamp() - client_info["send_time"]) > 8:
-                    # 超过有效时间
-                    logger.info("发送方签名时间超过有效时间，用户公钥：" + client_info["user_pk"])
-                    self.socket.send(b'0')
-                    continue
-                if not self.mainNode.mainNodeList.userPKisExit(user_pk=client_info["user_pk"]):
-                    # 发送方不是主节点
-                    logger.info("发送方不是主节点，用户公钥：" + client_info["user_pk"])
-                    self.socket.send(b'0')
-                    continue
-                certification_digest = network_message.getClientAndMessageDigest()
-                if not CipherSuites.verify(pk=client_info["user_pk"], signature=signature,
-                                           message=str(certification_digest).encode("utf-8")):
-                    # 签名验证失败
-                    logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
-                    self.socket.send(b'0')
-                    continue
-                # 新节点申请加入消息
-                if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
-                    reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
-                    # 处理回复消息
-                    self.nodeManager.replyApplyJoin(reply_application_form)
-                    self.socket.send(b'1')
-                    continue
-                # 主动申请删除节点的消息
-                if mess_type == NetworkMessageType.ReplyNodeActiveDeleteApplication:
-                    reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.deserialization(
-                        network_message.message)
-                    # 处理回复消息
-                    self.nodeManager.replyNodeActiveDelete(
-                        reply_application_form_active_delete=reply_application_form_active_delete)
-                    self.socket.send(b'1')
-                    continue
-            # 其他消息类型
-            except Exception as err:
-                # 非规定数据结构
-                logger.error(err, exc_info=True, stack_info=True)
-                self.socket.send(b'0')
+        zmq.device(zmq.QUEUE, self.server, self.workers)

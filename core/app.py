@@ -77,7 +77,6 @@ class APP:
         self.storageOfTemp.setEpoch(self.currentEpoch)
 
     def getEpoch(self):
-        logger.info("当前Epoch：" + str(self.currentEpoch))
         return self.currentEpoch
 
     def setEpoch(self, epoch):
@@ -86,7 +85,6 @@ class APP:
 
     def getElectionPeriod(self):
         current_election_period = int(self.getEpoch() / ElectionPeriodValue)
-        logger.info("当前ElectionPeriod：" + str(current_election_period))
         return current_election_period
 
     # 周期处理的事件，单独线程执行
@@ -223,7 +221,7 @@ class APP:
                 is_get = True
                 break
             except Exception as err:
-                logger.warning(err)
+                logger.error(err, stack_info=True)
         return is_get
 
     # 通过其他主节点获取当前epoch
@@ -245,7 +243,7 @@ class APP:
                     return False
             except Exception as err:
                 time.sleep(1)
-                logger.warning(err)
+                logger.error(err, stack_info=True)
 
     # 同步众生区块
     def synchronizedBlockOfBeings(self):
@@ -295,7 +293,7 @@ class APP:
                     start_epoch = end_epoch
                 except Exception as err:
                     logger.warning("众生区块同步获取失败，远程主节点url:" + server_url)
-                    logger.warning(err)
+                    logger.error(err, stack_info=True)
                     time.sleep(1)
 
     # 同步时代区块
@@ -315,17 +313,20 @@ class APP:
                             start_election_period += 1
                         else:
                             self.storageOfGalaxy.addBatchBlockOfGalaxy(block_list_of_galaxy=res)
+                            logger.info("已经保存到数据库")
                             self.chainAsset.saveBlockOfTimes(res)
+                            logger.info("已经保存为静态文件")
                             start_election_period += 1
                     else:
-                        logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
+                        logger.warning("时代区块同步获取失败,status_code：500，远程主节点url:" + server_url)
                         time.sleep(1)
                     if start_election_period >= self.getElectionPeriod():
                         logger.info("时代区块同步完成")
                         break
+                    logger.info("时代区块同步至,election_period:" + str(start_election_period))
                 except Exception as err:
                     logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
-                    logger.warning(err)
+                    logger.error(err, stack_info=True)
                     time.sleep(1)
 
     # 同步垃圾区块
@@ -348,14 +349,15 @@ class APP:
                             self.chainAsset.saveBlockOfGarbage(res)
                             start_election_period += 1
                     else:
-                        logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
+                        logger.warning("垃圾区块同步获取失败，远程主节点url:" + server_url)
                         time.sleep(1)
                     if start_election_period >= self.getElectionPeriod():
-                        logger.info("时代区块同步完成")
+                        logger.info("垃圾区块同步完成")
                         break
+                    logger.info("垃圾区块同步至,election_period:" + str(start_election_period))
                 except Exception as err:
-                    logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
-                    logger.warning(err)
+                    logger.warning("垃圾区块同步获取失败，远程主节点url:" + server_url)
+                    logger.error(err, stack_info=True)
                     time.sleep(1)
 
     # 数据恢复
@@ -668,7 +670,7 @@ class APP:
                         self.mainNode.currentBlockList.addBlock(block=new_block)
                     except Exception as err:
                         # 产生错误（如签名验证错误）后，发送不产生区块消息
-                        logger.error(err, exc_info=True, stack_info=True)
+                        logger.error(err, stack_info=True)
                         # 广播无区块产生的消息
                         logger.info("当前节点不生成区块")
                         empty_block = EmptyBlock(user_pk=self.user.getUserPKString(), epoch=self.getEpoch())

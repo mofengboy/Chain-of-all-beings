@@ -33,7 +33,7 @@ class StorageOfBeings(Sqlite):
             self.blockConn.commit()
             logger.info("已保存当前众生区块列表，数量为：" + str(len(data_list)))
         except Exception as err:
-            logger.warning(err)
+            logger.error(err, stack_info=True)
 
     def getBlockListByLastEpoch(self) -> BlockListOfBeings:
         if len(self.currentBlockListOfBeing.list) > 0:
@@ -132,12 +132,12 @@ class StorageOfBeings(Sqlite):
                      str(block.getBlockHeader()).encode("utf-8"), block.body])
             cursor = self.blockConn.cursor()
             cursor.executemany("""
-            insert into beings(epoch,block_id,simple_user_pk,main_node_user_pk,header,body) 
+            insert or ignore into beings(epoch,block_id,simple_user_pk,main_node_user_pk,header,body) 
             values(?,?,?,?,?,?) 
             """, data_list)
             self.blockConn.commit()
         except Exception as err:
-            logger.warning(err)
+            logger.error(err, stack_info=True)
 
     # 获取当前用户在此范围内的数量
     def getUserCountByEpoch(self, user_pk, start, end):

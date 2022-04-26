@@ -46,7 +46,7 @@ class STime:
                 response = c.request(ntp_list[i])
                 return int(str(response.tx_time * 1000)[0:13])
             except Exception as err:
-                logger.warning(err)
+                logger.error(err, stack_info=True)
                 logger.info("第" + str(i + 1) + "次尝试重连ntp服务器")
         logger.warning("时间校对失败！")
         return STime.getTimestamp()

@@ -51,12 +51,12 @@ class RemoteChainAsset:
     def getChainOfTimes(url, election_period: int):
         try:
             r = requests.get(url + "/static/times_" + str(election_period) + ".chain", timeout=1)
-            status_code = r.json()["data"]
-            if status_code == "404":
-                return "404"
             if r.headers.get('content-type') == "application/octet-stream":
                 return SerializationAssetOfTimes.deserialization(r.content)
             else:
+                status_code = r.json()["data"]
+                if status_code == "404":
+                    return "404"
                 return "500"
         except Exception as err:
             logging.warning(err)
@@ -67,12 +67,12 @@ class RemoteChainAsset:
     def getChainOfGarbage(url, election_period: int):
         try:
             r = requests.get(url + "/static/garbage_" + str(election_period) + ".chain", timeout=1)
-            status_code = r.json()["data"]
-            if status_code == "404":
-                return "404"
             if r.headers.get('content-type') == "application/octet-stream":
                 return SerializationAssetOfTimes.deserialization(r.content)
             else:
+                status_code = r.json()["data"]
+                if status_code == "404":
+                    return "404"
                 return "500"
         except Exception as err:
             logging.warning(err)
@@ -80,5 +80,5 @@ class RemoteChainAsset:
 
 
 if __name__ == "__main__":
-    a = RemoteChainAsset().getChainOfTimes(url="https://server.beings.icu", election_period=10)
+    a = RemoteChainAsset().getChainOfTimes(url="https://server.beings.icu", election_period=0)
     print(a)

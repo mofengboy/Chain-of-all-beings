@@ -43,8 +43,8 @@ class StorageOfGalaxy(Sqlite):
                 (election_period, block_id, user_pk, header, body, beings_block_id, users_pk[0], users_pk[1])
             )
         cursor = self.blockConn.cursor()
-        cursor.execute("""
-        insert into galaxy(election_period, block_id, user_pk, header, body, beings_block_id, beings_simple_user_pk, beings_main_node_user_pk) 
+        cursor.executemany("""
+        insert or ignore into galaxy(election_period, block_id, user_pk, header, body, beings_block_id, beings_simple_user_pk, beings_main_node_user_pk) 
         VALUES (?,?,?,?,?,?,?,?)
         """, data_list)
         self.blockConn.commit()
