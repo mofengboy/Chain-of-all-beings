@@ -47,6 +47,8 @@ class MainNodeList:
         self.__nodeList = []
 
     def getNodeList(self):
+        # 排序
+        self.__nodeList.sort(key=get_node_id)
         return self.__nodeList
 
     def setNodeList(self, node_list):

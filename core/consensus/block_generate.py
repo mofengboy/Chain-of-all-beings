@@ -30,9 +30,11 @@ class CurrentMainNode:
     def getNodeListOfGenerateBlock(self) -> MainNodeList:
         seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.getEpoch())
         random.seed(seed)
+        logger.info("设置随机种子：" + seed)
         node_list = random.choices(population=self.mainNodeList.getNodeList(),
                                    weights=self.mainNodeList.getNodeWeights(), k=self.getGenerateCount())
         logger.info("本次被选中的节点数量为:" + str(len(node_list)))
+        # 去重
         main_node_list = MainNodeList()
         for node in node_list:
             if not main_node_list.userPKisExit(user_pk=node["node_info"]["user_pk"]):
@@ -49,6 +51,7 @@ class CurrentMainNode:
     def getNodeListOfCheckNode(self) -> MainNodeList:
         seed = CipherSuites.getSeed(self.lastBlock.getBlockSHA256(), self.getEpoch() - 1)
         random.seed(seed)
+        logger.info("设置随机种子：" + seed)
         node_list = random.choices(population=self.mainNodeList.getNodeList(),
                                    weights=self.mainNodeList.getNodeWeights(), k=self.getGenerateCount() * 2)
         logger.info("本次被选中检查其他主节点的主节点数量为:" + str(len(node_list)))

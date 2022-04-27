@@ -261,7 +261,6 @@ class NodeManager:
         for vote in node_del_application_form.votes:
             if vote not in votes:
                 votes.append(vote)
-
         total_vote = 1
         for vote in votes:
             if CipherSuites.verify(pk=vote["user_pk"], signature=vote["signature"], message=str(info).encode("utf-8")):
