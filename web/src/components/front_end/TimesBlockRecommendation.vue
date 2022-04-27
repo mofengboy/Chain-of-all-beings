@@ -38,6 +38,13 @@
       <div class="detail-votes">总票数：{{ timesBlockDetail["votes"] }}</div>
       <div class="detail-vote-list">
         <p>投票列表</p>
+        <div>
+          <el-table :data="voteTableData" border style="width: 100%">
+            <el-table-column prop="main_user_pk" label="投票用户"/>
+            <el-table-column prop="number_of_vote" label="票数" width="80"/>
+            <el-table-column prop="vote_type" label="投票类型" width="100"/>
+          </el-table>
+        </div>
       </div>
     </div>
   </div>
@@ -60,7 +67,8 @@ export default {
       block_id: "",
       search_block_id: "",
       epoch: 0,
-      electionPeriodValue:20160
+      electionPeriodValue: 20160,
+      voteTableData: []
     }
   },
   components: {
@@ -100,7 +108,7 @@ export default {
       })
     },
     getListOfTimesBlock: function () {
-      const loading = this.$loading({lock: true, text: '正在计算中...', background: 'rgba(0, 0, 0, 0.7)'})
+      const loading = this.$loading({lock: true, text: '正在获取中...', background: 'rgba(0, 0, 0, 0.7)'})
       let election_period = Math.floor(this.epoch / this.electionPeriodValue)
       const _this = this
       this.axios({
@@ -155,6 +163,7 @@ export default {
             status: data["status"],
             create_time: data["create_time"]
           }
+          _this.voteTableData = data["vote_list"]
         } else {
           ElNotification({
             title: '获取失败',

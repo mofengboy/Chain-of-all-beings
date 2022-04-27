@@ -575,9 +575,14 @@ class SUB(threading.Thread):
                             literal_eval(
                                 bytes(message[len(SubscribeTopics.getNodeTopicOfActiveConfirmDelete()):]).decode(
                                     "utf-8"))
+
                         list_of_reply_application_form_active_delete = []
                         application_form_active_delete = SerializationApplicationFormActiveDelete.deserialization(
                             str(serial_application_form_active_delete).encode("utf-8"))
+                        # 检测该节点是否存在
+                        if not self.mainNode.mainNodeList.nodeIdIsExit(
+                                node_id=application_form_active_delete.delNodeId):
+                            continue
 
                         for serial_reply_application_form_active_delete in list_of_serial_reply_application_form_active_delete:
                             reply_application_form = SerializationReplyApplicationFormActiveDelete.deserialization(

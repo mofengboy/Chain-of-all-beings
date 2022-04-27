@@ -46,6 +46,9 @@
             <el-input v-model="simpleUserPk" :autosize="{minRows: 1}" type="textarea">
             </el-input>
           </el-form-item>
+          <el-form-item label="投票数量">
+            <el-input-number v-model="toVote" :precision="1" :step="0.1" :min="1.0"/>
+          </el-form-item>
           <el-form-item label="签名">
             <el-input v-model="voteSignature" :autosize="{minRows: 1}" type="textarea">
             </el-input>
@@ -74,9 +77,6 @@
               </el-form>
             </div>
           </el-dialog>
-          <el-form-item label="投票数量">
-            <el-input-number v-model="toVote" :precision="1" :step="0.1" :min="1.0"/>
-          </el-form-item>
           <el-form-item label="验证码">
             <div>
               <div class="CAPTCHA" v-on:click="getCAPTCHA">

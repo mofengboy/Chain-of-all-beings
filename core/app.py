@@ -132,7 +132,7 @@ class APP:
 
                         # 检测是否有投票完成,同意删除节点或不同意删除
                         logger.info("检测是否有投票完成,同意删除节点或不同意删除")
-                        self_out.checkNodActiveDelete()
+                        self_out.checkNodeActiveDelete()
 
                         logger.info("检测是否有待广播的短期票投票消息")
                         # 检测是否有待广播的短期票投票消息
@@ -612,7 +612,7 @@ class APP:
                 list_of_serial_reply_application_form_active_delete = res[1]
                 application_form_active_delete = self.storageOfTemp.getApplicationFormActiveDeleteByNodeId(
                     del_node_id=node_id,
-                    is_audit=0)
+                    is_audit=1)
                 serial_application_form_active_delete = SerializationApplicationFormActiveDelete.serialization(
                     application_form_active_delete)
                 # 删除主节点

@@ -378,9 +378,9 @@ class StorageOfTemp(Sqlite):
                                                                          content=res[1])
             application_form_active_delete.setMainNodeSignature(res[5])
             application_form_active_delete.setMainNodeUserPk(res[6])
+            return application_form_active_delete
         else:
             return None
-        return application_form_active_delete
 
     # 删除申请书，将is_audit置为2(主动申请删除节点）
     def delApplicationFormActiveDeleteByNodeId(self, del_node_id, is_audit):

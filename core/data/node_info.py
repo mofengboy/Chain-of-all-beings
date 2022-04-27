@@ -109,6 +109,12 @@ class MainNodeList:
                 return True
         return False
 
+    def nodeIdIsExit(self, node_id):
+        for main_node in self.__nodeList:
+            if main_node["node_info"]["node_id"] == node_id:
+                return True
+        return False
+
 
 # 获取nodeId的静态函数
 def get_node_id(node_list):

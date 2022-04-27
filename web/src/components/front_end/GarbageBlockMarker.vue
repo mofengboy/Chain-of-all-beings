@@ -25,7 +25,8 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfGarbageBlock">获取更多</el-button>
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfGarbageBlock">获取更多
+        </el-button>
       </div>
     </div>
     <div v-show="is_detail" class="detail">
@@ -38,6 +39,13 @@
       <div class="detail-votes">总票数：{{ timesBlockDetail["votes"] }}</div>
       <div class="detail-vote-list">
         <p>投票列表</p>
+        <div>
+          <el-table :data="voteTableData" border style="width: 100%">
+            <el-table-column prop="main_user_pk" label="投票用户"/>
+            <el-table-column prop="number_of_vote" label="票数" width="80"/>
+            <el-table-column prop="vote_type" label="投票类型" width="100"/>
+          </el-table>
+        </div>
       </div>
     </div>
   </div>
@@ -60,7 +68,8 @@ export default {
       block_id: "",
       search_block_id: "",
       epoch: 0,
-      electionPeriodValue:20160
+      electionPeriodValue: 20160,
+      voteTableData: []
     }
   },
   components: {
@@ -155,6 +164,7 @@ export default {
             status: data["status"],
             create_time: data["create_time"]
           }
+          _this.voteTableData = data["vote_list"]
         } else {
           ElNotification({
             title: '获取失败',
