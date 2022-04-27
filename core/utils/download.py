@@ -37,7 +37,7 @@ class RemoteChainAsset:
     @staticmethod
     def getChainOfBeings(url, epoch: int):
         try:
-            r = requests.get(url + "/static/beings_" + str(epoch) + ".chain", timeout=1)
+            r = requests.get(url + "/static/beings_" + str(epoch) + ".chain", timeout=5)
             if r.headers.get('content-type') == "application/octet-stream":
                 return SerializationAssetOfBeings.deserialization(r.content)
             else:
@@ -50,7 +50,7 @@ class RemoteChainAsset:
     @staticmethod
     def getChainOfTimes(url, election_period: int):
         try:
-            r = requests.get(url + "/static/times_" + str(election_period) + ".chain", timeout=1)
+            r = requests.get(url + "/static/times_" + str(election_period) + ".chain", timeout=5)
             if r.headers.get('content-type') == "application/octet-stream":
                 return SerializationAssetOfTimes.deserialization(r.content)
             else:
@@ -66,7 +66,7 @@ class RemoteChainAsset:
     @staticmethod
     def getChainOfGarbage(url, election_period: int):
         try:
-            r = requests.get(url + "/static/garbage_" + str(election_period) + ".chain", timeout=1)
+            r = requests.get(url + "/static/garbage_" + str(election_period) + ".chain", timeout=5)
             if r.headers.get('content-type') == "application/octet-stream":
                 return SerializationAssetOfTimes.deserialization(r.content)
             else:

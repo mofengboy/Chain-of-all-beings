@@ -150,3 +150,15 @@ class StorageOfGarbage(Sqlite):
         for data_i in res:
             simple_user_list.append(data_i[0])
         return simple_user_list
+
+    def getMaxElectionPeriod(self):
+        cursor = self.blockConn.cursor()
+        cursor.execute("""
+        select max(election_period)
+        from garbage
+        """)
+        res = cursor.fetchone()
+        if res is None:
+            return 0
+        else:
+            return res[0]

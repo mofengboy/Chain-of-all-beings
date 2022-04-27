@@ -302,8 +302,9 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             server_url_list.append(main_node["node_info"]["server_url"])
         logger.info("时代区块开始同步")
+        # 检测已经同步至
+        start_election_period = self.storageOfGalaxy.getMaxElectionPeriod()
         if self.getEpoch() > 0:
-            start_election_period = 0
             while True:
                 server_url = random.choice(server_url_list)
                 try:
@@ -335,8 +336,8 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             server_url_list.append(main_node["node_info"]["server_url"])
         logger.info("时代区块开始同步")
+        start_election_period = self.storageOfGarbage.getMaxElectionPeriod()
         if self.getEpoch() > 0:
-            start_election_period = 0
             while True:
                 server_url = random.choice(server_url_list)
                 try:
