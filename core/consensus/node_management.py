@@ -31,7 +31,7 @@ class NodeManager:
     def verifyAgreeInfo(self, application_form: ApplicationForm,
                         reply_application_form_list: [ReplyApplicationForm]) -> bool:
         # 检测是否超过时间
-        start_time = application_form.application["start_time"]
+        start_time = int(application_form.application["start_time"])
         current_time = STime.getTimestamp()
         if current_time - start_time > AUDIT_TIME:
             return False
@@ -52,12 +52,12 @@ class NodeManager:
             return True
         return False
 
-    # 验证新节点加入回复信息中同意节点列表及其签名
+    # 验证主动删除回复信息中同意节点列表及其签名
     def verifyAgreeInfoOfActiveDelete(self, application_form_active_delete: ApplicationFormActiveDelete,
                                       reply_application_form_active_delete_list: list[
                                           ReplyApplicationFormActiveDelete]) -> bool:
         # 检测是否超过时间
-        start_time = application_form_active_delete.application["start_time"]
+        start_time = int(application_form_active_delete.application["start_time"])
         current_time = STime.getTimestamp()
         if current_time - start_time > AUDIT_TIME:
             logger.warning("超过规定时间")
@@ -242,6 +242,7 @@ class NodeManager:
                 # 将存储的主节点同意数量设置为核验的
                 self.storageOfTemp.setAgreeCountOfActiveDelete(del_node_id, verify_agree_count)
             if verify_agree_count >= self.getCountOfNodeActiveDelete():
+                self.storageOfTemp.finishApplicationFormActiveDeleteByNodeId(del_node_id=del_node_id, is_audit=0)
                 return [True, verify_serial_reply_application_form_active_delete_list]
             else:
                 return [False, None]

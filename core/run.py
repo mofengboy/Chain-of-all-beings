@@ -147,7 +147,7 @@ def run(sk_string, pk_string, server_url):
                             logger.warning("请校对系统时间，当前时间与NTP时间误差超过一秒")
                     phase1 = False
             except Exception as error:
-                logger.error(error, stack_info=True)
+                logger.error(error, exc_info=True)
             time.sleep(1)
 
 

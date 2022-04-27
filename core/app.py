@@ -152,7 +152,7 @@ class APP:
                         logger.info("周期事件处理完成")
                     except Exception as err:
                         logger.error("周期事件出现错误")
-                        logger.error(err, stack_info=True)
+                        logger.error(err, exc_info=True)
 
         periodic_events = PeriodicEvents()
         periodic_events.start()
@@ -221,7 +221,7 @@ class APP:
                 is_get = True
                 break
             except Exception as err:
-                logger.error(err, stack_info=True)
+                logger.error(err, exc_info=True)
         return is_get
 
     # 通过其他主节点获取当前epoch
@@ -243,7 +243,7 @@ class APP:
                     return False
             except Exception as err:
                 time.sleep(1)
-                logger.error(err, stack_info=True)
+                logger.error(err, exc_info=True)
 
     # 同步众生区块
     def synchronizedBlockOfBeings(self):
@@ -293,7 +293,7 @@ class APP:
                     start_epoch = end_epoch
                 except Exception as err:
                     logger.warning("众生区块同步获取失败，远程主节点url:" + server_url)
-                    logger.error(err, stack_info=True)
+                    logger.error(err, exc_info=True)
                     time.sleep(1)
 
     # 同步时代区块
@@ -327,7 +327,7 @@ class APP:
                     logger.info("时代区块同步至,election_period:" + str(start_election_period))
                 except Exception as err:
                     logger.warning("时代区块同步获取失败，远程主节点url:" + server_url)
-                    logger.error(err, stack_info=True)
+                    logger.error(err, exc_info=True)
                     time.sleep(1)
 
     # 同步垃圾区块
@@ -358,7 +358,7 @@ class APP:
                     logger.info("垃圾区块同步至,election_period:" + str(start_election_period))
                 except Exception as err:
                     logger.warning("垃圾区块同步获取失败，远程主节点url:" + server_url)
-                    logger.error(err, stack_info=True)
+                    logger.error(err, exc_info=True)
                     time.sleep(1)
 
     # 数据恢复
@@ -599,14 +599,14 @@ class APP:
 
     # 当agree_count的值达到一定标准时，立即广播消息
     # 当超过规定时间还未收到确认消息时，删除该申请信息
-    def checkNodActiveDelete(self):
+    def checkNodeActiveDelete(self):
         # 获取node_active_delete表中所有is_audit=0的申请表
         for node_id in self.storageOfTemp.getNodeIdListOfApplicationFormActiveDeleteInProgress():
             # 检测是否超过有效时间，若超过删除该申请书
             if not self.nodeManager.isTimeReplyApplicationFormActiveDelete(node_id):
                 logger.info("该申请书已经超过有效时间,申请删除的节点ID为：" + node_id)
                 continue
-            # 检测是否达到成为新节点的条件
+            # 检测是否达到删除节点的条件
             res = self.nodeManager.isSuccessReplyApplicationFormActiveDelete(node_id)
             if res[0]:
                 list_of_serial_reply_application_form_active_delete = res[1]
@@ -676,7 +676,7 @@ class APP:
                         self.mainNode.currentBlockList.addBlock(block=new_block)
                     except Exception as err:
                         # 产生错误（如签名验证错误）后，发送不产生区块消息
-                        logger.error(err, stack_info=True)
+                        logger.error(err, exc_info=True)
                         # 广播无区块产生的消息
                         logger.info("当前节点不生成区块")
                         empty_block = EmptyBlock(user_pk=self.user.getUserPKString(), epoch=self.getEpoch())
