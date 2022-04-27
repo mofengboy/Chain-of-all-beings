@@ -215,13 +215,13 @@ class ApplicationFormActiveDelete:
         }
 
     def setMainNodeSignature(self, main_node_signature):
-        self.applyMainNode["application_signature"] = main_node_signature
+        self.applyMainNode["signature"] = main_node_signature
 
     def setMainNodeUserPk(self, main_node_user_pk):
         self.applyMainNode["user_pk"] = main_node_user_pk
 
     def getMainNodeSignature(self):
-        return self.applyMainNode["application_signature"]
+        return self.applyMainNode["signature"]
 
     def getMainNodeUserPk(self, ):
         return self.applyMainNode["user_pk"]

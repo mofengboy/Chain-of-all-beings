@@ -26,7 +26,7 @@
         <el-table-column label="申请时间" prop="createTime"/>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="addActiveDelete">获取更多
+        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getListOfMainNodeApplication">获取更多
         </el-button>
       </div>
     </div>
@@ -35,11 +35,11 @@
       <p class="application-title">主动申请删除某主节点</p>
       <el-form style="margin-top: 10px" label-position="right" label-width="70px" size="default">
         <div>
-          <el-form-item label="节点ID">
+          <el-form-item required label="节点ID">
             <el-input v-model="nodeId" :autosize="{minRows: 1}" type="textarea">
             </el-input>
           </el-form-item>
-          <el-form-item label="申请书">
+          <el-form-item required label="申请书">
             <el-input v-model="application" :autosize="{minRows: 2}" type="textarea">
             </el-input>
           </el-form-item>
@@ -112,8 +112,8 @@ export default {
                   _this.tableData.push({
                     id: data[i]["db_id"],
                     nodeID: detail["node_id"],
-                    application: Buffer.from(detail["application_content"], "base64").toString("utf-8"),
-                    remarks: Buffer.from(detail["remarks"], "base64").toString("utf-8"),
+                    application: detail["application_content"],
+                    remarks: detail["remarks"],
                     createTime: _this.$dayjs.unix(detail["create_time"]).format(),
                   })
                 })

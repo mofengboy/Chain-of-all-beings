@@ -21,11 +21,11 @@ class NodeManager:
 
     # 获取新节点加入要求主节点同意的数量
     def getCountOfNewNodeJoin(self):
-        return self.mainNode.mainNodeList.getNodeCount() / 2
+        return int(self.mainNode.mainNodeList.getNodeCount() / 2)
 
     # 获取主节点主动删除要求主节点同意的数量
     def getCountOfNodeActiveDelete(self):
-        return self.mainNode.mainNodeList.getNodeCount() / 2
+        return int(self.mainNode.mainNodeList.getNodeCount() / 2)
 
     # 验证新节点加入回复信息中同意节点列表及其签名
     def verifyAgreeInfo(self, application_form: ApplicationForm,
@@ -99,7 +99,7 @@ class NodeManager:
         if not self.mainNode.mainNodeList.userPKisExit(user_pk=reply_application_form.userPk):
             return False
         # 是否超过规定时间
-        time_span = STime.getTimestamp() - reply_application_form.startTime
+        time_span = STime.getTimestamp() - int(reply_application_form.startTime)
         if time_span > AUDIT_TIME:
             return False
         # 验证签名
@@ -126,7 +126,7 @@ class NodeManager:
             logger.warning(reply_application_form_active_delete.userPk)
             return False
         # 是否超过规定时间
-        time_span = STime.getTimestamp() - reply_application_form_active_delete.startTime
+        time_span = STime.getTimestamp() - int(reply_application_form_active_delete.startTime)
         if time_span > AUDIT_TIME:
             logger.warning("超过规定时间")
             logger.warning(reply_application_form_active_delete.startTime)
@@ -160,7 +160,7 @@ class NodeManager:
     def isTimeReplyApplicationForm(self, new_node_id):
         application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id)
         # 是否在规定时间内
-        time_span = STime.getTimestamp() - application_form.application["start_time"]
+        time_span = STime.getTimestamp() - int(application_form.application["start_time"])
         if time_span > AUDIT_TIME:
             # 取消该申请书
             self.storageOfTemp.delApplicationFormByNodeId(new_node_id)
@@ -173,7 +173,7 @@ class NodeManager:
         application_form_active_delete = self.storageOfTemp.getApplicationFormActiveDeleteByNodeId(del_node_id,
                                                                                                    is_audit=0)
         # 是否在规定时间内
-        time_span = STime.getTimestamp() - application_form_active_delete.application["start_time"]
+        time_span = STime.getTimestamp() - int(application_form_active_delete.application["start_time"])
         if time_span > AUDIT_TIME:
             # 取消该申请书
             self.storageOfTemp.delApplicationFormActiveDeleteByNodeId(del_node_id=del_node_id, is_audit=0)

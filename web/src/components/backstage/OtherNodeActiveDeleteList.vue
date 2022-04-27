@@ -90,7 +90,7 @@ export default {
                   _this.tableData.push({
                     id: data[i]["db_id"],
                     nodeID: detail["node_id"],
-                    application: Buffer.from(detail["application_content"], "base64").toString("utf-8"),
+                    application: detail["application_content"],
                     applicationTime: _this.$dayjs.unix(detail["application_time"]).format(),
                     mainNodeSignature: detail["main_node_signature"],
                     mainNodeUserPk: detail["main_node_user_pk"],

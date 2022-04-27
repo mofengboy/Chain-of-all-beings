@@ -770,7 +770,7 @@ class Server(threading.Thread):
                 # 签名有效期为八秒
                 client_info = network_message.clientInfo
                 signature = network_message.signature
-                if (STime.getTimestamp() - client_info["send_time"]) > 8:
+                if (STime.getTimestamp() - int(client_info["send_time"])) > 8:
                     # 超过有效时间
                     logger.info("发送方签名时间超过有效时间，用户公钥：" + client_info["user_pk"])
                     sock.send(b'0')
