@@ -151,8 +151,8 @@ class APP:
                         self_out.checkAndGenerateBlockOfGarbage()
                         logger.info("周期事件处理完成")
                     except Exception as err:
-                        logging.error("周期事件出现错误")
-                        logging.exception(err)
+                        logger.error("周期事件出现错误")
+                        logger.error(err, stack_info=True)
 
         periodic_events = PeriodicEvents()
         periodic_events.start()
@@ -368,12 +368,12 @@ class APP:
         for main_node in self.mainNode.mainNodeList.getNodeList():
             info_list.append([main_node["node_info"]["server_url"], main_node["node_info"]["node_ip"]])
         info = random.choice(info_list)
-        logger.info("获取最新期次数量")
+        logger.info("获取最新期次")
         i = 0
         is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
         while is_sync <= 0:
             i += 1
-            logger.warning("获取最新期次数量失败，第" + str(i) + "次尝试")
+            logger.warning("获取最新期次失败，第" + str(i) + "次尝试")
             info = random.choice(info_list)
             is_sync = self.remoteChainAsset.getCurrentEpoch(self.getEpoch, self.client, info[1])
 
@@ -449,6 +449,10 @@ class APP:
         application_content = application_form_active_delete["application_content"]
         application_time = application_form_active_delete["application_time"]
         is_audit = application_form_active_delete["is_audit"]
+        if is_audit == 1:
+            logger.info("发送同意删除消息")
+        else:
+            logger.info("发送拒绝删除消息")
         main_node_user_pk = application_form_active_delete["main_node_user_pk"]
         main_node_signature = application_form_active_delete["main_node_signature"]
 
@@ -470,6 +474,7 @@ class APP:
         serial_network_message = SerializationNetworkMessage.serialization(network_message)
         self.client.sendMessageByMainNodeUserPk(user_pk=main_node_user_pk,
                                                 data=str(serial_network_message).encode("utf-8"))
+        logger.info("消息发送完成")
 
     # 向全网广播新节点申请请求
     # 此时，当前主节点已经审核通过

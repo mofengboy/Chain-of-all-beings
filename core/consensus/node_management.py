@@ -184,7 +184,7 @@ class NodeManager:
     # 若在规定时间以内，且同意该节点加入的主节点的数量达到规定标准，则该节点正式成为主节点
     def isSuccessReplyApplicationForm(self, new_node_id) -> list[bool, list[ReplyApplicationForm]]:
         agree_count = self.storageOfTemp.getAgreeCountByNodeId(new_node_id)
-        if agree_count > self.getCountOfNewNodeJoin():
+        if agree_count >= self.getCountOfNewNodeJoin():
             application_form = self.storageOfTemp.getApplicationFormByNodeId(new_node_id)
             # 核对签名数量
             reply_application_form_list = self.storageOfTemp.getListOfReplyApplicationFormInfo(
@@ -205,7 +205,7 @@ class NodeManager:
                 logger.warning("存储的主节点同意数量为：" + str(agree_count))
                 # 将存储的主节点同意数量设置为核验的
                 self.storageOfTemp.setAgreeCount(new_node_id, verify_agree_count)
-            if verify_agree_count > self.getCountOfNewNodeJoin():
+            if verify_agree_count >= self.getCountOfNewNodeJoin():
                 return [True, verify_serial_reply_application_form_list]
             else:
                 return [False, None]
@@ -217,7 +217,7 @@ class NodeManager:
     def isSuccessReplyApplicationFormActiveDelete(self, del_node_id) -> list[
         bool, list[ReplyApplicationFormActiveDelete]]:
         agree_count = self.storageOfTemp.getAgreeCountOfActiveDeleteByNodeId(del_node_id, is_audit=0)
-        if agree_count > self.getCountOfNodeActiveDelete():
+        if agree_count >= self.getCountOfNodeActiveDelete():
             application_form_active_delete = self.storageOfTemp.getApplicationFormActiveDeleteByNodeId(del_node_id,
                                                                                                        is_audit=0)
             # 核对签名数量
@@ -241,7 +241,7 @@ class NodeManager:
                 logger.warning("存储的主节点同意数量为：" + str(agree_count))
                 # 将存储的主节点同意数量设置为核验的
                 self.storageOfTemp.setAgreeCountOfActiveDelete(del_node_id, verify_agree_count)
-            if verify_agree_count > self.getCountOfNodeActiveDelete():
+            if verify_agree_count >= self.getCountOfNodeActiveDelete():
                 return [True, verify_serial_reply_application_form_active_delete_list]
             else:
                 return [False, None]

@@ -85,21 +85,21 @@ export default {
           const data = res.data["data"]
           for (let i = 0; i < data.length; i++) {
             // 获取详细信息
-            _this.getDetailOfOtherNodeApplication(data[i]["db_id"])
+            _this.getDetailOfOtherNodeApplication(data[i]["id"])
                 .then((detail) => {
                   _this.tableData.push({
-                    id: data[i]["db_id"],
+                    id: data[i]["id"],
                     nodeID: detail["node_id"],
                     application: detail["application_content"],
-                    applicationTime: _this.$dayjs.unix(detail["application_time"]).format(),
+                    applicationTime: _this.$dayjs.unix(parseInt(detail["application_time"].toString().substring(0, 10))).format(),
                     mainNodeSignature: detail["main_node_signature"],
                     mainNodeUserPk: detail["main_node_user_pk"],
-                    createTime: _this.$dayjs.unix(detail["create_time"]).format(),
+                    createTime: _this.$dayjs.unix(parseInt(detail["create_time"].toString().substring(0, 10))).format(),
                   })
                 })
           }
           if (data.length > 0) {
-            _this.maxID = data[data.length - 1]["db_id"]
+            _this.maxID = data[data.length - 1]["id"]
           }
         } else {
           ElNotification({
@@ -141,7 +141,7 @@ export default {
         data: JSON.stringify({
           db_id: db_id,
           token: _this.token,
-          is_review: review
+          review: review
         }),
         headers: {"content-type": "application/json"}
       }).then((res) => {

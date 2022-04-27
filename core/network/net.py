@@ -68,15 +68,11 @@ class Client:
                     if main_node["node_info"]["node_id"] == node_id:
                         ip = main_node["node_info"]["node_ip"]
                 ip = "tcp://" + ip + ":23334"
-                try:
-                    socket.connect(ip)
-                    socket.send(data)
-                    message = socket.recv()
-                    logger.info("消息发送完成，对方ip为" + ip)
-                    return message
-                except Exception as err:
-                    logger.error(err, stack_info=True)
-                    raise ValueError(err)
+                socket.connect(ip)
+                socket.send(data)
+                message = socket.recv()
+                logger.info("消息发送完成，对方ip为" + ip)
+                return message
 
     def sendMessageByMainNodeUserPk(self, user_pk, data: bytes):
         with zmq.Context() as context:
@@ -88,16 +84,12 @@ class Client:
                     if main_node["node_info"]["user_pk"] == user_pk:
                         ip = main_node["node_info"]["node_ip"]
                 ip = "tcp://" + ip + ":23334"
-                try:
-                    socket.connect(ip)
-                    socket.send(data)
-                    message = socket.recv()
-                    logger.info("消息发送完成，对方公钥为" + user_pk)
-                    logger.info("消息发送完成，对方ip为" + ip)
-                    return message
-                except Exception as err:
-                    logger.error(err, stack_info=True)
-                    raise ValueError(err)
+                socket.connect(ip)
+                socket.send(data)
+                message = socket.recv()
+                logger.info("消息发送完成，对方公钥为" + user_pk)
+                logger.info("消息发送完成，对方ip为" + ip)
+                return message
 
     @staticmethod
     def sendMessageByIP(ip, data: bytes):

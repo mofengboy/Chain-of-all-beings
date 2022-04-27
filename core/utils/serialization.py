@@ -219,7 +219,7 @@ class SerializationNetworkMessage:
 
     # 反序列化
     @staticmethod
-    def deserialization(network_message_byte) -> NetworkMessage:
+    def deserialization(network_message_byte: bytes) -> NetworkMessage:
         network_message_dict = literal_eval(bytes(network_message_byte).decode("utf-8"))
         network_message = NetworkMessage(mess_type=network_message_dict["message_type"],
                                          message=network_message_dict["message"])

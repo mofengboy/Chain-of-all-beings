@@ -5,6 +5,8 @@ from core.data.network_message import NetworkMessage, NetworkMessageType
 from core.network.net import Client
 from core.utils.serialization import SerializationAssetOfBeings, SerializationNetworkMessage, SerializationAssetOfTimes
 
+logger = logging.getLogger("main")
+
 
 class RemoteChainAsset:
     @staticmethod
@@ -16,7 +18,7 @@ class RemoteChainAsset:
             epoch = int(res)
             return epoch - getEpoch()
         except Exception as err:
-            logging.warning(err)
+            logger.warning(err)
             return 0
 
     @staticmethod
@@ -27,10 +29,10 @@ class RemoteChainAsset:
                 epoch_list = r.json()["data"]
                 return epoch_list
             else:
-                logging.warning(r.json()["data"])
+                logger.warning(r.json()["data"])
                 return "500"
         except Exception as err:
-            logging.warning(err)
+            logger.warning(err)
             return "500"
 
     # 获取其他主节点的众生区块
@@ -43,7 +45,7 @@ class RemoteChainAsset:
             else:
                 return "500"
         except Exception as err:
-            logging.warning(err)
+            logger.warning(err)
             return "500"
 
     # 获取其他主节点的时代区块
@@ -59,7 +61,7 @@ class RemoteChainAsset:
                     return "404"
                 return "500"
         except Exception as err:
-            logging.warning(err)
+            logger.warning(err)
             return "500"
 
     # 获取其他主节点的垃圾区块
@@ -75,7 +77,7 @@ class RemoteChainAsset:
                     return "404"
                 return "500"
         except Exception as err:
-            logging.warning(err)
+            logger.warning(err)
             return "500"
 
 

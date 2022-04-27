@@ -166,4 +166,6 @@ class StorageOfGalaxy(Sqlite):
         if res is None:
             return 0
         else:
+            if res[0] is None:
+                return 0
             return res[0]
