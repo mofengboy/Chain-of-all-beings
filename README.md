@@ -47,6 +47,10 @@
 3. 投票标记，使众生区块被标记为垃圾区块。
 4. 申请成为主节点。
 
+### 共识机制
+
+查看[共识机制 ](./consensus_mechanism.md)
+
 ## 发布区块
 
 1. 普通用户首先在主节点提供的平台上生成秘钥对(包含私钥和公钥)。
@@ -59,19 +63,87 @@
 
 所有用户可以对主节点用户推荐或标记的众生区块进行投票。
 
-## 加入主节点
-
-1. 下载代码
-2. 同步数据
-3. 在某主节点A提供的平台上填写节点信息和申请书，并提交。
-4. 某主节点A同意后，广播以上消息，若有超过半数及以上的主节点同意，即可成为主节点。
+## 成为主节点
 
 ### 项目结构
 
-### 安装
+- core（核心模块）
 
-### 运行
+- server（简易后端）
 
-### 申请
+- web（简易前端）#
 
-## 共识机制
+### 部署
+
+- Docker部署（推荐）
+
+  1. 拉取项目到本地 
+  	```shell
+  docker pull mofengboy/beings
+  	```
+
+  2. 启动容器
+
+     **对于设置安全组的云主机，需要放行23333和23334端口**
+
+     ```shell
+     docker run -itd -p 5000:5000 -p 23333:23333 -p 23334:23334 -v /beings/core/db:/Chain-of-all-beings/core/db -v /beings/core/log:/Chain-of-all-beings/core/log -v /beings/server/db:/Chain-of-all-beings/server/db mofengboy/beings /bin/bash
+     ```
+     
+  3. 进入容器
+  
+     查看容器ID
+  
+     ```shell
+     docker ps
+     ```
+  
+     进入容器
+  
+     ```shell
+     docker exec -it 容器ID /bin/bash
+     ```
+  
+  4. 启动核心模块
+  
+     ```shell
+     cd /Chain-of-all-beings/core
+     nohup python run.py -s 您的私钥 -p 您的公钥 -u 您的后端服务网址 > core.log 2>&1 &
+     ```
+  
+  5. 启动简易后端模块
+  
+     ```shell
+     cd /Chain-of-all-beings/server
+     uwsgi -d --ini start.ini
+     ```
+  
+  6. 编译部署简易前端模块（可单独部署）
+  
+     安装依赖
+  
+     ```bash
+     npm install
+     ```
+  
+     修改配置文件中的后端服务地址，配置文件位于 Chain-of-all-beings/web/src/config.js
+  
+     编译
+  
+     ```shell
+     npm run build
+     ```
+  
+     
+  
+- python项目部署
+
+  略
+
+### 申请成为主节点
+
+填写主节点信息，并在其他主节点服务网站进行申请。
+
+
+
+
