@@ -784,14 +784,14 @@ class Server(threading.Thread):
                     logger.info("签名验证失败，用户公钥：" + client_info["user_pk"])
                     sock.send(b'0')
                     continue
-                # 新节点申请加入消息
+                # 新节点申请加入回复消息
                 if mess_type == NetworkMessageType.ReplayNewNodeApplicationJoin:
                     reply_application_form = SerializationReplyApplicationForm.deserialization(network_message.message)
                     # 处理回复消息
                     self.nodeManager.replyApplyJoin(reply_application_form)
                     sock.send(b'1')
                     continue
-                # 主动申请删除节点的消息
+                # 主动申请删除节点的回复消息
                 if mess_type == NetworkMessageType.ReplyNodeActiveDeleteApplication:
                     reply_application_form_active_delete = SerializationReplyApplicationFormActiveDelete.deserialization(
                         network_message.message)

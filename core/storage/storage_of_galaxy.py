@@ -63,7 +63,7 @@ class StorageOfGalaxy(Sqlite):
         else:
             return False
 
-    def getBlockAbstractByElectionPeriod(self, election_period) -> []:
+    def getBlockAbstractByElectionPeriod(self, election_period) -> list:
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header,body

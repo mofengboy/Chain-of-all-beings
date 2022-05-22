@@ -102,7 +102,7 @@ class StorageOfBeings(Sqlite):
             return block_of_beings
 
     # 包括start不包括end
-    def getBlocksByEpoch(self, start, end) -> []:
+    def getBlocksByEpoch(self, start, end) -> list:
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select header, body 
@@ -155,7 +155,7 @@ class StorageOfBeings(Sqlite):
         else:
             return res[0]
 
-    def getUserPkByBlockId(self, block_id) -> []:
+    def getUserPkByBlockId(self, block_id) -> list:
         cursor = self.blockConn.cursor()
         cursor.execute("""
         select simple_user_pk,main_node_user_pk 

@@ -628,7 +628,7 @@ class APP:
     # 0-30S
     def startNewEpoch(self):
         logger.info("众生区块生成周期开始，Epoch:" + str(self.getEpoch()) + ",ElectionPeriod:" + str(self.getElectionPeriod()))
-        # 获取本次产生区块的节点列表
+        # 计算本次产生区块的节点列表
         self.mainNode.currentMainNode = CurrentMainNode(self.mainNode.mainNodeList,
                                                         self.storageOfBeings.getLastBlockByCache(),
                                                         self.getEpoch).getNodeListOfGenerateBlock()

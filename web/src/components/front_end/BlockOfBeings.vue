@@ -63,7 +63,24 @@ export default {
     this.getIdListOfBeingsByOffset()
     this.is_detail = this.$route.query.block_id !== undefined;
   },
+  updated() {
+    let block_id = this.getRequest("block_id")
+    if (block_id == null) {
+      this.is_detail = false
+    }else {
+      this.is_detail = true
+    }
+    console.log(block_id)
+  },
   methods: {
+    getRequest: function (url_name) {
+      let reg = new RegExp("(^|&)" + url_name + "=([^&]*)(&|$)", "i");
+      let r = window.location.search.substr(1).match(reg);
+      if (r != null) {
+        return decodeURIComponent(r[2]);
+      }
+      return null;
+    },
     openDetail: function (event) {
       for (let i = 0; i < this.tableData.length; i++) {
         if (event.id === this.tableData[i]["id"]) {
