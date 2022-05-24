@@ -11,6 +11,7 @@ export default {
     return {}
   },
   created() {
+    document.body.removeChild(document.getElementById('loader'))
   },
   methods: {}
 }
