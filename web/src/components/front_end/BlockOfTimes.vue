@@ -4,41 +4,43 @@
       <el-table :data="tableData" style="width: 100%">
         <el-table-column type="expand">
           <template #default="props">
-            <el-form label-width="100px">
-              <el-form-item label="时代区块ID">
-                <el-input v-model="props.row.block_id" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="上一区块头部Hash">
-                <el-input v-model="props.row.prev_block_header" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="上一区块Hash">
-                <el-input v-model="props.row.prev_block" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="时代区块用户公钥">
-                <el-input v-model="props.row.user_pk" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="时代区块用户签名">
-                <el-input v-model="props.row.body_signature" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="原众生区块普通用户公钥">
-                <el-input :model-value="props.row.body_users_pk[0]" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="原众生区块主节点用户公钥">
-                <el-input :model-value="props.row.body_users_pk[1]" :autosize="{minRows: 1}" readonly
-                          type="textarea">
-                </el-input>
-              </el-form-item>
-              <el-form-item label="时间戳">
-                <el-input v-model="props.row.timestamp" :autosize="{minRows: 1}" readonly type="textarea">
-                </el-input>
-              </el-form-item>
-            </el-form>
+            <div style="width: 95%">
+              <el-form label-width="100px">
+                <el-form-item label="时代区块ID">
+                  <el-input v-model="props.row.block_id" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="上一区块头部Hash">
+                  <el-input v-model="props.row.prev_block_header" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="上一区块Hash">
+                  <el-input v-model="props.row.prev_block" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="时代区块用户公钥">
+                  <el-input v-model="props.row.user_pk" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="时代区块用户签名">
+                  <el-input v-model="props.row.body_signature" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="原众生区块普通用户公钥">
+                  <el-input :model-value="props.row.body_users_pk[0]" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="原众生区块主节点用户公钥">
+                  <el-input :model-value="props.row.body_users_pk[1]" :autosize="{minRows: 1}" readonly
+                            type="textarea">
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="时间戳">
+                  <el-input v-model="props.row.timestamp" :autosize="{minRows: 1}" readonly type="textarea">
+                  </el-input>
+                </el-form-item>
+              </el-form>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="election_period" label="上链期次(选举周期)"></el-table-column>
@@ -229,5 +231,9 @@ export default {
 
 .epoch-input {
   margin: 0 25px 0 0;
+}
+
+.el-form-item{
+  width: 98%;
 }
 </style>

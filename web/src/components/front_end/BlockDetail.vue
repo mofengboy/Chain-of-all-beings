@@ -6,36 +6,34 @@
     <div class="content">
       <markdown :source="body"></markdown>
     </div>
-    <el-collapse v-model="collapse_item">
-      <el-collapse-item title="区块头部信息" name="1">
-        <el-form label-width="100px">
-          <el-form-item label="上一期次区块头部哈希列表">
-            <el-input v-model="local_preBlockHeaderHash" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-          <el-form-item label="上一期次区块哈希列表">
-            <el-input v-model="local_preBlockHash" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-          <el-form-item label="普通用户公钥">
-            <el-input v-model="local_general_user_public_key" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-          <el-form-item label="普通用户签名">
-            <el-input v-model="local_general_user_signature" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-          <el-form-item label="主节点用户公钥">
-            <el-input v-model="local_main_node_public_key" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-          <el-form-item label="主节点用户签名">
-            <el-input v-model="local_main_node_signature" :autosize="{minRows: 1}" readonly type="textarea">
-            </el-input>
-          </el-form-item>
-        </el-form>
-      </el-collapse-item>
-    </el-collapse>
+
+    <el-form label-width="100px">
+      <el-form-item label="上一期次区块头部哈希列表">
+        <el-input v-model="local_preBlockHeaderHash" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+      <el-form-item label="上一期次区块哈希列表">
+        <el-input v-model="local_preBlockHash" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+      <el-form-item label="普通用户公钥">
+        <el-input v-model="local_general_user_public_key" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+      <el-form-item label="普通用户签名">
+        <el-input v-model="local_general_user_signature" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+      <el-form-item label="主节点用户公钥">
+        <el-input v-model="local_main_node_public_key" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+      <el-form-item label="主节点用户签名">
+        <el-input v-model="local_main_node_signature" :autosize="{minRows: 1}" readonly type="textarea">
+        </el-input>
+      </el-form-item>
+    </el-form>
+
   </div>
 </template>
 
@@ -116,5 +114,9 @@ export default {
   padding: 0 10px;
   border-radius: 4px;
   border: 2px dashed var(--el-border-color-base);
+}
+
+.block-header {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 </style>

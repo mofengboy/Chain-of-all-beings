@@ -34,8 +34,8 @@
         <el-form-item label="申请书">
           <el-input :autosize="{ minRows: 2 }" v-model="application" type="textarea">
           </el-input>
-          <el-collapse style="width: 100%" v-model="collapse_item">
-            <el-collapse-item title="预览" name="1">
+          <el-collapse style="width: 100%;margin-top: 10px" v-model="collapse_item">
+            <el-collapse-item name="1">
               <div>
                 <Markdown class="markdown" :source="application"></Markdown>
               </div>
@@ -54,8 +54,8 @@
         <el-form-item label="备注">
           <el-input :autosize="{ minRows: 2 }" v-model="remarks" type="textarea">
           </el-input>
-          <el-collapse style="width: 100%" v-model="collapse_item">
-            <el-collapse-item title="预览" name="1">
+          <el-collapse style="width: 100%;margin-top: 10px" v-model="collapse_item">
+            <el-collapse-item name="1">
               <div>
                 <Markdown class="markdown" :source="remarks"></Markdown>
               </div>

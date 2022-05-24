@@ -13,8 +13,8 @@
         <el-form-item label="内容">
           <el-input :autosize="{ minRows: 2 }" v-model="body" type="textarea">
           </el-input>
-          <el-collapse style="width: 100%" v-model="collapse_item">
-            <el-collapse-item title="预览" name="1">
+          <el-collapse style="width: 100%; margin-top: 10px" v-model="collapse_item">
+            <el-collapse-item name="1">
               <div>
                 <Markdown class="markdown" :source="body"></Markdown>
               </div>

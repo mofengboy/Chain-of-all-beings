@@ -103,7 +103,7 @@ export default {
 }
 
 .top-menu {
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
+  /*box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)*/
 }
 
 .main {
@@ -111,7 +111,56 @@ export default {
   padding: 10px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
 }
-
 .footer {
 }
+.el-menu{
+  background: #a5bffc;
+  border-radius: 50px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
+  /*box-shadow: 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;*/
+}
+.el-menu:hover{
+  background: #a5bffc;
+  border-radius: 50px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1)
+  /*box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;*/
+}
+/*.el-menu-item{*/
+/*  background: linear-gradient(-45deg, #3f00b5, #9f69fe, #27c8b7, #3f00b5);*/
+/*  !*background-size: 800% 400%;*!*/
+/*  !*padding: 1em 2em;*!*/
+/*  display: inline-block;*/
+/*  border: none;*/
+/*  border-radius: 10px;*/
+/*  !*font-size: 17px;*!*/
+/*  !*font-weight: 700;*!*/
+/*  color: white;*/
+/*  transition: all .5s ease-in-out;*/
+/*  animation: gradient 10s infinite cubic-bezier(.62, .28, .23, .99) both;*/
+/*}*/
+
+/*.el-menu-item:hover {*/
+/*  animation: gradient 3s infinite;*/
+/*  transform: scale(1.05);*/
+/*}*/
+
+/*.el-menu-item:active {*/
+/*  animation: gradient 3s infinite;*/
+/*  transform: scale(0.8);*/
+/*}*/
+
+/*@keyframes gradient {*/
+/*  0% {*/
+/*    background-position: 0% 50%;*/
+/*  }*/
+
+/*  50% {*/
+/*    background-position: 100% 50%;*/
+/*  }*/
+
+/*  100% {*/
+/*    background-position: 0% 50%;*/
+/*  }*/
+/*}*/
+
 </style>

@@ -1,8 +1,8 @@
 <template>
   <div>
     <div v-show="!is_detail">
-      <el-table :data="tableData" style="width: 100%" @row-click="openDetail">
-        <el-table-column prop="epoch" label="上链期次" width="100"></el-table-column>
+      <el-table :data="tableData" @row-click="openDetail" class="table-data">
+        <el-table-column prop="epoch" label="上链期次" width="100" :row-style="getRowClass" :header-row-style="getRowClass" :header-cell-style="getRowClass"></el-table-column>
         <el-table-column label="内容摘要">
           <template #default="scope">
             <el-tooltip class="box-item" content="点击查看详情" placement="top">
@@ -12,7 +12,8 @@
         </el-table-column>
       </el-table>
       <div>
-        <el-button type="primary" style="margin-top:10px;width: 100%" v-on:click="getIdListOfBeingsByOffset">获取更多
+        <el-button type="primary" class="button-get-more button-search-style" v-on:click="getIdListOfBeingsByOffset">
+          获取更多
         </el-button>
       </div>
       <div class="search-epoch">
@@ -26,7 +27,9 @@
             </el-form-item>
           </div>
           <div>
-            <el-button type="primary" style="width: 100%" v-on:click="getIdListOfBeingsByEpoch">查找</el-button>
+            <el-button type="primary" v-on:click="getIdListOfBeingsByEpoch" class="button-search button-search-style ">
+              查找
+            </el-button>
           </div>
         </el-form>
       </div>
@@ -53,6 +56,7 @@ export default {
       block_id: "",
       start_epoch: 0,
       end_epoch: 8,
+      table_data_row: "background-color: transparent;"
     }
   },
   components: {
@@ -67,12 +71,15 @@ export default {
     let block_id = this.getRequest("block_id")
     if (block_id == null) {
       this.is_detail = false
-    }else {
+    } else {
       this.is_detail = true
     }
     console.log(block_id)
   },
   methods: {
+    getRowClass:function() {
+      return "background:#3f5c6d2c;color:#000;";
+    },
     getRequest: function (url_name) {
       let reg = new RegExp("(^|&)" + url_name + "=([^&]*)(&|$)", "i");
       let r = window.location.search.substr(1).match(reg);
@@ -221,8 +228,22 @@ export default {
 </script>
 
 <style scoped>
-.detail {
+.table-data {
+  width: 100%;
+}
 
+.table-data-row {
+  background-color: transparent;
+}
+/*最外层透明*/
+.el-table, .el-table__expanded-cell{
+  background-color: transparent;
+}
+/* 表格内背景颜色 */
+.el-table th,
+.el-table tr,
+.el-table td {
+  background-color: transparent;
 }
 
 .search-epoch {
@@ -232,4 +253,71 @@ export default {
 .epoch-input {
   margin: 0 25px 0 0;
 }
+
+.button-get-more {
+  margin: 15px 10%;
+  width: 80%;
+  text-align: center;
+}
+
+.button-search {
+  margin: 5px 10%;
+  width: 80%;
+  text-align: center
+}
+
+.button-search-style {
+  --color: #3992e6;
+  position: relative;
+  z-index: 1;
+}
+
+.button-search-style::before {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  top: -7px;
+  left: -7px;
+  z-index: -5;
+  border-top: 3px solid var(--color);
+  border-left: 3px solid var(--color);
+  transition: 0.5s;
+}
+
+.button-search-style::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  bottom: -7px;
+  right: -7px;
+  z-index: -5;
+  border-right: 3px solid var(--color);
+  border-bottom: 3px solid var(--color);
+  transition: 0.5s;
+}
+
+.button-search-style:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+.button-search-style:hover::after {
+  width: 100%;
+  height: 100%;
+}
+
+.button-search-style button {
+  padding: 0.7em 2em;
+  font-size: 16px;
+  background: #222222;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 </style>
