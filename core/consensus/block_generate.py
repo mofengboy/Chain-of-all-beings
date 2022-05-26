@@ -75,6 +75,9 @@ class NewBlockOfBeings:
             if not CipherSuites.verify(pk=user_pk[i], signature=body_signature[i], message=body):
                 # 用户公钥、签名、内容不匹配 抛出错误
                 raise "签名验证失败"
+        # 验证区块体是否超过1M
+        if len(body) > 1048576:
+            raise "区块超过1M"
         self.newBlock = BlockOfBeings(epoch=epoch, pre_block=pre_block, prev_block_header=prev_block_header,
                                       user_pk=user_pk, body_signature=body_signature, body=body)
 
@@ -89,6 +92,10 @@ class NewBlockOfBeingsByExist:
             if not CipherSuites.verify(pk=header["userPK"][i], signature=header["bodySignature"][i], message=body):
                 # 用户公钥、签名、内容不匹配 抛出错误
                 raise "签名验证失败"
+
+        # 验证区块体是否超过1M
+        if len(body) > 1048576:
+            raise "区块超过1M"
 
         self.newBlock = BlockOfBeings(body=body)
         self.newBlock.setHeader(header)
