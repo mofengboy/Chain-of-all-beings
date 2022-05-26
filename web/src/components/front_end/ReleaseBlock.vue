@@ -49,7 +49,7 @@
   </div>
   <div>
     <!--公钥生成弹框-->
-    <el-dialog v-model="publicKeyDialog" title="在线生成" width="80%">
+    <el-dialog append-to-body v-model="publicKeyDialog" title="在线生成" width="80%" draggable>
       <div>
         <el-form>
           <p>此处不会存储您的私钥，计算任务全部都在本地进行。</p>
@@ -69,7 +69,7 @@
       </div>
     </el-dialog>
     <!--签名弹框-->
-    <el-dialog v-model="signatureDialog" title="计算签名" width="80%">
+    <el-dialog append-to-body v-model="signatureDialog" title="计算签名" width="80%" draggable>
       <div>
         <el-form>
           <p>若内容发生改变，则必须重新计算签名。</p>
@@ -311,4 +311,6 @@ export default {
   border-radius: 4px;
   border: 2px dashed var(--el-border-color-base);
 }
+
+
 </style>

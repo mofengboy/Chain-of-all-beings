@@ -57,7 +57,7 @@
             </div>
           </el-form-item>
           <!--签名弹框-->
-          <el-dialog v-model="signatureDialog" title="计算签名" width="80%">
+          <el-dialog append-to-body v-model="signatureDialog" title="计算签名" width="80%">
             <div>
               <el-form>
                 <p>若内容发生改变，则必须重新计算签名。</p>
@@ -121,7 +121,7 @@
             </div>
           </el-form-item>
           <!--签名弹框-->
-          <el-dialog v-model="signatureDialog" title="计算签名" width="80%">
+          <el-dialog append-to-body v-model="signatureDialog" title="计算签名" width="80%">
             <div>
               <el-form>
                 <p>若内容发生改变，则必须重新计算签名。</p>

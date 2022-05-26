@@ -17,7 +17,7 @@
         </div>
       </el-form>
     </div>
-    <div style="text-align: center;">普通用户票数信息列表</div>
+    <div style="text-align: center;margin-top: 10px">普通用户票数信息列表</div>
     <el-table stripe :data="tableData" class="main-table">
       <el-table-column prop="user_pk" label="用户公钥"></el-table-column>
       <el-table-column header-align="center" prop="used_vote" label="已使用的票数" width="80"></el-table-column>
@@ -34,7 +34,7 @@
     </div>
     <div>
       <!--修改总票数弹框-->
-      <el-dialog v-model="dialog" title="修改总票数" width="80%">
+      <el-dialog append-to-body v-model="dialog" title="修改总票数" width="80%">
         <div>
           <el-form>
             <p>1. 修改后的总票数不能低于已经使用的票数</p>

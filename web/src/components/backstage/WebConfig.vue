@@ -174,4 +174,7 @@ export default {
   margin: 10px auto;
   width: 100%;
 }
+.markdown{
+  padding: 10px;
+}
 </style>
