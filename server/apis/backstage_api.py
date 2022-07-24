@@ -320,6 +320,38 @@ def recommendBeings():
         return http_message.getJson()
 
 
+@backstage.route("/backstage/beings/revocation", methods=['POST'])
+@cross_origin(origins=Allow_Url_List)
+def revocationRecommendBeings():
+    """撤销推荐众生区块
+        Content-Type: application/json
+        {
+          "token":"",
+          "block_id":""
+        }
+        返回 json
+        {
+        "is_success":bool,
+        "data":
+        """
+    try:
+        info = request.get_json()
+        # 验证token
+        token = info["token"]
+        if not auth.verifyToken(token):
+            http_message = HttpMessage(is_success=False, data="Token无效")
+            return http_message.getJson()
+        # 获取列表
+        beings_block_id = info["block_id"]
+        blockOfTimes.revocationTimesBlockQueueByBlockId(beings_block_id)
+        http_message = HttpMessage(is_success=True, data="撤销推荐成功")
+        return http_message.getJson()
+    except Exception as err:
+        print(err)
+        http_message = HttpMessage(is_success=False, data="参数错误")
+        return http_message.getJson()
+
+
 @backstage.route("/backstage/beings/marker", methods=['POST'])
 @cross_origin(origins=Allow_Url_List)
 def markerBeings():
